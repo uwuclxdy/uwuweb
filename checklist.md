@@ -4,7 +4,7 @@
 - [x] Build `dashboard.php` role switcher:
   - [x] Detect role via `$_SESSION['role_id']`.
   - [x] Load matching widgets/nav links.
-- [ ] Teacher grade book – Skeleton HTML (`teacher/gradebook.php`).
+- [x] Teacher grade book – Skeleton HTML (`teacher/gradebook.php`).
 - [ ] Teacher grade book – JS inline edit (calls `/api/grades.php`).
 - [ ] API: `api/grades.php` save logic with validation.
 - [ ] Teacher attendance – Form page (`teacher/attendance.php`).
