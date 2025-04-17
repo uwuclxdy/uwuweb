@@ -1,10 +1,10 @@
 <?php
 /**
  * Attendance API Endpoint
- * 
+ *
  * Handles CRUD operations for attendance data
  * Returns JSON responses for AJAX requests
- * 
+ *
  * Functions:
  * - addPeriod() - Creates a new period for a class
  * - updatePeriod() - Updates an existing period
@@ -86,35 +86,35 @@ function addPeriod() {
     $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
     $periodDate = trim($_POST['period_date'] ?? '');
     $periodLabel = trim($_POST['period_label'] ?? '');
-    
+
     if (!$classId || empty($periodDate) || empty($periodLabel)) {
         http_response_code(400); // Bad Request
         echo json_encode(['error' => 'Invalid input data']);
         return;
     }
-    
+
     // Verify teacher has access to this class
     if (!teacherHasAccessToClass($classId)) {
         http_response_code(403); // Forbidden
         echo json_encode(['error' => 'You do not have access to this class']);
         return;
     }
-    
+
     try {
         $pdo = getDBConnection();
         $stmt = $pdo->prepare(
             "INSERT INTO periods (class_id, period_date, period_label) 
              VALUES (:class_id, :period_date, :period_label)"
         );
-        
+
         $stmt->execute([
             'class_id' => $classId,
             'period_date' => $periodDate,
             'period_label' => $periodLabel
         ]);
-        
+
         $periodId = $pdo->lastInsertId();
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Period added successfully',
@@ -124,10 +124,10 @@ function addPeriod() {
                 'period_date' => $periodDate,
                 'period_label' => $periodLabel
             ]
-        ]);
+        ], JSON_THROW_ON_ERROR);
     } catch (PDOException $e) {
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
     }
 }
 
@@ -139,20 +139,20 @@ function updatePeriod() {
     $periodId = filter_input(INPUT_POST, 'period_id', FILTER_VALIDATE_INT);
     $periodDate = trim($_POST['period_date'] ?? '');
     $periodLabel = trim($_POST['period_label'] ?? '');
-    
+
     if (!$periodId || empty($periodDate) || empty($periodLabel)) {
         http_response_code(400); // Bad Request
         echo json_encode(['error' => 'Invalid input data']);
         return;
     }
-    
+
     // Verify teacher has access to this period
     if (!teacherHasAccessToPeriod($periodId)) {
         http_response_code(403); // Forbidden
         echo json_encode(['error' => 'You do not have access to this period']);
         return;
     }
-    
+
     try {
         $pdo = getDBConnection();
         $stmt = $pdo->prepare(
@@ -160,13 +160,13 @@ function updatePeriod() {
              SET period_date = :period_date, period_label = :period_label
              WHERE period_id = :period_id"
         );
-        
+
         $stmt->execute([
             'period_id' => $periodId,
             'period_date' => $periodDate,
             'period_label' => $periodLabel
         ]);
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Period updated successfully',
@@ -188,37 +188,37 @@ function updatePeriod() {
 function deletePeriod() {
     // Validate input
     $periodId = filter_input(INPUT_POST, 'period_id', FILTER_VALIDATE_INT);
-    
+
     if (!$periodId) {
         http_response_code(400); // Bad Request
         echo json_encode(['error' => 'Invalid period ID']);
         return;
     }
-    
+
     // Verify teacher has access to this period
     if (!teacherHasAccessToPeriod($periodId)) {
         http_response_code(403); // Forbidden
         echo json_encode(['error' => 'You do not have access to this period']);
         return;
     }
-    
+
     try {
         $pdo = getDBConnection();
-        
+
         // Start transaction to ensure data integrity
         $pdo->beginTransaction();
-        
+
         // Delete related attendance records first
         $stmt = $pdo->prepare("DELETE FROM attendance WHERE period_id = :period_id");
         $stmt->execute(['period_id' => $periodId]);
-        
+
         // Then delete the period
         $stmt = $pdo->prepare("DELETE FROM periods WHERE period_id = :period_id");
         $stmt->execute(['period_id' => $periodId]);
-        
+
         // Commit transaction
         $pdo->commit();
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Period deleted successfully'
@@ -226,7 +226,7 @@ function deletePeriod() {
     } catch (PDOException $e) {
         // Rollback on error
         $pdo->rollBack();
-        
+
         http_response_code(500); // Internal Server Error
         echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     }
@@ -240,36 +240,36 @@ function saveAttendance() {
     $enrollId = filter_input(INPUT_POST, 'enroll_id', FILTER_VALIDATE_INT);
     $periodId = filter_input(INPUT_POST, 'period_id', FILTER_VALIDATE_INT);
     $status = $_POST['status'] ?? '';
-    
+
     if (!$enrollId || !$periodId || !in_array($status, ['P', 'A', 'L'])) {
         http_response_code(400); // Bad Request
         echo json_encode(['error' => 'Invalid input data']);
         return;
     }
-    
+
     // Verify teacher has access to this period and enrollment
     if (!teacherHasAccessToPeriod($periodId) || !teacherHasAccessToEnrollment($enrollId)) {
         http_response_code(403); // Forbidden
         echo json_encode(['error' => 'You do not have access to this student or period']);
         return;
     }
-    
+
     try {
         $pdo = getDBConnection();
-        
+
         // Check if attendance record already exists
         $stmt = $pdo->prepare(
             "SELECT att_id FROM attendance 
              WHERE enroll_id = :enroll_id AND period_id = :period_id"
         );
-        
+
         $stmt->execute([
             'enroll_id' => $enrollId,
             'period_id' => $periodId
         ]);
-        
+
         $existingRecord = $stmt->fetch();
-        
+
         if ($existingRecord) {
             // Update existing record
             $stmt = $pdo->prepare(
@@ -277,13 +277,13 @@ function saveAttendance() {
                  SET status = :status
                  WHERE enroll_id = :enroll_id AND period_id = :period_id"
             );
-            
+
             $stmt->execute([
                 'enroll_id' => $enrollId,
                 'period_id' => $periodId,
                 'status' => $status
             ]);
-            
+
             $attId = $existingRecord['att_id'];
         } else {
             // Insert new record
@@ -291,16 +291,16 @@ function saveAttendance() {
                 "INSERT INTO attendance (enroll_id, period_id, status) 
                  VALUES (:enroll_id, :period_id, :status)"
             );
-            
+
             $stmt->execute([
                 'enroll_id' => $enrollId,
                 'period_id' => $periodId,
                 'status' => $status
             ]);
-            
+
             $attId = $pdo->lastInsertId();
         }
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Attendance saved successfully',
@@ -324,55 +324,55 @@ function bulkAttendance() {
     // Validate inputs
     $periodId = filter_input(INPUT_POST, 'period_id', FILTER_VALIDATE_INT);
     $attendanceData = isset($_POST['attendance_data']) ? json_decode($_POST['attendance_data'], true) : null;
-    
+
     if (!$periodId || !is_array($attendanceData)) {
         http_response_code(400); // Bad Request
         echo json_encode(['error' => 'Invalid input data']);
         return;
     }
-    
+
     // Verify teacher has access to this period
     if (!teacherHasAccessToPeriod($periodId)) {
         http_response_code(403); // Forbidden
         echo json_encode(['error' => 'You do not have access to this period']);
         return;
     }
-    
+
     try {
         $pdo = getDBConnection();
         $pdo->beginTransaction();
-        
+
         $saved = 0;
         $errors = [];
-        
+
         foreach ($attendanceData as $data) {
             $enrollId = isset($data['enroll_id']) ? filter_var($data['enroll_id'], FILTER_VALIDATE_INT) : null;
             $status = $data['status'] ?? '';
-            
+
             if (!$enrollId || !in_array($status, ['P', 'A', 'L'])) {
                 $errors[] = "Invalid data for enrollment ID: $enrollId";
                 continue;
             }
-            
+
             // Verify teacher has access to this enrollment
             if (!teacherHasAccessToEnrollment($enrollId)) {
                 $errors[] = "Access denied for enrollment ID: $enrollId";
                 continue;
             }
-            
+
             // Check if attendance record already exists
             $stmt = $pdo->prepare(
                 "SELECT att_id FROM attendance 
                  WHERE enroll_id = :enroll_id AND period_id = :period_id"
             );
-            
+
             $stmt->execute([
                 'enroll_id' => $enrollId,
                 'period_id' => $periodId
             ]);
-            
+
             $existingRecord = $stmt->fetch();
-            
+
             if ($existingRecord) {
                 // Update existing record
                 $stmt = $pdo->prepare(
@@ -380,7 +380,7 @@ function bulkAttendance() {
                      SET status = :status
                      WHERE enroll_id = :enroll_id AND period_id = :period_id"
                 );
-                
+
                 $stmt->execute([
                     'enroll_id' => $enrollId,
                     'period_id' => $periodId,
@@ -392,17 +392,17 @@ function bulkAttendance() {
                     "INSERT INTO attendance (enroll_id, period_id, status) 
                      VALUES (:enroll_id, :period_id, :status)"
                 );
-                
+
                 $stmt->execute([
                     'enroll_id' => $enrollId,
                     'period_id' => $periodId,
                     'status' => $status
                 ]);
             }
-            
+
             $saved++;
         }
-        
+
         if (!empty($errors)) {
             $pdo->rollBack();
             http_response_code(400); // Bad Request
@@ -422,7 +422,7 @@ function bulkAttendance() {
     } catch (PDOException $e) {
         // Rollback on error
         $pdo->rollBack();
-        
+
         http_response_code(500); // Internal Server Error
         echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
     }
@@ -436,16 +436,16 @@ function justifyAbsence() {
     $attId = filter_input(INPUT_POST, 'att_id', FILTER_VALIDATE_INT);
     $justification = trim($_POST['justification'] ?? '');
     $approved = isset($_POST['approved']) ? filter_var($_POST['approved'], FILTER_VALIDATE_BOOLEAN) : null;
-    
+
     if (!$attId || empty($justification)) {
         http_response_code(400); // Bad Request
         echo json_encode(['error' => 'Invalid input data']);
         return;
     }
-    
+
     try {
         $pdo = getDBConnection();
-        
+
         // Check if the attendance record exists and if the user has access
         $stmt = $pdo->prepare(
             "SELECT a.att_id, a.status, a.justification, e.enroll_id, p.period_id, c.class_id, c.teacher_id
@@ -455,59 +455,59 @@ function justifyAbsence() {
              JOIN classes c ON p.class_id = c.class_id
              WHERE a.att_id = :att_id"
         );
-        
+
         $stmt->execute(['att_id' => $attId]);
         $record = $stmt->fetch();
-        
+
         if (!$record) {
             http_response_code(404); // Not Found
             echo json_encode(['error' => 'Attendance record not found']);
             return;
         }
-        
+
         // Check if the current user is a teacher who can approve justifications
         $isTeacher = hasRole(ROLE_TEACHER);
         $isTeacherOfClass = $isTeacher && teacherHasAccessToClass($record['class_id']);
-        
+
         // Check if the current user is a student who can submit justifications
         $isStudent = hasRole(ROLE_STUDENT);
         $isStudentOfEnrollment = $isStudent && studentOwnsEnrollment($record['enroll_id']);
-        
+
         // Only allow teachers to approve justifications
         if ($approved !== null && (!$isTeacher || !$isTeacherOfClass)) {
             http_response_code(403); // Forbidden
             echo json_encode(['error' => 'Only teachers can approve justifications']);
             return;
         }
-        
+
         // Only allow students to submit justifications or teachers to modify them
         if (!$isStudentOfEnrollment && !$isTeacherOfClass) {
             http_response_code(403); // Forbidden
             echo json_encode(['error' => 'You do not have permission to modify this justification']);
             return;
         }
-        
+
         // Update the justification
         $updateFields = ['justification = :justification'];
         $params = [
             'att_id' => $attId,
             'justification' => $justification
         ];
-        
+
         // If approval status is provided (by a teacher)
         if ($approved !== null && $isTeacherOfClass) {
             $updateFields[] = 'approved = :approved';
             $params['approved'] = $approved ? 1 : 0;
         }
-        
+
         $stmt = $pdo->prepare(
             "UPDATE attendance 
              SET " . implode(', ', $updateFields) . "
              WHERE att_id = :att_id"
         );
-        
+
         $stmt->execute($params);
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Justification ' . ($approved !== null ? ($approved ? 'approved' : 'rejected') : 'saved') . ' successfully',
@@ -530,16 +530,16 @@ function getStudentAttendance() {
     // Validate inputs
     $studentId = filter_input(INPUT_POST, 'student_id', FILTER_VALIDATE_INT);
     $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
-    
+
     if (!$studentId) {
         http_response_code(400); // Bad Request
         echo json_encode(['error' => 'Invalid student ID']);
         return;
     }
-    
+
     try {
         $pdo = getDBConnection();
-        
+
         // Build the query based on whether a specific class is requested
         $query = "
             SELECT p.period_date, p.period_label, c.title as class_title, 
@@ -552,28 +552,28 @@ function getStudentAttendance() {
             JOIN students st ON e.student_id = st.student_id
             WHERE st.student_id = :student_id
         ";
-        
+
         $params = ['student_id' => $studentId];
-        
+
         if ($classId) {
             $query .= " AND c.class_id = :class_id";
             $params['class_id'] = $classId;
         }
-        
+
         $query .= " ORDER BY p.period_date DESC, p.period_label ASC";
-        
+
         $stmt = $pdo->prepare($query);
         $stmt->execute($params);
-        
+
         $attendance = $stmt->fetchAll();
-        
+
         // Calculate summary statistics
         $total = count($attendance);
         $present = 0;
         $absent = 0;
         $late = 0;
         $justified = 0;
-        
+
         foreach ($attendance as $record) {
             switch ($record['status']) {
                 case 'P':
@@ -590,7 +590,7 @@ function getStudentAttendance() {
                     break;
             }
         }
-        
+
         $summary = [
             'total' => $total,
             'present' => $present,
@@ -599,7 +599,7 @@ function getStudentAttendance() {
             'justified' => $justified,
             'attendance_rate' => $total > 0 ? round((($present + $late) / $total) * 100, 1) : 0
         ];
-        
+
         echo json_encode([
             'success' => true,
             'attendance' => $attendance,
@@ -617,24 +617,24 @@ function getStudentAttendance() {
 function teacherHasAccessToClass($classId) {
     try {
         $pdo = getDBConnection();
-        
+
         // Admins have access to all classes
         if (hasRole(ROLE_ADMIN)) {
             return true;
         }
-        
+
         $stmt = $pdo->prepare(
             "SELECT c.class_id
              FROM classes c
              JOIN teachers t ON c.teacher_id = t.teacher_id
              WHERE t.user_id = :user_id AND c.class_id = :class_id"
         );
-        
+
         $stmt->execute([
             'user_id' => getUserId(),
             'class_id' => $classId
         ]);
-        
+
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
         return false;
@@ -647,12 +647,12 @@ function teacherHasAccessToClass($classId) {
 function teacherHasAccessToPeriod($periodId) {
     try {
         $pdo = getDBConnection();
-        
+
         // Admins have access to all periods
         if (hasRole(ROLE_ADMIN)) {
             return true;
         }
-        
+
         $stmt = $pdo->prepare(
             "SELECT p.period_id
              FROM periods p
@@ -660,12 +660,12 @@ function teacherHasAccessToPeriod($periodId) {
              JOIN teachers t ON c.teacher_id = t.teacher_id
              WHERE t.user_id = :user_id AND p.period_id = :period_id"
         );
-        
+
         $stmt->execute([
             'user_id' => getUserId(),
             'period_id' => $periodId
         ]);
-        
+
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
         return false;
@@ -678,12 +678,12 @@ function teacherHasAccessToPeriod($periodId) {
 function teacherHasAccessToEnrollment($enrollId) {
     try {
         $pdo = getDBConnection();
-        
+
         // Admins have access to all enrollments
         if (hasRole(ROLE_ADMIN)) {
             return true;
         }
-        
+
         $stmt = $pdo->prepare(
             "SELECT e.enroll_id
              FROM enrollments e
@@ -691,12 +691,12 @@ function teacherHasAccessToEnrollment($enrollId) {
              JOIN teachers t ON c.teacher_id = t.teacher_id
              WHERE t.user_id = :user_id AND e.enroll_id = :enroll_id"
         );
-        
+
         $stmt->execute([
             'user_id' => getUserId(),
             'enroll_id' => $enrollId
         ]);
-        
+
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
         return false;
@@ -709,19 +709,19 @@ function teacherHasAccessToEnrollment($enrollId) {
 function studentOwnsEnrollment($enrollId) {
     try {
         $pdo = getDBConnection();
-        
+
         $stmt = $pdo->prepare(
             "SELECT e.enroll_id
              FROM enrollments e
              JOIN students s ON e.student_id = s.student_id
              WHERE s.user_id = :user_id AND e.enroll_id = :enroll_id"
         );
-        
+
         $stmt->execute([
             'user_id' => getUserId(),
             'enroll_id' => $enrollId
         ]);
-        
+
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
         return false;

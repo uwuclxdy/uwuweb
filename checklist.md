@@ -12,7 +12,7 @@
 - [x] Show attendance summary widgets on dashboard.
 - [x] Student absence justification upload (`student/justification.php`).
 - [x] Teacher justification approval path.
-- [ ] Admin user CRUD (`admin/users.php`, reset password).
+- [x] Admin user CRUD (`admin/users.php`, reset password).
 - [ ] Admin settings CRUD (`admin/settings.php`).
 - [ ] Responsive styling tweaks.
 - [ ] CSRF tokens on all forms.
