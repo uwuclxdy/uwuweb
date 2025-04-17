@@ -1,6 +1,6 @@
-# uwuweb Task Checklist (auto‑updated by AI)
+# uwuweb Task Checklist (auto‑updated by AI)
 
-- [ ] Import `db/uwuweb.sql` and confirm PDO connection (`includes/db.php`).
+- [x] Import `db/uwuweb.sql` and confirm PDO connection (`includes/db.php`).
 - [ ] Build `dashboard.php` role switcher:
   - [ ] Detect role via `$_SESSION['role_id']`.
   - [ ] Load matching widgets/nav links.
