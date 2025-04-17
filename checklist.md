@@ -14,7 +14,7 @@
 - [x] Teacher justification approval path.
 - [x] Admin user CRUD (`admin/users.php`, reset password).
 - [x] Admin settings CRUD (`admin/settings.php`).
-- [ ] Responsive styling tweaks.
+- [x] Responsive styling tweaks.
 - [ ] CSRF tokens on all forms.
 - [ ] Input sanitization helpers in `includes/functions.php`.
 - [ ] Seed demo data script (`db/seed_demo.sql`).

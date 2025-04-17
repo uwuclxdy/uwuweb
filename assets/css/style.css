@@ -196,6 +196,63 @@ body {
 }
 
 /* Responsive styles */
+/* Mobile menu toggle */
+.mobile-menu-toggle {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--text-light);
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+/* Responsive tables */
+.responsive-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.responsive-table th, 
+.responsive-table td {
+    padding: 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.responsive-table th {
+    background-color: var(--background-dark);
+    font-weight: 600;
+}
+
+/* Form elements */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-control {
+    display: block;
+    width: 100%;
+    padding: 0.5rem;
+    font-size: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: white;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+/* Enhanced breakpoints */
+@media screen and (max-width: 1024px) {
+    .widget-grid {
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    }
+}
+
 @media screen and (max-width: 768px) {
     .dashboard {
         flex-direction: column;
@@ -207,6 +264,114 @@ body {
     
     .widget-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .mobile-menu-toggle {
+        display: block;
+    }
+    
+    .main-nav {
+        display: none;
+    }
+    
+    .main-nav.active {
+        display: block;
+    }
+    
+    .user-info {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .attendance-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .period-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+
+@media screen and (max-width: 576px) {
+    .main-header .container {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .responsive-table {
+        display: block;
+        overflow-x: auto;
+    }
+    
+    .widget-footer {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .widget-link {
+        display: block;
+        margin: 0.5rem 0;
+    }
+    
+    .attendance-summary {
+        flex-direction: column;
+    }
+    
+    .breakdown-item {
+        width: 45%;
+    }
+    
+    .btn {
+        display: block;
+        width: 100%;
+        text-align: center;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Table responsiveness enhancements */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+}
+
+/* Card-based layout for small screens */
+@media screen and (max-width: 576px) {
+    .card-view .responsive-table,
+    .card-view .responsive-table tbody,
+    .card-view .responsive-table tr {
+        display: block;
+        width: 100%;
+    }
+    
+    .card-view .responsive-table thead {
+        display: none;
+    }
+    
+    .card-view .responsive-table td {
+        display: flex;
+        padding: 0.5rem;
+        text-align: right;
+        border-bottom: none;
+    }
+    
+    .card-view .responsive-table td:last-child {
+        border-bottom: 1px solid var(--border-color);
+        margin-bottom: 1rem;
+    }
+    
+    .card-view .responsive-table td::before {
+        content: attr(data-label);
+        float: left;
+        font-weight: bold;
+        color: var(--text-dark);
+        margin-right: 1rem;
     }
 }
 
@@ -500,6 +665,51 @@ body {
 
 .absence-list li:last-child {
     border-bottom: none;
+}
+
+/* Print styles for reports */
+@media print {
+    .main-header,
+    .sidebar,
+    .main-footer,
+    .no-print {
+        display: none;
+    }
+    
+    body {
+        background: white;
+        font-size: 12pt;
+    }
+    
+    .container {
+        width: 100%;
+        max-width: none;
+        padding: 0;
+    }
+    
+    .dashboard {
+        display: block;
+    }
+    
+    .dashboard-content {
+        padding: 0;
+    }
+    
+    .widget {
+        box-shadow: none;
+        page-break-inside: avoid;
+    }
+    
+    .widget-title {
+        background: none;
+        color: var(--text-dark);
+        border-bottom: 1pt solid #000;
+    }
+    
+    a {
+        text-decoration: none;
+        color: var(--text-dark);
+    }
 }
 
 @keyframes progress {

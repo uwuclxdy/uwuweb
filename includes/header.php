@@ -29,6 +29,9 @@ $roleName = $currentRole ? getRoleName($currentRole) : 'Guest';
         <div class="container">
             <h1 class="site-title">uwuweb</h1>
             <?php if (isLoggedIn()): ?>
+                <button class="mobile-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
+                    ≡
+                </button>
                 <div class="user-info">
                     <span class="username"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></span>
                     <span class="role-badge"><?= htmlspecialchars($roleName) ?></span>
