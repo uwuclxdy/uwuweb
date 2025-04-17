@@ -1,9 +1,9 @@
 # uwuweb Task Checklist (auto‑updated by AI)
 
 - [x] Import `db/uwuweb.sql` and confirm PDO connection (`includes/db.php`).
-- [ ] Build `dashboard.php` role switcher:
-  - [ ] Detect role via `$_SESSION['role_id']`.
-  - [ ] Load matching widgets/nav links.
+- [x] Build `dashboard.php` role switcher:
+  - [x] Detect role via `$_SESSION['role_id']`.
+  - [x] Load matching widgets/nav links.
 - [ ] Teacher grade book – Skeleton HTML (`teacher/gradebook.php`).
 - [ ] Teacher grade book – JS inline edit (calls `/api/grades.php`).
 - [ ] API: `api/grades.php` save logic with validation.
