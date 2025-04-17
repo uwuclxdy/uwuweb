@@ -1,10 +1,13 @@
 <?php
 /**
- * uwuweb - Grade Management System
  * Database Connection Handler
  * 
  * Establishes and provides a PDO connection to the uwuweb database
  * Used by all data access operations throughout the application
+ * 
+ * Functions:
+ * - getDBConnection() - Creates and returns a PDO database connection
+ * - testDBConnection() - Tests database connectivity and returns status
  */
 
 // Database configuration

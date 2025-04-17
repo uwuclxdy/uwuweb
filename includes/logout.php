@@ -1,9 +1,11 @@
 <?php
 /**
- * uwuweb - Grade Management System
  * Logout Handler
  * 
  * Terminates user session and redirects to login page
+ * 
+ * Functions:
+ * - None (procedural script)
  */
 
 // Start session if not already started

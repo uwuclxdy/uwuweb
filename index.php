@@ -1,9 +1,11 @@
 <?php
 /**
- * uwuweb - Grade Management System
  * Login Page
  * 
  * Handles user authentication and redirects to the dashboard
+ * 
+ * Functions:
+ * - None (main script file)
  */
 
 require_once 'includes/auth.php';

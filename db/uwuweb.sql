@@ -1,3 +1,7 @@
+# noinspection SpellCheckingInspectionForFile
+
+# noinspection SpellCheckingInspectionForFile
+
 -- uwuweb Database Schema
 -- Creation script for the school grade management system
 
@@ -135,12 +139,12 @@ CREATE TABLE attendance (
 );
 
 -- Insert default roles
-INSERT INTO roles (name) VALUES 
+INSERT INTO roles (name) VALUES
     ('Administrator'),
     ('Teacher'),
     ('Student'),
     ('Parent');
 
 -- Create default admin user (username: admin, password: Admin123!)
-INSERT INTO users (username, pass_hash, role_id) 
+INSERT INTO users (username, pass_hash, role_id)
 VALUES ('admin', '$2y$10$uG5Pb7.QDoU7tusgia4MveBSSu9jPVBj0HV.i7I/92alff0bwUJ.2', 1);

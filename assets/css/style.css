@@ -1,9 +1,12 @@
 /**
- * uwuweb - Grade Management System
- * Main stylesheet
+ * Main Stylesheet
+ * 
+ * Provides the styling for the entire application
+ * Uses CSS variables for theme consistency
+ * Mobile-first responsive design with Flexbox/Grid layout
  */
 
-:root {
+ :root {
     --primary-color: #4a6fa5;
     --secondary-color: #6d8cc7;
     --accent-color: #ff9800;
@@ -15,6 +18,10 @@
     --background-dark: #e0e0e0;
     --border-color: #ddd;
     --shadow-color: rgba(0, 0, 0, 0.1);
+    --present-color: #4caf50;
+    --absent-color: #f44336;
+    --late-color: #ff9800;
+    --justified-color: #2196f3;
 }
 
 /* Base styles */
@@ -200,5 +207,303 @@ body {
     
     .widget-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+/* Attendance widget specific styles */
+.attendance-summary {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.attendance-rate {
+    text-align: center;
+    margin: 0.5rem;
+}
+
+.rate-circle {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto;
+}
+
+.rate-circle.mini {
+    width: 60px;
+    height: 60px;
+}
+
+.circular-chart {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.circle-bg {
+    fill: none;
+    stroke: var(--background-dark);
+    stroke-width: 3;
+}
+
+.circle {
+    fill: none;
+    stroke-width: 3;
+    stroke: var(--primary-color);
+    stroke-linecap: round;
+    animation: progress 1s ease-out forwards;
+}
+
+.percentage {
+    fill: var(--text-dark);
+    font-size: 0.35em;
+    font-weight: bold;
+    text-anchor: middle;
+}
+
+.rate-circle.mini .percentage {
+    font-size: 0.3em;
+}
+
+.rate-label, .mini-label {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.mini-label {
+    font-size: 0.75rem;
+}
+
+.attendance-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.breakdown-item {
+    text-align: center;
+    padding: 0.5rem;
+    min-width: 60px;
+}
+
+.count {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.label {
+    font-size: 0.8rem;
+}
+
+.present-color, .present-status {
+    color: var(--present-color);
+}
+
+.absent-color, .absent-status {
+    color: var(--absent-color);
+}
+
+.late-color, .late-status {
+    color: var(--late-color);
+}
+
+.justified-color {
+    color: var(--justified-color);
+}
+
+.recent-periods, .recent-attendance {
+    margin-top: 1rem;
+    border-top: 1px solid var(--border-color);
+    padding-top: 1rem;
+}
+
+.mini-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+
+.mini-table th, .mini-table td {
+    padding: 0.4rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.mini-table th {
+    font-weight: 600;
+    background-color: var(--background-dark);
+}
+
+.today-attendance .period-item {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+}
+
+.period-item.needs-attention {
+    border-left: 4px solid var(--accent-color);
+}
+
+.period-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.period-header h4 {
+    margin: 0;
+}
+
+.attention-badge {
+    background-color: var(--accent-color);
+    color: var(--text-light);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+}
+
+.complete-badge {
+    background-color: var(--success-color);
+    color: var(--text-light);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.7rem;
+}
+
+.completion-bar-container {
+    margin-bottom: 0.5rem;
+}
+
+.completion-label {
+    font-size: 0.8rem;
+    margin-bottom: 0.2rem;
+}
+
+.completion-bar {
+    height: 8px;
+    background-color: var(--background-dark);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.completion-fill {
+    height: 100%;
+    background-color: var(--primary-color);
+}
+
+.attendance-stats {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+}
+
+.period-actions {
+    margin-top: 0.75rem;
+    text-align: right;
+}
+
+.btn-small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.widget-footer {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--border-color);
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+.widget-link {
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    text-decoration: none;
+    margin-right: 1rem;
+}
+
+.widget-link:hover {
+    text-decoration: underline;
+}
+
+.empty-message {
+    text-align: center;
+    color: #777;
+    padding: 1rem;
+}
+
+.justification-list .justification-item {
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.75rem 0;
+}
+
+.justification-item .student-name {
+    font-weight: bold;
+}
+
+.justification-item .absence-details {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.justification-item .justification-text {
+    margin: 0.5rem 0;
+    font-style: italic;
+}
+
+.child-attendance {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.child-attendance:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.mini-stats {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.mini-stat {
+    text-align: center;
+    font-size: 0.75rem;
+}
+
+.mini-value {
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.absence-list {
+    list-style: none;
+    padding: 0;
+    font-size: 0.85rem;
+}
+
+.absence-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem 0;
+    border-bottom: 1px dotted var(--border-color);
+}
+
+.absence-list li:last-child {
+    border-bottom: none;
+}
+
+@keyframes progress {
+    0% {
+        stroke-dasharray: 0 100;
     }
 }

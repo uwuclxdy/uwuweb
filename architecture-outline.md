@@ -124,20 +124,6 @@ uwuweb/
 - `/api/` endpoints isolated for easy REST upgrade.
 - Add `mail()` helpers when notifications become in‑scope.
 
----
-
-## 10 Reusable AI Prompt Template
-
-> **System**: You are ChatGPT, helping extend “uwuweb,” a PHP/MySQL grade‑management app. The current architecture is described below.
->
-> **Context**:
->
-> ```
-> {insert this document’s key sections: roles, DB schema, directory layout}
-> ```
->
-> **Task**: {clear, atomic request, e.g., “Add CSV export for class averages.”}
->
-> **Constraints**: Only use HTML, CSS, JS, PHP, MySQL. Keep code minimal and match existing style.
->
-> **Output**: Provide updated file list and code snippets to insert.
+## 10 Comments
+- NO inline comments.
+- Every source file starts with the header block that: explains in short what that script does, lists all functions that are in that file and their short descriptions

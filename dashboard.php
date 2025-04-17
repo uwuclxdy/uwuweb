@@ -1,10 +1,12 @@
 <?php
 /**
- * uwuweb - Grade Management System
  * Dashboard
  * 
  * Dynamic dashboard that displays different content based on user role
  * Central hub for all user activities with role-specific widgets and navigation
+ * 
+ * Functions:
+ * - None (main script file)
  */
 
 require_once 'includes/auth.php';

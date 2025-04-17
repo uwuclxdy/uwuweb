@@ -138,13 +138,16 @@
 }</component>
   <component name="PhpWorkspaceProjectConfiguration" interpreter_name="PHP" />
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="QODANA_PROBLEMS_VIEW_TAB" />
+    <option name="selectedTabId" value="ProjectErrors" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 3
 }</component>
   <component name="ProjectId" id="2vj8l8QemlEGlKE7SiIX5zsud2v" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -168,6 +171,7 @@
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;com.github.copilot.settings.ApplicationConfigurable&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
@@ -180,8 +184,8 @@
   <component name="QodanaHighlightedReportService">
     <option name="localRunNotPublishedPersistedInfo">
       <LocalReportPersistedInfo>
-        <option name="path" value="/tmp/qodana_output8/qodana.sarif.json" />
-        <option name="reportGuid" value="a6a3a355-9db8-4889-a145-a0ae7fab5fef" />
+        <option name="path" value="/tmp/qodana_output301/qodana.sarif.json" />
+        <option name="reportGuid" value="eaa07236-2a14-455d-987d-5600c54cbe33" />
         <option name="reportName" value="uwuweb/qodana/2025-04-17" />
       </LocalReportPersistedInfo>
     </option>
@@ -191,14 +195,17 @@
   </component>
   <component name="QodanaReportsService">
     <option name="descriptions">
-      <ReportDescription localRun="true" path="/tmp/qodana_output5/qodana.sarif.json" reportGuid="6ae05030-08f0-4925-b3ba-4c0ba14ad7cf" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output10/qodana.sarif.json" reportGuid="c6f67c8d-2405-411a-bf01-672685a61025" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output1/qodana.sarif.json" reportGuid="fe88777a-10c5-44eb-b419-f527d57a93f8" reportId="uwuweb/qodana/2025-04-17" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output301/qodana.sarif.json" reportGuid="eaa07236-2a14-455d-987d-5600c54cbe33" reportId="uwuweb/qodana/2025-04-17" />
       <ReportDescription localRun="true" path="/tmp/qodana_output/qodana.sarif.json" reportGuid="40772e34-74cf-4836-89ee-50de76a4d65b" reportId="uwuweb/qodana/2025-04-17" />
       <ReportDescription localRun="true" path="/tmp/qodana_output3/qodana.sarif.json" reportGuid="39a02b95-3b3c-45ed-8b67-3c80c7c8d4ee" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output4/qodana.sarif.json" reportGuid="cce3a2c2-3f0b-4376-9c50-cb9f3b2c1f32" reportId="uwuweb/qodana/2025-04-17" />
       <ReportDescription localRun="true" path="/tmp/qodana_output8/qodana.sarif.json" reportGuid="a6a3a355-9db8-4889-a145-a0ae7fab5fef" reportId="uwuweb/qodana/2025-04-17" />
       <ReportDescription localRun="true" path="/tmp/qodana_output2/qodana.sarif.json" reportGuid="e1f11170-65c2-4181-b9aa-dfc0878655a3" reportId="uwuweb/qodana/2025-04-17" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output365/qodana.sarif.json" reportGuid="6d9f75bf-2690-4381-8850-ca5758f5d40b" reportId="uwuweb/qodana/2025-04-17" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output5/qodana.sarif.json" reportGuid="6ae05030-08f0-4925-b3ba-4c0ba14ad7cf" reportId="uwuweb/qodana/2025-04-17" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output10/qodana.sarif.json" reportGuid="c6f67c8d-2405-411a-bf01-672685a61025" reportId="uwuweb/qodana/2025-04-17" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output11/qodana.sarif.json" reportGuid="af49eeac-3105-4f6f-ad7b-8436a28fe27e" reportId="uwuweb/qodana/2025-04-17" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output1/qodana.sarif.json" reportGuid="fe88777a-10c5-44eb-b419-f527d57a93f8" reportId="uwuweb/qodana/2025-04-17" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output4/qodana.sarif.json" reportGuid="cce3a2c2-3f0b-4376-9c50-cb9f3b2c1f32" reportId="uwuweb/qodana/2025-04-17" />
       <ReportDescription localRun="true" path="/tmp/qodana_output9/qodana.sarif.json" reportGuid="fc771fe5-28cb-487f-a824-2c040d84c2d6" reportId="uwuweb/qodana/2025-04-17" />
       <ReportDescription localRun="true" path="/tmp/qodana_output6/qodana.sarif.json" reportGuid="b890abd9-7ff1-46ed-b896-d1f1c12aac5f" reportId="uwuweb/qodana/2025-04-17" />
     </option>
@@ -222,7 +229,7 @@
       <workItem from="1744647272194" duration="791000" />
       <workItem from="1744724761661" duration="2273000" />
       <workItem from="1744733103590" duration="8470000" />
-      <workItem from="1744895629228" duration="6501000" />
+      <workItem from="1744895629228" duration="9123000" />
     </task>
     <servers />
   </component>

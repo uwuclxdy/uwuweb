@@ -1,10 +1,19 @@
 <?php
 /**
- * uwuweb - Grade Management System
  * Authentication and Session Management
  * 
  * Provides functions for user authentication, session management,
  * and role-based access control
+ * 
+ * Functions:
+ * - isLoggedIn() - Checks if a user is currently logged in
+ * - getUserRole() - Returns the current user's role ID
+ * - getUserId() - Returns the current user's ID
+ * - hasRole($roleId) - Checks if current user has a specific role
+ * - requireRole($roleId) - Restricts page access to users with specific role
+ * - generateCSRFToken() - Creates a CSRF token for form security
+ * - verifyCSRFToken($token) - Validates submitted CSRF token
+ * - getRoleName($roleId) - Returns the name of a role by ID
  */
 
 // Start session if not already started

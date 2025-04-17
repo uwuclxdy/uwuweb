@@ -1,10 +1,12 @@
 <?php
 /**
- * uwuweb - Grade Management System
  * Common Header File
  * 
  * Contains common HTML header structure included in all pages
  * Includes necessary CSS and initializes session
+ * 
+ * Functions:
+ * - None (template file)
  */
 
 // Ensure auth.php is included for session management

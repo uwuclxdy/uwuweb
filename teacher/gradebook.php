@@ -1,10 +1,16 @@
 <?php
 /**
- * uwuweb - Grade Management System
  * Teacher Grade Book
  * 
  * Provides interface for teachers to manage student grades
  * Supports viewing, adding, and editing grades for assigned classes
+ * 
+ * Functions:
+ * - getTeacherId($userId) - Retrieves teacher ID from user ID
+ * - getTeacherClasses($teacherId) - Gets classes taught by a teacher
+ * - getClassStudents($classId) - Gets students enrolled in a class
+ * - getGradeItems($classId) - Gets grade items for a class
+ * - getClassGrades($classId) - Gets all grades for a class
  */
 
 require_once '../includes/auth.php';
@@ -113,6 +119,9 @@ if ($selectedClassId) {
     }
 }
 
+// Generate CSRF token for AJAX requests
+$csrfToken = generateCSRFToken();
+
 // Include page header
 include '../includes/header.php';
 ?>
@@ -148,6 +157,9 @@ include '../includes/header.php';
                 <div class="action-buttons">
                     <button id="btn-add-grade-item" class="btn">Add Grade Item</button>
                 </div>
+                
+                <!-- Status message container for AJAX feedback -->
+                <div id="status-message" class="status-message" style="display: none;"></div>
                 
                 <?php if (empty($gradeItems)): ?>
                     <div class="alert alert-info">
@@ -199,6 +211,8 @@ include '../includes/header.php';
                                             $itemId = $item['item_id'];
                                             $gradeValue = isset($grades[$enrollId][$itemId]) ? 
                                                 $grades[$enrollId][$itemId]['points'] : '';
+                                            $comment = isset($grades[$enrollId][$itemId]) ? 
+                                                $grades[$enrollId][$itemId]['comment'] : '';
                                             
                                             // Calculate weighted average if grade exists
                                             if ($gradeValue !== '') {
@@ -214,14 +228,15 @@ include '../includes/header.php';
                                         ?>
                                             <td class="grade-cell" 
                                                 data-enroll-id="<?= htmlspecialchars($enrollId) ?>" 
-                                                data-item-id="<?= htmlspecialchars($itemId) ?>">
+                                                data-item-id="<?= htmlspecialchars($itemId) ?>"
+                                                data-comment="<?= htmlspecialchars($comment) ?>">
                                                 <span class="grade-display">
                                                     <?= htmlspecialchars($gradeValue) ?>
                                                 </span>
                                             </td>
                                         <?php endforeach; ?>
                                         
-                                        <td class="average">
+                                        <td class="average" id="average-<?= htmlspecialchars($enrollId) ?>">
                                             <?php
                                             if ($totalWeight > 0) {
                                                 $average = ($weightedPoints / $totalWeight) * 100;
@@ -244,6 +259,8 @@ include '../includes/header.php';
                 <div class="modal-content">
                     <h3>Add Grade Item</h3>
                     <form id="grade-item-form">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                        <input type="hidden" name="action" value="add_grade_item">
                         <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
                         
                         <div class="form-group">
@@ -274,6 +291,8 @@ include '../includes/header.php';
                 <div class="modal-content">
                     <h3>Edit Grade</h3>
                     <form id="grade-edit-form">
+                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                        <input type="hidden" name="action" value="save_grade">
                         <input type="hidden" name="enroll_id" id="edit_enroll_id">
                         <input type="hidden" name="item_id" id="edit_item_id">
                         
@@ -325,6 +344,19 @@ include '../includes/header.php';
         document.getElementById('grade-edit-form-container').style.display = 'none';
     }
     
+    // Function to show status message
+    function showStatusMessage(message, type = 'success') {
+        const statusElement = document.getElementById('status-message');
+        statusElement.textContent = message;
+        statusElement.className = `status-message ${type}`;
+        statusElement.style.display = 'block';
+        
+        // Hide message after 5 seconds
+        setTimeout(() => {
+            statusElement.style.display = 'none';
+        }, 5000);
+    }
+    
     // Event listener for the Add Grade Item button
     document.getElementById('btn-add-grade-item')?.addEventListener('click', showGradeItemForm);
     
@@ -344,21 +376,128 @@ include '../includes/header.php';
     document.getElementById('grade-item-form')?.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        // In a future implementation, this will use fetch() to call the API
-        // For now, it just reloads the page as a placeholder
-        alert('This functionality will be implemented in a future task');
-        closeGradeItemForm();
+        // Get form data and convert to FormData object for AJAX submission
+        const formData = new FormData(this);
+        
+        // Send AJAX request to API
+        fetch('/api/grades.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showStatusMessage(data.message, 'success');
+                // Reload the page to show the new grade item
+                // In a more advanced implementation, we could dynamically add the item to the table
+                window.location.reload();
+            } else {
+                showStatusMessage(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            showStatusMessage('An error occurred: ' + error, 'error');
+        })
+        .finally(() => {
+            closeGradeItemForm();
+        });
     });
     
     // Grade Edit Form submission
     document.getElementById('grade-edit-form')?.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        // In a future implementation, this will use fetch() to call the API
-        // For now, it just reloads the page as a placeholder
-        alert('This functionality will be implemented in a future task');
-        closeGradeEditForm();
+        // Get form data
+        const formData = new FormData(this);
+        const enrollId = formData.get('enroll_id');
+        const itemId = formData.get('item_id');
+        const points = formData.get('points');
+        const comment = formData.get('comment');
+        
+        // Send AJAX request to save the grade
+        fetch('/api/grades.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update the cell with the new grade value
+                const cell = document.querySelector(`.grade-cell[data-enroll-id="${enrollId}"][data-item-id="${itemId}"]`);
+                if (cell) {
+                    cell.querySelector('.grade-display').textContent = points;
+                    cell.dataset.comment = comment;
+                    
+                    // Add highlighting effect to show the cell was updated
+                    cell.classList.add('updated');
+                    setTimeout(() => {
+                        cell.classList.remove('updated');
+                    }, 2000);
+                    
+                    // Recalculate student average (would typically be done server-side)
+                    calculateStudentAverage(enrollId);
+                }
+                
+                showStatusMessage(data.message, 'success');
+            } else {
+                showStatusMessage(data.error, 'error');
+            }
+        })
+        .catch(error => {
+            showStatusMessage('An error occurred: ' + error, 'error');
+        })
+        .finally(() => {
+            closeGradeEditForm();
+        });
     });
+    
+    // Function to calculate student average (simplified version)
+    // In a real implementation, this would be calculated server-side
+    function calculateStudentAverage(enrollId) {
+        // Get all grade cells for this student
+        const cells = document.querySelectorAll(`.grade-cell[data-enroll-id="${enrollId}"]`);
+        let totalWeightedPoints = 0;
+        let totalWeight = 0;
+        
+        cells.forEach(cell => {
+            const itemId = cell.dataset.itemId;
+            const gradeValue = cell.querySelector('.grade-display').textContent.trim();
+            
+            if (gradeValue !== '') {
+                // Find the item's weight and max points from the table header
+                const headerIndex = [...cell.parentNode.children].indexOf(cell);
+                const weightElement = document.querySelector(`.weight-row th:nth-child(${headerIndex})`);
+                const maxPointsElement = document.querySelector(`.grade-item:nth-child(${headerIndex}) .max-points`);
+                
+                if (weightElement && maxPointsElement) {
+                    const weightText = weightElement.textContent;
+                    const maxPointsText = maxPointsElement.textContent;
+                    
+                    const weight = parseFloat(weightText.replace('Weight: ', ''));
+                    const maxPoints = parseFloat(maxPointsText.replace('(', '').replace(')', ''));
+                    
+                    if (!isNaN(weight) && !isNaN(maxPoints) && maxPoints > 0) {
+                        const points = parseFloat(gradeValue);
+                        totalWeightedPoints += (points / maxPoints) * weight;
+                        totalWeight += weight;
+                    }
+                }
+            }
+        });
+        
+        // Update the average cell
+        const averageCell = document.getElementById(`average-${enrollId}`);
+        if (averageCell && totalWeight > 0) {
+            const average = (totalWeightedPoints / totalWeight) * 100;
+            averageCell.textContent = average.toFixed(1) + '%';
+            
+            // Highlight the average cell
+            averageCell.classList.add('updated');
+            setTimeout(() => {
+                averageCell.classList.remove('updated');
+            }, 2000);
+        }
+    }
 </script>
 
 <style>
@@ -435,10 +574,41 @@ include '../includes/header.php';
     
     .gradebook-table .grade-cell {
         cursor: pointer;
+        transition: background-color 0.3s;
     }
     
     .gradebook-table .grade-cell:hover {
         background-color: #f0f0f0;
+    }
+    
+    .gradebook-table .grade-cell.updated,
+    .gradebook-table .average.updated {
+        animation: highlightBackground 2s;
+    }
+    
+    @keyframes highlightBackground {
+        0% { background-color: #ffeb3b; }
+        100% { background-color: transparent; }
+    }
+    
+    /* Status message styles */
+    .status-message {
+        padding: 0.75rem;
+        margin: 1rem 0;
+        border-radius: 4px;
+        display: none;
+    }
+    
+    .status-message.success {
+        background-color: #dff0d8;
+        color: #3c763d;
+        border: 1px solid #d6e9c6;
+    }
+    
+    .status-message.error {
+        background-color: #f2dede;
+        color: #a94442;
+        border: 1px solid #ebccd1;
     }
     
     /* Modal styles */
