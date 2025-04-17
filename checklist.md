@@ -10,7 +10,7 @@
 - [x] Teacher attendance – Form page (`teacher/attendance.php`).
 - [x] API: `api/attendance.php` CRUD.
 - [x] Show attendance summary widgets on dashboard.
-- [ ] Student absence justification upload (`student/justification.php`).
+- [x] Student absence justification upload (`student/justification.php`).
 - [ ] Teacher justification approval path.
 - [ ] Admin user CRUD (`admin/users.php`, reset password).
 - [ ] Admin settings CRUD (`admin/settings.php`).
