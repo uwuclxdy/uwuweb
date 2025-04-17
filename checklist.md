@@ -13,7 +13,7 @@
 - [x] Student absence justification upload (`student/justification.php`).
 - [x] Teacher justification approval path.
 - [x] Admin user CRUD (`admin/users.php`, reset password).
-- [ ] Admin settings CRUD (`admin/settings.php`).
+- [x] Admin settings CRUD (`admin/settings.php`).
 - [ ] Responsive styling tweaks.
 - [ ] CSRF tokens on all forms.
 - [ ] Input sanitization helpers in `includes/functions.php`.
