@@ -20,11 +20,10 @@
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-
     // Set session timeout to 30 minutes as per security notes
     ini_set('session.gc_maxlifetime', 1800);
     session_set_cookie_params(1800);
+    session_start();
 
     // Regenerate session ID periodically for security
     if (!isset($_SESSION['last_regeneration'])) {

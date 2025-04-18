@@ -5,26 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin/settings.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/settings.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/grades.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/assets/css/style.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/js/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/assets/js/main.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/includes/auth.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/auth.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/includes/db.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/db.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/includes/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/functions.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/header.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parent/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parent/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/grades.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/student/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/student/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/grades.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/student/justification.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/justification.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/teacher/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/teacher/gradebook.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/gradebook.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/teacher/justifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/justifications.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -101,8 +85,8 @@
   <component name="QodanaHighlightedReportService">
     <option name="localRunNotPublishedPersistedInfo">
       <LocalReportPersistedInfo>
-        <option name="path" value="/tmp/qodana_output2/qodana.sarif.json" />
-        <option name="reportGuid" value="3286cf1a-8084-4455-8a5f-0da00f8adc5e" />
+        <option name="path" value="/tmp/qodana_output8/qodana.sarif.json" />
+        <option name="reportGuid" value="59fa689e-ec5e-4d71-aca1-c6b1b006dd00" />
         <option name="reportName" value="uwuweb/qodana/2025-04-18" />
       </LocalReportPersistedInfo>
     </option>
@@ -117,6 +101,8 @@
     <option name="descriptions">
       <ReportDescription localRun="true" path="/tmp/qodana_output2/qodana.sarif.json" reportGuid="3286cf1a-8084-4455-8a5f-0da00f8adc5e" reportId="uwuweb/qodana/2025-04-18" />
       <ReportDescription localRun="true" path="/tmp/qodana_output1/qodana.sarif.json" reportGuid="a33c0c48-ac2d-46ee-99e2-7e81fae1d378" reportId="uwuweb/qodana/2025-04-18" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output10/qodana.sarif.json" reportGuid="5e7e4de4-267f-4fb9-831c-3a8acb5792d7" reportId="uwuweb/qodana/2025-04-18" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output8/qodana.sarif.json" reportGuid="59fa689e-ec5e-4d71-aca1-c6b1b006dd00" reportId="uwuweb/qodana/2025-04-18" />
       <ReportDescription localRun="true" path="/tmp/qodana_output/qodana.sarif.json" reportGuid="3d25dae9-c8e7-4362-be27-55c62663b899" reportId="uwuweb/qodana/2025-04-18" />
     </option>
   </component>
@@ -143,7 +129,7 @@
       <workItem from="1744969821161" duration="1702000" />
       <workItem from="1744972034027" duration="2955000" />
       <workItem from="1744982495586" duration="8592000" />
-      <workItem from="1744992228792" duration="2812000" />
+      <workItem from="1744992228792" duration="5481000" />
     </task>
     <servers />
   </component>
