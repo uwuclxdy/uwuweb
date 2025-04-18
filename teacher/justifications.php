@@ -289,6 +289,7 @@ include '../includes/header.php';
     
     <div class="filters">
         <form method="get" action="" class="filter-form">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
             <div class="filter-group">
                 <label for="class-filter">Filter by Class:</label>
                 <select id="class-filter" name="class_id" onchange="this.form.submit()">

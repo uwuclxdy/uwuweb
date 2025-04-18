@@ -271,6 +271,7 @@ include '../includes/header.php';
         <!-- Class selector -->
         <div class="class-selector">
             <form method="get" action="">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                 <label for="class_id">Select Class:</label>
                 <select name="class_id" id="class_id" onchange="this.form.submit()">
                     <?php foreach ($classes as $class): ?>
@@ -308,6 +309,7 @@ include '../includes/header.php';
                         
                         <?php if (!empty($periods)): ?>
                             <form method="get" action="" class="period-selector">
+                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                                 <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
                                 <label for="period_id">Select Period:</label>
                                 <select name="period_id" id="period_id" onchange="this.form.submit()">

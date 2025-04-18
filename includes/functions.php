@@ -1210,3 +1210,223 @@ function getStudentId() {
 function getUserId() {
     return $_SESSION['user_id'] ?? null;
 }
+
+/**
+ * Input Sanitization Helper Functions
+ */
+
+/**
+ * Sanitize string input to prevent XSS attacks
+ * @param string $input The input to sanitize
+ * @return string Sanitized string
+ */
+function sanitizeString($input) {
+    // First, trim whitespace
+    $input = trim($input);
+    
+    // Convert special characters to HTML entities
+    return htmlspecialchars($input, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+}
+
+/**
+ * Sanitize HTML content allowing only safe tags and attributes
+ * @param string $input The HTML input to sanitize
+ * @return string Sanitized HTML
+ */
+function sanitizeHTML($input) {
+    // First, trim whitespace
+    $input = trim($input);
+    
+    // Define allowed HTML tags and attributes
+    $allowedTags = [
+        'p', 'br', 'b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li'
+    ];
+    
+    // Create tag string for strip_tags
+    $allowedTagsString = '<' . implode('><', $allowedTags) . '>';
+    
+    // Strip all but allowed tags
+    $stripped = strip_tags($input, $allowedTagsString);
+    
+    // Return the sanitized HTML
+    return $stripped;
+}
+
+/**
+ * Sanitize integer input
+ * @param mixed $input The input to sanitize
+ * @return int Sanitized integer (0 if invalid)
+ */
+function sanitizeInt($input) {
+    return filter_var($input, FILTER_SANITIZE_NUMBER_INT);
+}
+
+/**
+ * Validate and sanitize integer input with optional min/max bounds
+ * @param mixed $input The input to validate
+ * @param int|null $min Minimum allowed value (null for no minimum)
+ * @param int|null $max Maximum allowed value (null for no maximum)
+ * @return int|false Sanitized integer or false if invalid
+ */
+function validateInt($input, $min = null, $max = null) {
+    $options = [];
+    
+    if ($min !== null) {
+        $options['min_range'] = $min;
+    }
+    
+    if ($max !== null) {
+        $options['max_range'] = $max;
+    }
+    
+    $filteredValue = filter_var($input, FILTER_VALIDATE_INT, [
+        'options' => $options
+    ]);
+    
+    return $filteredValue;
+}
+
+/**
+ * Validate email address
+ * @param string $email The email to validate
+ * @return string|false Sanitized email or false if invalid
+ */
+function validateEmail($email) {
+    return filter_var($email, FILTER_VALIDATE_EMAIL);
+}
+
+/**
+ * Sanitize and validate date in Y-m-d format
+ * @param string $date The date string to validate
+ * @return string|false Validated date or false if invalid
+ */
+function validateDate($date) {
+    // First, sanitize the string
+    $date = sanitizeString($date);
+    
+    // Try to convert to DateTime object to validate
+    $dateTime = DateTime::createFromFormat('Y-m-d', $date);
+    
+    // Check if it's a valid date
+    if ($dateTime && $dateTime->format('Y-m-d') === $date) {
+        return $date;
+    }
+    
+    return false;
+}
+
+/**
+ * Sanitize and validate database table/column name
+ * Prevents SQL injection in dynamic table/column names
+ * @param string $name The table or column name to sanitize
+ * @return string|false Sanitized name or false if invalid
+ */
+function sanitizeDbIdentifier($name) {
+    // Only allow alphanumeric and underscore
+    if (preg_match('/^[a-zA-Z0-9_]+$/', $name)) {
+        return $name;
+    }
+    
+    return false;
+}
+
+/**
+ * Sanitize an array of inputs
+ * @param array $inputArray The array to sanitize
+ * @param string $type The type of sanitization ('string', 'int', 'html')
+ * @return array Sanitized array
+ */
+function sanitizeArray($inputArray, $type = 'string') {
+    if (!is_array($inputArray)) {
+        return [];
+    }
+    
+    $sanitized = [];
+    
+    foreach ($inputArray as $key => $value) {
+        // Sanitize the key (always as string)
+        $sanitizedKey = sanitizeString($key);
+        
+        if (is_array($value)) {
+            // Recursively sanitize nested arrays
+            $sanitized[$sanitizedKey] = sanitizeArray($value, $type);
+        } else {
+            // Sanitize based on type
+            switch ($type) {
+                case 'int':
+                    $sanitized[$sanitizedKey] = sanitizeInt($value);
+                    break;
+                case 'html':
+                    $sanitized[$sanitizedKey] = sanitizeHTML($value);
+                    break;
+                case 'string':
+                default:
+                    $sanitized[$sanitizedKey] = sanitizeString($value);
+                    break;
+            }
+        }
+    }
+    
+    return $sanitized;
+}
+
+/**
+ * Sanitize uploaded filename to prevent path traversal attacks
+ * @param string $filename The filename to sanitize
+ * @return string Sanitized filename
+ */
+function sanitizeFilename($filename) {
+    // Remove anything that isn't alphanumeric, dot, hyphen, or underscore
+    $filename = preg_replace('/[^\w\.-]+/', '', $filename);
+    
+    // Remove leading dots to prevent hidden file issues
+    $filename = ltrim($filename, '.');
+    
+    return $filename;
+}
+
+/**
+ * Sanitize all request inputs ($_GET, $_POST)
+ * @param array $request The request array ($_GET, $_POST)
+ * @param array $exceptions Keys to exclude from sanitization
+ * @return array Sanitized request data
+ */
+function sanitizeRequest($request, $exceptions = []) {
+    $sanitized = [];
+    
+    foreach ($request as $key => $value) {
+        // Skip sanitization for excepted keys
+        if (in_array($key, $exceptions)) {
+            $sanitized[$key] = $value;
+            continue;
+        }
+        
+        if (is_array($value)) {
+            $sanitized[$key] = sanitizeArray($value);
+        } else {
+            $sanitized[$key] = sanitizeString($value);
+        }
+    }
+    
+    return $sanitized;
+}
+
+/**
+ * Generate a safe redirect URL (prevent open redirect vulnerabilities)
+ * @param string $url The URL to validate
+ * @param string $default Default URL to use if provided URL is invalid
+ * @return string Safe URL to redirect to
+ */
+function sanitizeRedirectUrl($url, $default = 'index.php') {
+    // Remove any whitespace
+    $url = trim($url);
+    
+    // Check if URL is relative (starts with / or doesn't have protocol)
+    if (empty($url) || strpos($url, '://') !== false || strpos($url, '//') === 0) {
+        // URL is empty or absolute, use default
+        return $default;
+    }
+    
+    // URL is relative, it's safe to use
+    return $url;
+}

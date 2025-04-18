@@ -137,6 +137,7 @@ include '../includes/header.php';
         <!-- Class selector -->
         <div class="class-selector">
             <form method="get" action="">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                 <label for="class_id">Select Class:</label>
                 <select name="class_id" id="class_id" onchange="this.form.submit()">
                     <?php foreach ($classes as $class): ?>
