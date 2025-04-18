@@ -133,6 +133,9 @@ CREATE TABLE attendance (
     period_id INT NOT NULL,
     status ENUM('P', 'A', 'L') NOT NULL, -- Present, Absent, Late
     justification TEXT,
+    approved BOOLEAN DEFAULT NULL,
+    reject_reason TEXT,
+    justification_file VARCHAR(255) DEFAULT NULL,
     FOREIGN KEY (enroll_id) REFERENCES enrollments(enroll_id),
     FOREIGN KEY (period_id) REFERENCES periods(period_id),
     UNIQUE KEY (enroll_id, period_id)

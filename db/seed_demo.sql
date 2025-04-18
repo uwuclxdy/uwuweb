@@ -277,7 +277,7 @@ JOIN grade_items gi ON c.class_id = gi.class_id
 WHERE c.title = 'Mathematics 4.B - First Semester' AND gi.name = 'Homework 1';
 
 -- Add attendance records for 4.A Math periods
-INSERT INTO attendance (enroll_id, period_id, status, justification)
+INSERT INTO attendance (enroll_id, period_id, status, justification, approved)
 SELECT 
     e.enroll_id,
     p.period_id,
@@ -290,6 +290,11 @@ SELECT
         WHEN RAND() > 0.8 THEN 'Medical appointment'
         WHEN RAND() > 0.6 THEN 'Family emergency'
         ELSE NULL
+    END,
+    CASE
+        WHEN RAND() > 0.7 THEN 1  -- 70% approved
+        WHEN RAND() > 0.4 THEN 0  -- 30% rejected
+        ELSE NULL                 -- rest pending
     END
 FROM enrollments e
 JOIN periods p ON e.class_id = p.class_id
@@ -297,7 +302,7 @@ JOIN classes c ON e.class_id = c.class_id
 WHERE c.title = 'Mathematics 4.A - First Semester';
 
 -- Add attendance records for 4.B Math periods
-INSERT INTO attendance (enroll_id, period_id, status, justification)
+INSERT INTO attendance (enroll_id, period_id, status, justification, approved)
 SELECT 
     e.enroll_id,
     p.period_id,
@@ -310,6 +315,11 @@ SELECT
         WHEN RAND() > 0.8 THEN 'Medical appointment'
         WHEN RAND() > 0.6 THEN 'Family emergency'
         ELSE NULL
+    END,
+    CASE
+        WHEN RAND() > 0.7 THEN 1  -- 70% approved
+        WHEN RAND() > 0.4 THEN 0  -- 30% rejected
+        ELSE NULL                 -- rest pending
     END
 FROM enrollments e
 JOIN periods p ON e.class_id = p.class_id
@@ -320,3 +330,12 @@ WHERE c.title = 'Mathematics 4.B - First Semester';
 UPDATE attendance 
 SET justification = NULL
 WHERE status = 'A' AND RAND() > 0.5;
+
+-- Add reject reasons for rejected justifications
+UPDATE attendance
+SET reject_reason = CASE 
+    WHEN RAND() > 0.6 THEN 'Insufficient documentation provided'
+    WHEN RAND() > 0.3 THEN 'Reason not acceptable per school policy'
+    ELSE 'Late submission'
+    END
+WHERE approved = 0;
