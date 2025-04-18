@@ -10,6 +10,8 @@
  * - sendJsonResponse($data, $success = true) - Sends a JSON response
  */
 
+use JetBrains\PhpStorm\NoReturn;
+
 require_once '../includes/auth.php';
 require_once '../includes/db.php';
 require_once '../includes/functions.php';
@@ -85,7 +87,8 @@ function validateTeacherAccess($teacherId, $justification) {
 }
 
 // Send JSON response
-function sendJsonResponse($data, $success = true) {
+#[NoReturn] function sendJsonResponse($data, $success = true): void
+{
     header('Content-Type: application/json');
     echo json_encode([
         'success' => $success,

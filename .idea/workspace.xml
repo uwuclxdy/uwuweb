@@ -5,14 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/sqldialects.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/sqldialects.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin/users.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/users.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/grades.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/student/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/grades.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/teacher/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/teacher/justifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/justifications.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/justifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/justifications.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/includes/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/functions.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/student/justification.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/justification.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/teacher/gradebook.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/gradebook.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -86,8 +85,22 @@
     ]
   }
 }</component>
+  <component name="QodanaHighlightedReportService">
+    <option name="localRunNotPublishedPersistedInfo">
+      <LocalReportPersistedInfo>
+        <option name="path" value="/tmp/qodana_output2/qodana.sarif.json" />
+        <option name="reportGuid" value="2b0e3b13-7f45-416b-a959-6c77eff02e48" />
+        <option name="reportName" value="uwuweb-new/qodana/2025-04-18" />
+      </LocalReportPersistedInfo>
+    </option>
+  </component>
+  <component name="QodanaIsSelectedPersistenceService">
+    <option name="selectedOrLoading" value="true" />
+  </component>
   <component name="QodanaReportsService">
     <option name="descriptions">
+      <ReportDescription localRun="true" path="/tmp/qodana_output2/qodana.sarif.json" reportGuid="2b0e3b13-7f45-416b-a959-6c77eff02e48" reportId="uwuweb-new/qodana/2025-04-18" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output1/qodana.sarif.json" reportGuid="dcacf700-12c5-4417-945e-99a1c25a644e" reportId="uwuweb-new/qodana/2025-04-18" />
       <ReportDescription localRun="true" path="/tmp/qodana_output/qodana.sarif.json" reportGuid="e49275f0-87cc-453f-b77a-36c69641cdd9" reportId="uwuweb-new/qodana/2025-04-18" />
     </option>
   </component>
@@ -112,7 +125,7 @@
       <workItem from="1744733103590" duration="8470000" />
       <workItem from="1744895629228" duration="9987000" />
       <workItem from="1744969821161" duration="1702000" />
-      <workItem from="1744972034027" duration="628000" />
+      <workItem from="1744972034027" duration="2955000" />
     </task>
     <servers />
   </component>

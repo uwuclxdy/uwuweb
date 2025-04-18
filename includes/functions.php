@@ -1690,16 +1690,63 @@ function getStudentId() {
 }
 
 /**
- * Get the current user's ID from session
- * @return int|null User ID or null if not logged in
+ * Get the parent ID for the currently logged-in user
+ * @return int|null Parent ID or null if not found
  */
-function getUserId() {
-    return $_SESSION['user_id'] ?? null;
+function getParentId() {
+    $userId = getUserId();
+    
+    if (!$userId) {
+        return null;
+    }
+    
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->prepare("SELECT parent_id FROM parents WHERE user_id = :user_id");
+        $stmt->execute(['user_id' => $userId]);
+        $result = $stmt->fetch();
+        
+        return $result ? $result['parent_id'] : null;
+    } catch (PDOException $e) {
+        return null;
+    }
 }
 
 /**
- * Input Sanitization Helper Functions
+ * Get the current active term
+ * @return array|null Term information or null if no current term is found
  */
+function getCurrentTerm() {
+    try {
+        $pdo = getDBConnection();
+        $stmt = $pdo->query(
+            "SELECT 
+                term_id, 
+                name, 
+                start_date, 
+                end_date
+             FROM terms
+             WHERE start_date <= CURRENT_DATE AND end_date >= CURRENT_DATE
+             ORDER BY start_date DESC
+             LIMIT 1"
+        );
+        
+        $result = $stmt->fetch();
+        return $result ?: null;
+    } catch (PDOException $e) {
+        return null;
+    }
+}
+
+/**
+ * Get user's role from session
+ * @return int|null User's role ID or null if not found
+ */
+function getUserRole() {
+    return $_SESSION['role_id'] ?? null;
+}
+
+// Input Sanitization Helper Functions
 
 /**
  * Sanitize string input to prevent XSS attacks

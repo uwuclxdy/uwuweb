@@ -331,7 +331,6 @@ include '../includes/header.php';
     
     // Function to show the grade edit form
     function showGradeEditForm(enrollId, itemId, points, comment) {
-        const form = document.getElementById('grade-edit-form');
         document.getElementById('edit_enroll_id').value = enrollId;
         document.getElementById('edit_item_id').value = itemId;
         document.getElementById('points').value = points || '';
@@ -461,7 +460,6 @@ include '../includes/header.php';
         let totalWeight = 0;
         
         cells.forEach(cell => {
-            const itemId = cell.dataset.itemId;
             const gradeValue = cell.querySelector('.grade-display').textContent.trim();
             
             if (gradeValue !== '') {

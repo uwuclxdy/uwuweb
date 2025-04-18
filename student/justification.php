@@ -411,7 +411,6 @@ include '../includes/header.php';
         
         buttons.forEach(button => {
             button.addEventListener('click', function() {
-                const absenceId = this.getAttribute('data-absence-id');
                 const date = this.getAttribute('data-date');
                 const className = this.getAttribute('data-class');
                 const justification = this.getAttribute('data-justification');
