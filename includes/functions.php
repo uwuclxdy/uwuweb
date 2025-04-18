@@ -26,7 +26,11 @@
  * - getUserId() - Gets current user ID from session
  * - getSchoolStatisticsWidget() - Renders school statistics widget
  * - getRecentActivityWidget() - Renders recent activity widget
- * - getClassAveragesWidget() - Renders class averages widget
+ * - getClassAveragesWidget() - Renders class averages widget based on user role
+ * - renderAdminClassAveragesWidget() - Renders school-wide class averages for admin
+ * - renderTeacherClassAveragesWidget() - Renders class averages for teacher's classes
+ * - renderStudentClassAveragesWidget() - Renders class averages for student's classes
+ * - renderParentChildClassAveragesWidget() - Renders class averages for parent's children
  * - getTeacherClassesWidget() - Renders teacher classes widget
  * - getAttendanceSummaryWidget() - Renders attendance summary widget
  * - getPendingJustificationsWidget() - Renders pending justifications widget
@@ -60,7 +64,21 @@ function getRecentActivityWidget() {
 }
 
 function getClassAveragesWidget() {
-    return '<div class="widget-content">Class averages will be shown here.</div>';
+    $role = getUserRole();
+    
+    // Call the appropriate rendering function based on user role
+    switch ($role) {
+        case ROLE_ADMIN:
+            return renderAdminClassAveragesWidget();
+        case ROLE_TEACHER:
+            return renderTeacherClassAveragesWidget();
+        case ROLE_STUDENT:
+            return renderStudentClassAveragesWidget();
+        case ROLE_PARENT:
+            return renderParentChildClassAveragesWidget();
+        default:
+            return '<div class="widget-content">Class averages not available for your role.</div>';
+    }
 }
 
 function getTeacherClassesWidget() {
@@ -235,6 +253,10 @@ function getWidgetsByRole($role) {
                 'title' => 'School Attendance Overview',
                 'function' => 'renderAdminAttendanceWidget'
             ];
+            $widgets['class_averages'] = [
+                'title' => 'School-wide Class Averages',
+                'function' => 'renderAdminClassAveragesWidget'
+            ];
             break;
             
         case ROLE_TEACHER:
@@ -249,6 +271,10 @@ function getWidgetsByRole($role) {
             $widgets['pending_justifications'] = [
                 'title' => 'Pending Justifications',
                 'function' => 'renderTeacherPendingJustificationsWidget'
+            ];
+            $widgets['class_averages'] = [
+                'title' => 'My Class Averages',
+                'function' => 'renderTeacherClassAveragesWidget'
             ];
             break;
             
@@ -265,6 +291,10 @@ function getWidgetsByRole($role) {
                 'title' => 'Upcoming Classes',
                 'function' => 'renderUpcomingClassesWidget'
             ];
+            $widgets['class_averages'] = [
+                'title' => 'My Class Averages',
+                'function' => 'renderStudentClassAveragesWidget'
+            ];
             break;
             
         case ROLE_PARENT:
@@ -275,6 +305,10 @@ function getWidgetsByRole($role) {
             $widgets['child_attendance'] = [
                 'title' => 'Child\'s Attendance Summary',
                 'function' => 'renderParentAttendanceWidget'
+            ];
+            $widgets['child_class_averages'] = [
+                'title' => 'Child\'s Class Averages',
+                'function' => 'renderParentChildClassAveragesWidget'
             ];
             break;
     }
