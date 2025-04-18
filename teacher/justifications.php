@@ -468,8 +468,8 @@ include '../includes/header.php';
                                   date.getFullYear();
             
             // Create status text and class
-            let statusText = '';
-            let statusClass = '';
+            let statusText;
+            let statusClass;
             let actionButtons = '';
             
             if (justification.approved === null) {
@@ -507,7 +507,7 @@ include '../includes/header.php';
                         </form>
                     </div>
                 `;
-            } else if (justification.approved == 1) {
+            } else if (justification.approved === 1) {
                 statusText = 'Approved';
                 statusClass = 'approved';
             } else {
@@ -532,7 +532,7 @@ include '../includes/header.php';
             
             // Generate reject reason section if rejected
             let rejectReasonSection = '';
-            if (justification.approved == 0 && justification.reject_reason) {
+            if (justification.approved === 0 && justification.reject_reason) {
                 rejectReasonSection = `
                     <div class="reject-reason-section">
                         <h4>Reason for Rejection:</h4>

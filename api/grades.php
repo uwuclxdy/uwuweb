@@ -195,9 +195,9 @@ function deleteGradeItem() {
         return;
     }
     
+    $pdo = getDBConnection();
+    
     try {
-        $pdo = getDBConnection();
-        
         // Start transaction to ensure data integrity
         $pdo->beginTransaction();
         
@@ -218,7 +218,9 @@ function deleteGradeItem() {
         ]);
     } catch (PDOException $e) {
         // Rollback on error
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         
         http_response_code(500); // Internal Server Error
         echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);

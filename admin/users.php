@@ -580,8 +580,8 @@ function toggleRoleFields() {
     const studentFields = document.getElementById('student-fields');
     const parentFields = document.getElementById('parent-fields');
     
-    studentFields.style.display = (roleId == <?= ROLE_STUDENT ?>) ? 'block' : 'none';
-    parentFields.style.display = (roleId == <?= ROLE_PARENT ?>) ? 'block' : 'none';
+    studentFields.style.display = (roleId === <?= ROLE_STUDENT ?>) ? 'block' : 'none';
+    parentFields.style.display = (roleId === <?= ROLE_PARENT ?>) ? 'block' : 'none';
 }
 
 function showPasswordResetModal(userId, username) {

@@ -5,113 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.htaccess" beforeDir="false" afterPath="$PROJECT_DIR$/.htaccess" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/users.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/users.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/calendar.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/calendar.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/classes.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/classes.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/grades.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/messages.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/messages.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/notifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/notifications.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/reports.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/reports.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/subjects.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/subjects.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/users.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/users.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/Attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/Attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/AttendanceJustification.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/AttendanceJustification.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/CalendarEvent.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/CalendarEvent.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/Class.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/Class.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/Grade.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/Grade.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/GradeHistory.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/GradeHistory.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/Message.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/Message.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/Notification.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/Notification.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/Report.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/Report.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/Student.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/Student.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/Subject.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/Subject.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/Teacher.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/Teacher.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/classes/User.php" beforeDir="false" afterPath="$PROJECT_DIR$/classes/User.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/config.php" beforeDir="false" afterPath="$PROJECT_DIR$/config/config.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/constants.php" beforeDir="false" afterPath="$PROJECT_DIR$/config/constants.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/environment.php" beforeDir="false" afterPath="$PROJECT_DIR$/config/environment.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/server/apache-local.conf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/server/apache.conf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/server/nginx.conf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/server/php-fpm.conf" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/dashboard/admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/dashboard/admin.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/auth.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/auth.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/cache.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/cache.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/csrf.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/csrf.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/db.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/db.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/db/init.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/db/init.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/db/migration.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/db/migration.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/export.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/export.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/functions.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/image-optimization.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/image-optimization.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/init.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/init.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/middleware.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/middleware.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/pdf.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/pdf.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/performance-monitor.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/performance-monitor.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/query-optimization.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/query-optimization.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/security.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/security.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/session.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/Session.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/statistics.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/statistics.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/upload.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/upload.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/validation.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/validation.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/admin/class-subjects.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/admin/class-subjects.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/admin/classes.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/admin/classes.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/admin/subjects.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/admin/subjects.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/admin/users.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/admin/users.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/analytics/class.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/analytics/class.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/analytics/compare.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/analytics/compare.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/analytics/export.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/analytics/export.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/analytics/student.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/analytics/student.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/analytics/subject.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/analytics/subject.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/analytics/teacher.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/analytics/teacher.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/attendance/justify.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/attendance/justify.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/attendance/track.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/attendance/track.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/attendance/view.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/attendance/view.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/calendar/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/calendar/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/dashboard.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/dashboard.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/grades/entry.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/grades/entry.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/grades/modify.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/grades/modify.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/grades/view.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/grades/view.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/login.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/login.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/logout.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/logout.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/messages/compose.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/messages/compose.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/messages/group.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/messages/group.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/messages/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/messages/index.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/messages/reply.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/messages/reply.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/messages/view.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/messages/view.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/profile.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/profile.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/profile/notifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/profile/notifications.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/reports/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/reports/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/reports/class-progress.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/reports/class-progress.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/reports/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/reports/grades.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/reports/performance.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/reports/performance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pages/reset-password.php" beforeDir="false" afterPath="$PROJECT_DIR$/pages/reset-password.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/qodana.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/qodana.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/components/attendance-form.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/components/attendance-form.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/components/class-subject-selector.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/components/class-subject-selector.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/components/notification-center.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/components/notification-center.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/components/student-selector.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/components/student-selector.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/components/trend-charts.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/components/trend-charts.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/dashboard-admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/dashboard-admin.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/dashboard-student.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/dashboard-student.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/dashboard-teacher.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/dashboard-teacher.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/header.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/profile.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/profile.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/reports/report-card.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/reports/report-card.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/sidebar.php" beforeDir="false" afterPath="$PROJECT_DIR$/templates/sidebar.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/framework.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/AuthTest.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/integration/GradeTest.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/performance/PerformanceTest.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/security/SecurityTest.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/ui/CriticalPathTest.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit/AttendanceTest.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit/GradeTest.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/unit/UserTest.php" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/tools/create-demo-users.php" beforeDir="false" afterPath="$PROJECT_DIR$/tools/create-demo-users.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/student/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/grades.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/teacher/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/attendance.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/teacher/justifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/justifications.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -155,6 +56,7 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.ChatTagsLlmMigration&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.CodyAccountHistoryMigration&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.CodyAccountsIdsRefresh&quot;: &quot;true&quot;,
@@ -168,8 +70,11 @@
     &quot;RunOnceActivity.ToggleCodyToolWindowAfterMigration&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/uwuclxdy/repos/uwuweb-new&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;com.github.copilot.settings.ApplicationConfigurable&quot;,
@@ -181,34 +86,9 @@
     ]
   }
 }</component>
-  <component name="QodanaHighlightedReportService">
-    <option name="localRunNotPublishedPersistedInfo">
-      <LocalReportPersistedInfo>
-        <option name="path" value="/tmp/qodana_output684/qodana.sarif.json" />
-        <option name="reportGuid" value="f0505c59-16fc-4cb5-9dd7-d8820038fd60" />
-        <option name="reportName" value="uwuweb/qodana/2025-04-17" />
-      </LocalReportPersistedInfo>
-    </option>
-  </component>
-  <component name="QodanaIsSelectedPersistenceService">
-    <option name="selectedOrLoading" value="true" />
-  </component>
   <component name="QodanaReportsService">
     <option name="descriptions">
-      <ReportDescription localRun="true" path="/tmp/qodana_output301/qodana.sarif.json" reportGuid="eaa07236-2a14-455d-987d-5600c54cbe33" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output/qodana.sarif.json" reportGuid="40772e34-74cf-4836-89ee-50de76a4d65b" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output3/qodana.sarif.json" reportGuid="39a02b95-3b3c-45ed-8b67-3c80c7c8d4ee" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output8/qodana.sarif.json" reportGuid="a6a3a355-9db8-4889-a145-a0ae7fab5fef" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output2/qodana.sarif.json" reportGuid="e1f11170-65c2-4181-b9aa-dfc0878655a3" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output365/qodana.sarif.json" reportGuid="6d9f75bf-2690-4381-8850-ca5758f5d40b" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output5/qodana.sarif.json" reportGuid="6ae05030-08f0-4925-b3ba-4c0ba14ad7cf" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output10/qodana.sarif.json" reportGuid="c6f67c8d-2405-411a-bf01-672685a61025" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output11/qodana.sarif.json" reportGuid="af49eeac-3105-4f6f-ad7b-8436a28fe27e" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output1/qodana.sarif.json" reportGuid="fe88777a-10c5-44eb-b419-f527d57a93f8" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output684/qodana.sarif.json" reportGuid="f0505c59-16fc-4cb5-9dd7-d8820038fd60" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output4/qodana.sarif.json" reportGuid="cce3a2c2-3f0b-4376-9c50-cb9f3b2c1f32" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output9/qodana.sarif.json" reportGuid="fc771fe5-28cb-487f-a824-2c040d84c2d6" reportId="uwuweb/qodana/2025-04-17" />
-      <ReportDescription localRun="true" path="/tmp/qodana_output6/qodana.sarif.json" reportGuid="b890abd9-7ff1-46ed-b896-d1f1c12aac5f" reportId="uwuweb/qodana/2025-04-17" />
+      <ReportDescription localRun="true" path="/tmp/qodana_output/qodana.sarif.json" reportGuid="e49275f0-87cc-453f-b77a-36c69641cdd9" reportId="uwuweb-new/qodana/2025-04-18" />
     </option>
   </component>
   <component name="SharedIndexes">
@@ -231,6 +111,8 @@
       <workItem from="1744724761661" duration="2273000" />
       <workItem from="1744733103590" duration="8470000" />
       <workItem from="1744895629228" duration="9987000" />
+      <workItem from="1744969821161" duration="1702000" />
+      <workItem from="1744972034027" duration="628000" />
     </task>
     <servers />
   </component>

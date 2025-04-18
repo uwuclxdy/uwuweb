@@ -202,9 +202,9 @@ function deletePeriod() {
         return;
     }
 
+    $pdo = getDBConnection();
+    
     try {
-        $pdo = getDBConnection();
-
         // Start transaction to ensure data integrity
         $pdo->beginTransaction();
 
@@ -225,7 +225,9 @@ function deletePeriod() {
         ]);
     } catch (PDOException $e) {
         // Rollback on error
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
 
         http_response_code(500); // Internal Server Error
         echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
@@ -338,8 +340,9 @@ function bulkAttendance() {
         return;
     }
 
+    $pdo = getDBConnection();
+    
     try {
-        $pdo = getDBConnection();
         $pdo->beginTransaction();
 
         $saved = 0;
@@ -421,7 +424,9 @@ function bulkAttendance() {
         }
     } catch (PDOException $e) {
         // Rollback on error
-        $pdo->rollBack();
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
 
         http_response_code(500); // Internal Server Error
         echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
@@ -443,9 +448,9 @@ function justifyAbsence() {
         return;
     }
 
+    $pdo = getDBConnection();
+    
     try {
-        $pdo = getDBConnection();
-
         // Check if the attendance record exists and if the user has access
         $stmt = $pdo->prepare(
             "SELECT a.att_id, a.status, a.justification, e.enroll_id, p.period_id, c.class_id, c.teacher_id
