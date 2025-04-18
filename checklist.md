@@ -17,4 +17,4 @@
 - [x] Responsive styling tweaks.
 - [x] CSRF tokens on all forms.
 - [x] Input sanitization helpers in `includes/functions.php`.
-- [ ] Seed demo data script (`db/seed_demo.sql`).
+- [x] Seed demo data script (`db/seed_demo.sql`).
