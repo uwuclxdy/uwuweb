@@ -39,7 +39,7 @@ function getTeacherId($userId) {
         error_log("Database connection failed in getTeacherId()");
         return null;
     }
-    
+
     $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = :user_id");
     $stmt->execute(['user_id' => $userId]);
     $result = $stmt->fetch();
@@ -53,14 +53,14 @@ function getTeacherClasses($teacherId) {
         error_log("Database connection failed in getTeacherClasses()");
         return [];
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT c.class_id, c.title, s.name AS subject_name, t.name AS term_name
          FROM classes c
          JOIN subjects s ON c.subject_id = s.subject_id
          JOIN terms t ON c.term_id = t.term_id
          WHERE c.teacher_id = :teacher_id
-         ORDER BY t.start_date DESC, s.name ASC"
+         ORDER BY t.start_date DESC, s.name"
     );
     $stmt->execute(['teacher_id' => $teacherId]);
     return $stmt->fetchAll();
@@ -73,13 +73,13 @@ function getClassStudents($classId) {
         error_log("Database connection failed in getClassStudents()");
         return [];
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT e.enroll_id, s.student_id, s.first_name, s.last_name, s.class_code
          FROM enrollments e
          JOIN students s ON e.student_id = s.student_id
          WHERE e.class_id = :class_id
-         ORDER BY s.last_name ASC, s.first_name ASC"
+         ORDER BY s.last_name, s.first_name"
     );
     $stmt->execute(['class_id' => $classId]);
     return $stmt->fetchAll();
@@ -92,12 +92,12 @@ function getClassPeriods($classId) {
         error_log("Database connection failed in getClassPeriods()");
         return [];
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT period_id, period_date, period_label 
          FROM periods 
          WHERE class_id = :class_id
-         ORDER BY period_date DESC, period_label ASC"
+         ORDER BY period_date DESC, period_label"
     );
     $stmt->execute(['class_id' => $classId]);
     return $stmt->fetchAll();
@@ -110,7 +110,7 @@ function getPeriodAttendance($periodId) {
         error_log("Database connection failed in getPeriodAttendance()");
         return [];
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT a.att_id, a.enroll_id, a.status, a.justification
          FROM attendance a
@@ -138,7 +138,7 @@ function addPeriod($classId, $periodDate, $periodLabel) {
         error_log("Database connection failed in addPeriod()");
         throw new PDOException("Failed to connect to database");
     }
-    
+
     $stmt = $pdo->prepare(
         "INSERT INTO periods (class_id, period_date, period_label)
          VALUES (:class_id, :period_date, :period_label)"

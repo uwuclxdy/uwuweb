@@ -77,50 +77,7 @@ function getStudentAttendance($studentId, $termId = null) {
     return $stmt->fetchAll();
 }
 
-// Get attendance status label
-function getAttendanceStatusLabel($status) {
-    $labels = [
-        'P' => 'Present',
-        'A' => 'Absent',
-        'L' => 'Late'
-    ];
-
-    return $labels[$status] ?? 'Unknown';
-}
-
-// Calculate attendance statistics
-function calculateAttendanceStats($attendance) {
-    $total = count($attendance);
-    $present = 0;
-    $absent = 0;
-    $late = 0;
-    $justified = 0;
-
-    foreach ($attendance as $record) {
-        if ($record['status'] === 'P') {
-            $present++;
-        } elseif ($record['status'] === 'A') {
-            $absent++;
-            if (!empty($record['justification']) && $record['approved'] == 1) {
-                $justified++;
-            }
-        } elseif ($record['status'] === 'L') {
-            $late++;
-        }
-    }
-
-    return [
-        'total' => $total,
-        'present' => $present,
-        'absent' => $absent,
-        'late' => $late,
-        'justified' => $justified,
-        'present_percent' => $total > 0 ? round(($present / $total) * 100, 1) : 0,
-        'absent_percent' => $total > 0 ? round(($absent / $total) * 100, 1) : 0,
-        'late_percent' => $total > 0 ? round(($late / $total) * 100, 1) : 0,
-        'justified_percent' => $absent > 0 ? round(($justified / $absent) * 100, 1) : 0
-    ];
-}
+// getAttendanceStatusLabel and calculateAttendanceStats functions moved to includes/functions.php
 
 // Get available terms for filtering
 function getAvailableTerms() {

@@ -1,10 +1,10 @@
 <?php
 /**
  * Teacher Grade Book
- * 
+ *
  * Provides interface for teachers to manage student grades
  * Supports viewing, adding, and editing grades for assigned classes
- * 
+ *
  * Functions:
  * - getTeacherId($userId) - Retrieves teacher ID from user ID
  * - getTeacherClasses($teacherId) - Gets classes taught by a teacher
@@ -36,7 +36,7 @@ function getTeacherId($userId) {
     if (!$pdo) {
         return null;
     }
-    
+
     $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = :user_id");
     $stmt->execute(['user_id' => $userId]);
     $result = $stmt->fetch();
@@ -49,14 +49,14 @@ function getTeacherClasses($teacherId) {
     if (!$pdo) {
         return [];
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT c.class_id, c.title, s.name AS subject_name, t.name AS term_name
          FROM classes c
          JOIN subjects s ON c.subject_id = s.subject_id
          JOIN terms t ON c.term_id = t.term_id
          WHERE c.teacher_id = :teacher_id
-         ORDER BY t.start_date DESC, s.name ASC"
+         ORDER BY t.start_date DESC, s.name"
     );
     $stmt->execute(['teacher_id' => $teacherId]);
     return $stmt->fetchAll();
@@ -68,13 +68,13 @@ function getClassStudents($classId) {
     if (!$pdo) {
         return [];
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT e.enroll_id, s.student_id, s.first_name, s.last_name, s.class_code
          FROM enrollments e
          JOIN students s ON e.student_id = s.student_id
          WHERE e.class_id = :class_id
-         ORDER BY s.last_name ASC, s.first_name ASC"
+         ORDER BY s.last_name, s.first_name"
     );
     $stmt->execute(['class_id' => $classId]);
     return $stmt->fetchAll();
@@ -86,12 +86,12 @@ function getGradeItems($classId) {
     if (!$pdo) {
         return [];
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT item_id, name, max_points, weight
          FROM grade_items
          WHERE class_id = :class_id
-         ORDER BY name ASC"
+         ORDER BY name"
     );
     $stmt->execute(['class_id' => $classId]);
     return $stmt->fetchAll();
@@ -103,7 +103,7 @@ function getClassGrades($classId) {
     if (!$pdo) {
         return [];
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT g.grade_id, g.enroll_id, g.item_id, g.points, g.comment
          FROM grades g
@@ -111,7 +111,7 @@ function getClassGrades($classId) {
          WHERE e.class_id = :class_id"
     );
     $stmt->execute(['class_id' => $classId]);
-    
+
     // Index grades by enroll_id and item_id for easier access
     $grades = [];
     foreach ($stmt->fetchAll() as $grade) {
@@ -121,7 +121,7 @@ function getClassGrades($classId) {
             'comment' => $grade['comment']
         ];
     }
-    
+
     return $grades;
 }
 
@@ -161,7 +161,7 @@ include '../includes/header.php';
 
 <div class="gradebook-container">
     <h1>Teacher Grade Book</h1>
-    
+
     <?php if (!$hasClasses): ?>
         <div class="alert alert-error">
             You are not assigned to any classes. Please contact an administrator.
@@ -174,7 +174,7 @@ include '../includes/header.php';
                 <label for="class_id">Select Class:</label>
                 <select name="class_id" id="class_id" onchange="this.form.submit()">
                     <?php foreach ($classes as $class): ?>
-                        <option value="<?= htmlspecialchars($class['class_id']) ?>" 
+                        <option value="<?= htmlspecialchars($class['class_id']) ?>"
                                 <?= $selectedClassId == $class['class_id'] ? 'selected' : '' ?>>
                             <?= htmlspecialchars("{$class['subject_name']} - {$class['title']} ({$class['term_name']})") ?>
                         </option>
@@ -182,19 +182,19 @@ include '../includes/header.php';
                 </select>
             </form>
         </div>
-        
+
         <?php if ($selectedClassId): ?>
             <div class="class-details">
                 <h2><?= htmlspecialchars($selectedClass['subject_name']) ?></h2>
                 <h3><?= htmlspecialchars($selectedClass['title']) ?> - <?= htmlspecialchars($selectedClass['term_name']) ?></h3>
-                
+
                 <div class="action-buttons">
                     <button id="btn-add-grade-item" class="btn">Add Grade Item</button>
                 </div>
-                
+
                 <!-- Status message container for AJAX feedback -->
                 <div id="status-message" class="status-message" style="display: none;"></div>
-                
+
                 <?php if (empty($gradeItems)): ?>
                     <div class="alert alert-info">
                         No grade items have been created for this class yet. Use the "Add Grade Item" button to create one.
@@ -233,35 +233,35 @@ include '../includes/header.php';
                                             <?= htmlspecialchars("{$student['last_name']}, {$student['first_name']}") ?>
                                             <span class="class-code">[<?= htmlspecialchars($student['class_code']) ?>]</span>
                                         </td>
-                                        
-                                        <?php 
+
+                                        <?php
                                         $totalPoints = 0;
                                         $totalMaxPoints = 0;
                                         $totalWeight = 0;
                                         $weightedPoints = 0;
-                                        
-                                        foreach ($gradeItems as $item): 
+
+                                        foreach ($gradeItems as $item):
                                             $enrollId = $student['enroll_id'];
                                             $itemId = $item['item_id'];
-                                            $gradeValue = isset($grades[$enrollId][$itemId]) ? 
+                                            $gradeValue = isset($grades[$enrollId][$itemId]) ?
                                                 $grades[$enrollId][$itemId]['points'] : '';
-                                            $comment = isset($grades[$enrollId][$itemId]) ? 
+                                            $comment = isset($grades[$enrollId][$itemId]) ?
                                                 $grades[$enrollId][$itemId]['comment'] : '';
-                                            
+
                                             // Calculate weighted average if grade exists
                                             if ($gradeValue !== '') {
                                                 $points = (float)$gradeValue;
                                                 $maxPoints = (float)$item['max_points'];
                                                 $weight = (float)$item['weight'];
-                                                
+
                                                 if ($maxPoints > 0) {
                                                     $weightedPoints += ($points / $maxPoints) * $weight;
                                                     $totalWeight += $weight;
                                                 }
                                             }
                                         ?>
-                                            <td class="grade-cell" 
-                                                data-enroll-id="<?= htmlspecialchars($enrollId) ?>" 
+                                            <td class="grade-cell"
+                                                data-enroll-id="<?= htmlspecialchars($enrollId) ?>"
                                                 data-item-id="<?= htmlspecialchars($itemId) ?>"
                                                 data-comment="<?= htmlspecialchars($comment) ?>">
                                                 <span class="grade-display">
@@ -269,7 +269,7 @@ include '../includes/header.php';
                                                 </span>
                                             </td>
                                         <?php endforeach; ?>
-                                        
+
                                         <td class="average" id="average-<?= htmlspecialchars($enrollId) ?>">
                                             <?php
                                             if ($totalWeight > 0) {
@@ -287,7 +287,7 @@ include '../includes/header.php';
                     </div>
                 <?php endif; ?>
             </div>
-            
+
             <!-- Grade Item Form Template (hidden) -->
             <div id="grade-item-form-container" class="modal" style="display: none;">
                 <div class="modal-content">
@@ -296,22 +296,22 @@ include '../includes/header.php';
                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                         <input type="hidden" name="action" value="add_grade_item">
                         <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
-                        
+
                         <div class="form-group">
                             <label for="name">Name:</label>
                             <input type="text" id="name" name="name" required>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="max_points">Maximum Points:</label>
                             <input type="number" id="max_points" name="max_points" min="1" value="100" required>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="weight">Weight:</label>
                             <input type="number" id="weight" name="weight" min="0.1" step="0.1" value="1" required>
                         </div>
-                        
+
                         <div class="form-actions">
                             <button type="button" class="btn btn-cancel" onclick="closeGradeItemForm()">Cancel</button>
                             <button type="submit" class="btn">Save</button>
@@ -329,17 +329,17 @@ include '../includes/header.php';
                         <input type="hidden" name="action" value="save_grade">
                         <input type="hidden" name="enroll_id" id="edit_enroll_id">
                         <input type="hidden" name="item_id" id="edit_item_id">
-                        
+
                         <div class="form-group">
                             <label for="points">Points:</label>
                             <input type="number" id="points" name="points" step="0.1" required>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="comment">Comment:</label>
                             <textarea id="comment" name="comment" rows="3"></textarea>
                         </div>
-                        
+
                         <div class="form-actions">
                             <button type="button" class="btn btn-cancel" onclick="closeGradeEditForm()">Cancel</button>
                             <button type="submit" class="btn">Save</button>
@@ -356,43 +356,43 @@ include '../includes/header.php';
     function showGradeItemForm() {
         document.getElementById('grade-item-form-container').style.display = 'flex';
     }
-    
+
     // Function to close the grade item form
     function closeGradeItemForm() {
         document.getElementById('grade-item-form-container').style.display = 'none';
     }
-    
+
     // Function to show the grade edit form
     function showGradeEditForm(enrollId, itemId, points, comment) {
         document.getElementById('edit_enroll_id').value = enrollId;
         document.getElementById('edit_item_id').value = itemId;
         document.getElementById('points').value = points || '';
         document.getElementById('comment').value = comment || '';
-        
+
         document.getElementById('grade-edit-form-container').style.display = 'flex';
     }
-    
+
     // Function to close the grade edit form
     function closeGradeEditForm() {
         document.getElementById('grade-edit-form-container').style.display = 'none';
     }
-    
+
     // Function to show status message
     function showStatusMessage(message, type = 'success') {
         const statusElement = document.getElementById('status-message');
         statusElement.textContent = message;
         statusElement.className = `status-message ${type}`;
         statusElement.style.display = 'block';
-        
+
         // Hide message after 5 seconds
         setTimeout(() => {
             statusElement.style.display = 'none';
         }, 5000);
     }
-    
+
     // Event listener for the Add Grade Item button
     document.getElementById('btn-add-grade-item')?.addEventListener('click', showGradeItemForm);
-    
+
     // Event listeners for grade cells (for inline editing)
     document.querySelectorAll('.grade-cell').forEach(cell => {
         cell.addEventListener('click', function() {
@@ -400,18 +400,18 @@ include '../includes/header.php';
             const itemId = this.dataset.itemId;
             const points = this.querySelector('.grade-display').textContent.trim();
             const comment = this.dataset.comment || '';
-            
+
             showGradeEditForm(enrollId, itemId, points, comment);
         });
     });
-    
+
     // Grade Item Form submission
     document.getElementById('grade-item-form')?.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         // Get form data and convert to FormData object for AJAX submission
         const formData = new FormData(this);
-        
+
         // Send AJAX request to API
         fetch('/api/grades.php', {
             method: 'POST',
@@ -435,18 +435,18 @@ include '../includes/header.php';
             closeGradeItemForm();
         });
     });
-    
+
     // Grade Edit Form submission
     document.getElementById('grade-edit-form')?.addEventListener('submit', function(e) {
         e.preventDefault();
-        
+
         // Get form data
         const formData = new FormData(this);
         const enrollId = formData.get('enroll_id');
         const itemId = formData.get('item_id');
         const points = formData.get('points');
         const comment = formData.get('comment');
-        
+
         // Send AJAX request to save the grade
         fetch('/api/grades.php', {
             method: 'POST',
@@ -460,17 +460,17 @@ include '../includes/header.php';
                 if (cell) {
                     cell.querySelector('.grade-display').textContent = points;
                     cell.dataset.comment = comment;
-                    
+
                     // Add highlighting effect to show the cell was updated
                     cell.classList.add('updated');
                     setTimeout(() => {
                         cell.classList.remove('updated');
                     }, 2000);
-                    
+
                     // Recalculate student average (would typically be done server-side)
                     calculateStudentAverage(enrollId);
                 }
-                
+
                 showStatusMessage(data.message, 'success');
             } else {
                 showStatusMessage(data.error, 'error');
@@ -483,7 +483,7 @@ include '../includes/header.php';
             closeGradeEditForm();
         });
     });
-    
+
     // Function to calculate student average (simplified version)
     // In a real implementation, this would be calculated server-side
     function calculateStudentAverage(enrollId) {
@@ -491,23 +491,23 @@ include '../includes/header.php';
         const cells = document.querySelectorAll(`.grade-cell[data-enroll-id="${enrollId}"]`);
         let totalWeightedPoints = 0;
         let totalWeight = 0;
-        
+
         cells.forEach(cell => {
             const gradeValue = cell.querySelector('.grade-display').textContent.trim();
-            
+
             if (gradeValue !== '') {
                 // Find the item's weight and max points from the table header
                 const headerIndex = [...cell.parentNode.children].indexOf(cell);
                 const weightElement = document.querySelector(`.weight-row th:nth-child(${headerIndex})`);
                 const maxPointsElement = document.querySelector(`.grade-item:nth-child(${headerIndex}) .max-points`);
-                
+
                 if (weightElement && maxPointsElement) {
                     const weightText = weightElement.textContent;
                     const maxPointsText = maxPointsElement.textContent;
-                    
+
                     const weight = parseFloat(weightText.replace('Weight: ', ''));
                     const maxPoints = parseFloat(maxPointsText.replace('(', '').replace(')', ''));
-                    
+
                     if (!isNaN(weight) && !isNaN(maxPoints) && maxPoints > 0) {
                         const points = parseFloat(gradeValue);
                         totalWeightedPoints += (points / maxPoints) * weight;
@@ -516,13 +516,13 @@ include '../includes/header.php';
                 }
             }
         });
-        
+
         // Update the average cell
         const averageCell = document.getElementById(`average-${enrollId}`);
         if (averageCell && totalWeight > 0) {
             const average = (totalWeightedPoints / totalWeight) * 100;
             averageCell.textContent = average.toFixed(1) + '%';
-            
+
             // Highlight the average cell
             averageCell.classList.add('updated');
             setTimeout(() => {
@@ -537,92 +537,92 @@ include '../includes/header.php';
     .gradebook-container {
         padding: 1rem 0;
     }
-    
+
     .class-selector {
         margin: 1rem 0;
     }
-    
+
     .class-selector select {
         padding: 0.5rem;
         width: 100%;
         max-width: 400px;
     }
-    
+
     .class-details {
         margin-top: 2rem;
     }
-    
+
     .action-buttons {
         margin: 1rem 0;
     }
-    
+
     .gradebook-table-container {
         overflow-x: auto;
         margin-top: 1rem;
     }
-    
+
     .gradebook-table {
         width: 100%;
         border-collapse: collapse;
         border: 1px solid var(--border-color);
     }
-    
-    .gradebook-table th, 
+
+    .gradebook-table th,
     .gradebook-table td {
         padding: 0.75rem;
         border: 1px solid var(--border-color);
         text-align: center;
     }
-    
+
     .gradebook-table th {
         background-color: var(--primary-color);
         color: var(--text-light);
     }
-    
+
     .gradebook-table .weight-row th {
         font-size: 0.8rem;
         background-color: var(--secondary-color);
         font-weight: normal;
     }
-    
+
     .gradebook-table .student-name {
         text-align: left;
         white-space: nowrap;
     }
-    
+
     .gradebook-table .grade-item {
         min-width: 80px;
     }
-    
+
     .gradebook-table .max-points {
         font-size: 0.8rem;
         display: block;
     }
-    
+
     .gradebook-table .class-code {
         font-size: 0.8rem;
         color: #666;
     }
-    
+
     .gradebook-table .grade-cell {
         cursor: pointer;
         transition: background-color 0.3s;
     }
-    
+
     .gradebook-table .grade-cell:hover {
         background-color: #f0f0f0;
     }
-    
+
     .gradebook-table .grade-cell.updated,
     .gradebook-table .average.updated {
         animation: highlightBackground 2s;
     }
-    
+
     @keyframes highlightBackground {
         0% { background-color: #ffeb3b; }
         100% { background-color: transparent; }
     }
-    
+
     /* Status message styles */
     .status-message {
         padding: 0.75rem;
@@ -630,19 +630,19 @@ include '../includes/header.php';
         border-radius: 4px;
         display: none;
     }
-    
+
     .status-message.success {
         background-color: #dff0d8;
         color: #3c763d;
         border: 1px solid #d6e9c6;
     }
-    
+
     .status-message.error {
         background-color: #f2dede;
         color: #a94442;
         border: 1px solid #ebccd1;
     }
-    
+
     /* Modal styles */
     .modal {
         display: none;
@@ -656,7 +656,7 @@ include '../includes/header.php';
         justify-content: center;
         z-index: 10;
     }
-    
+
     .modal-content {
         background-color: white;
         padding: 2rem;
@@ -665,17 +665,17 @@ include '../includes/header.php';
         max-width: 500px;
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
     }
-    
+
     .form-group {
         margin-bottom: 1rem;
     }
-    
+
     .form-group label {
         display: block;
         margin-bottom: 0.5rem;
         font-weight: 500;
     }
-    
+
     .form-group input,
     .form-group textarea {
         width: 100%;
@@ -683,18 +683,18 @@ include '../includes/header.php';
         border: 1px solid var(--border-color);
         border-radius: 4px;
     }
-    
+
     .form-actions {
         display: flex;
         justify-content: flex-end;
         gap: 1rem;
         margin-top: 1.5rem;
     }
-    
+
     .btn-cancel {
         background-color: #ccc;
     }
-    
+
     .btn-cancel:hover {
         background-color: #999;
     }

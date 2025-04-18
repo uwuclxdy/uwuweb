@@ -149,7 +149,7 @@ function updateGradeItem() {
     }
 
     try {
-        $pdo = safeGetDBConnection('api/grades.php - updateGradeItem()', true);
+        $pdo = safeGetDBConnection('api/grades.php - updateGradeItem()');
         if (!$pdo) {
             throw new PDOException("Failed to connect to database");
         }
@@ -204,7 +204,7 @@ function deleteGradeItem() {
     }
 
     try {
-        $pdo = safeGetDBConnection('api/grades.php - deleteGradeItem()', true);
+        $pdo = safeGetDBConnection('api/grades.php - deleteGradeItem()');
         if (!$pdo) {
             throw new PDOException("Failed to connect to database");
         }
@@ -262,7 +262,7 @@ function saveGrade() {
     }
 
     try {
-        $pdo = safeGetDBConnection('api/grades.php - saveGrade()', true);
+        $pdo = safeGetDBConnection('api/grades.php - saveGrade()');
         if (!$pdo) {
             throw new PDOException("Failed to connect to database");
         }
@@ -354,7 +354,7 @@ function teacherHasAccessToClass($classId) {
         ]);
 
         return $stmt->rowCount() > 0;
-    } catch (PDOException $e) {
+    } catch (PDOException) {
         return false;
     }
 }
@@ -383,7 +383,7 @@ function teacherHasAccessToGradeItem($itemId) {
         ]);
 
         return $stmt->rowCount() > 0;
-    } catch (PDOException $e) {
+    } catch (PDOException) {
         return false;
     }
 }
@@ -412,7 +412,7 @@ function teacherHasAccessToEnrollment($enrollId) {
         ]);
 
         return $stmt->rowCount() > 0;
-    } catch (PDOException $e) {
+    } catch (PDOException) {
         return false;
     }
 }

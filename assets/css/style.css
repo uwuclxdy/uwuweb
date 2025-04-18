@@ -1,12 +1,12 @@
 /**
  * Main Stylesheet
- * 
+ *
  * Provides the styling for the entire application
  * Uses CSS variables for theme consistency
  * Mobile-first responsive design with Flexbox/Grid layout
  */
 
- :root {
+:root {
     --primary-color: #4a6fa5;
     --secondary-color: #6d8cc7;
     --accent-color: #ff9800;
@@ -213,7 +213,7 @@ body {
     margin: 1rem 0;
 }
 
-.responsive-table th, 
+.responsive-table th,
 .responsive-table td {
     padding: 0.75rem;
     text-align: left;
@@ -257,38 +257,38 @@ body {
     .dashboard {
         flex-direction: column;
     }
-    
+
     .sidebar {
         width: 100%;
     }
-    
+
     .widget-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .mobile-menu-toggle {
         display: block;
     }
-    
+
     .main-nav {
         display: none;
     }
-    
+
     .main-nav.active {
         display: block;
     }
-    
+
     .user-info {
         flex-direction: column;
         align-items: flex-start;
         gap: 0.5rem;
     }
-    
+
     .attendance-stats {
         flex-direction: column;
         gap: 0.5rem;
     }
-    
+
     .period-header {
         flex-direction: column;
         align-items: flex-start;
@@ -302,30 +302,30 @@ body {
         gap: 1rem;
         align-items: flex-start;
     }
-    
+
     .responsive-table {
         display: block;
         overflow-x: auto;
     }
-    
+
     .widget-footer {
         flex-direction: column;
         gap: 0.75rem;
     }
-    
+
     .widget-link {
         display: block;
         margin: 0.5rem 0;
     }
-    
+
     .attendance-summary {
         flex-direction: column;
     }
-    
+
     .breakdown-item {
         width: 45%;
     }
-    
+
     .btn {
         display: block;
         width: 100%;
@@ -349,23 +349,23 @@ body {
         display: block;
         width: 100%;
     }
-    
+
     .card-view .responsive-table thead {
         display: none;
     }
-    
+
     .card-view .responsive-table td {
         display: flex;
         padding: 0.5rem;
         text-align: right;
         border-bottom: none;
     }
-    
+
     .card-view .responsive-table td:last-child {
         border-bottom: 1px solid var(--border-color);
         margin-bottom: 1rem;
     }
-    
+
     .card-view .responsive-table td::before {
         content: attr(data-label);
         float: left;
@@ -675,37 +675,37 @@ body {
     .no-print {
         display: none;
     }
-    
+
     body {
         background: white;
         font-size: 12pt;
     }
-    
+
     .container {
         width: 100%;
         max-width: none;
         padding: 0;
     }
-    
+
     .dashboard {
         display: block;
     }
-    
+
     .dashboard-content {
         padding: 0;
     }
-    
+
     .widget {
         box-shadow: none;
         page-break-inside: avoid;
     }
-    
+
     .widget-title {
         background: none;
         color: var(--text-dark);
         border-bottom: 1pt solid #000;
     }
-    
+
     a {
         text-decoration: none;
         color: var(--text-dark);

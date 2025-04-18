@@ -56,7 +56,7 @@ function getStudentAbsences($studentId) {
              JOIN classes c ON p.class_id = c.class_id
              JOIN subjects s ON c.subject_id = s.subject_id
              WHERE e.student_id = :student_id AND a.status = 'A'
-             ORDER BY p.period_date DESC, p.period_label ASC"
+             ORDER BY p.period_date DESC, p.period_label"
         );
 
         $stmt->execute(['student_id' => $studentId]);
@@ -146,7 +146,7 @@ function saveJustificationFile($file, $absenceId) {
             }
 
             $stmt = $pdo->prepare(
-                "UPDATE tbl_attendance 
+                "UPDATE attendance 
                  SET justification_file = :file_path 
                  WHERE att_id = :att_id"
             );

@@ -99,7 +99,7 @@ function getClassAverage($classId) {
          JOIN enrollments e ON g.enroll_id = e.enroll_id
          WHERE gi.class_id = :class_id
          GROUP BY gi.item_id, gi.name, gi.max_points, gi.weight
-         ORDER BY gi.name ASC"
+         ORDER BY gi.name"
     );
 
     $stmt->execute(['class_id' => $classId]);
@@ -169,7 +169,7 @@ function getAvailableTerms() {
         error_log("Database connection failed in getAvailableTerms()");
         return [];
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT DISTINCT t.term_id, t.name, t.start_date, t.end_date
          FROM terms t

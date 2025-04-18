@@ -376,8 +376,8 @@ function displaySubjectsList() {
     $stmt = $pdo->query("
         SELECT subject_id, name
         FROM subjects
-        ORDER BY name ASC
-    ");
+        ORDER BY name"
+    );
 
     $subjects = $stmt->fetchAll();
 ?>
@@ -600,17 +600,17 @@ function showForm(formId) {
 function confirmDeleteTerm(termId, termName) {
     document.getElementById('delete-term-id').value = termId;
     document.getElementById('delete-term-name').textContent = termName;
-    document.getElementById('delete-term-modal').style.display = 'block';
+    document.getElementById('delete-term-modal').display = 'block';
 }
 
 function confirmDeleteSubject(subjectId, subjectName) {
     document.getElementById('delete-subject-id').value = subjectId;
     document.getElementById('delete-subject-name').textContent = subjectName;
-    document.getElementById('delete-subject-modal').style.display = 'block';
+    document.getElementById('delete-subject-modal').display = 'block';
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+    document.getElementById(modalId).display = 'none';
 }
 </script>
 

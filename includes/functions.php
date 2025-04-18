@@ -1,4 +1,4 @@
-<?php
+<?php /** @noinspection ForgottenDebugOutputInspection */
 /**
  * Common Utility Functions
  *
@@ -122,6 +122,7 @@ function renderAdminClassAveragesWidget() {
                 c.title AS class_title,
                 s.name AS subject_name,
                 t.name AS term_name,
+                t.start_date,
                 teachers.teacher_id,
                 CONCAT(tu.username) AS teacher_name,
                 COUNT(DISTINCT e.student_id) AS student_count,
@@ -139,7 +140,7 @@ function renderAdminClassAveragesWidget() {
              LEFT JOIN grade_items gi ON c.class_id = gi.class_id
              LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id
              WHERE t.end_date >= CURRENT_DATE
-             GROUP BY c.class_id, s.name, t.name
+             GROUP BY c.class_id, c.title, s.name, t.name, t.start_date, teachers.teacher_id, teacher_name
              ORDER BY avg_score DESC"
         );
 
@@ -221,25 +222,35 @@ function renderTeacherClassAveragesWidget() {
         // Get class averages only for this teacher's classes
         $stmt = $pdo->prepare(
             "SELECT 
-                c.class_id,
-                c.title AS class_title,
-                s.name AS subject_name,
-                t.name AS term_name,
-                COUNT(DISTINCT e.student_id) AS student_count,
-                AVG(
-                    CASE WHEN g.points IS NOT NULL THEN 
-                        (g.points / gi.max_points) * 100 
-                    ELSE NULL END
-                ) AS avg_score
-             FROM classes c
-             JOIN subjects s ON c.subject_id = s.subject_id
-             JOIN terms t ON c.term_id = t.term_id
-             LEFT JOIN enrollments e ON c.class_id = e.class_id
-             LEFT JOIN grade_items gi ON c.class_id = gi.class_id
-             LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id
-             WHERE c.teacher_id = :teacher_id AND t.end_date >= CURRENT_DATE
-             GROUP BY c.class_id, s.name, t.name
-             ORDER BY t.start_date DESC, s.name ASC"
+                 c.class_id,
+                 c.title AS class_title,
+                 s.name AS subject_name,
+                 t.name AS term_name,
+                 e.enroll_id,
+                 -- Student's own average
+                 AVG(
+                     CASE WHEN g.points IS NOT NULL THEN 
+                         (g.points / gi.max_points) * 100 
+                     ELSE NULL END
+                 ) AS student_avg_score,
+                 -- Class average (all students)
+                 (SELECT AVG(
+                     IF(g2.points IS NOT NULL, (g2.points / gi2.max_points) * 100, NULL)
+                 )
+                 FROM enrollments e2
+                 JOIN grades g2 ON e2.enroll_id = g2.enroll_id
+                 JOIN grade_items gi2 ON g2.item_id = gi2.item_id
+                 WHERE gi2.class_id = c.class_id
+                 ) AS class_avg_score
+              FROM enrollments e
+              JOIN classes c ON e.class_id = c.class_id
+              JOIN subjects s ON c.subject_id = s.subject_id
+              JOIN terms t ON c.term_id = t.term_id
+              LEFT JOIN grade_items gi ON c.class_id = gi.class_id
+              LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id
+              WHERE e.student_id = :student_id
+              GROUP BY c.class_id, c.title, s.name, t.name, e.enroll_id, t.start_date
+              ORDER BY t.start_date DESC, s.name"
         );
 
         $stmt->execute(['teacher_id' => $teacherId]);
@@ -337,15 +348,11 @@ function renderStudentClassAveragesWidget() {
                 e.enroll_id,
                 -- Student's own average
                 AVG(
-                    CASE WHEN g.points IS NOT NULL THEN 
-                        (g.points / gi.max_points) * 100 
-                    ELSE NULL END
+                    IF(g.points IS NOT NULL, (g.points / gi.max_points) * 100, NULL)
                 ) AS student_avg_score,
                 -- Class average (all students)
                 (SELECT AVG(
-                    CASE WHEN g2.points IS NOT NULL THEN 
-                        (g2.points / gi2.max_points) * 100 
-                    ELSE NULL END
+                    IF(g2.points IS NOT NULL, (g2.points / gi2.max_points) * 100, NULL)
                 )
                 FROM enrollments e2
                 JOIN grades g2 ON e2.enroll_id = g2.enroll_id
@@ -359,7 +366,7 @@ function renderStudentClassAveragesWidget() {
              LEFT JOIN grade_items gi ON c.class_id = gi.class_id
              LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id
              WHERE e.student_id = :student_id
-             GROUP BY c.class_id, s.name, t.name
+             GROUP BY c.class_id, c.title, s.name, t.name, e.enroll_id, t.start_date
              ORDER BY t.start_date DESC, s.name ASC"
         );
 
@@ -502,15 +509,11 @@ function renderParentChildClassAveragesWidget() {
                     e.enroll_id,
                     -- Student's own average
                     AVG(
-                        CASE WHEN g.points IS NOT NULL THEN 
-                            (g.points / gi.max_points) * 100 
-                        ELSE NULL END
+                        IF(g.points IS NOT NULL, (g.points / gi.max_points) * 100, NULL)
                     ) AS student_avg_score,
                     -- Class average (all students)
                     (SELECT AVG(
-                        CASE WHEN g2.points IS NOT NULL THEN 
-                            (g2.points / gi2.max_points) * 100 
-                        ELSE NULL END
+                        IF(g2.points IS NOT NULL, (g2.points / gi2.max_points) * 100, NULL)
                     )
                     FROM enrollments e2
                     JOIN grades g2 ON e2.enroll_id = g2.enroll_id
@@ -524,7 +527,7 @@ function renderParentChildClassAveragesWidget() {
                  LEFT JOIN grade_items gi ON c.class_id = gi.class_id
                  LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id
                  WHERE e.student_id = :student_id
-                 GROUP BY c.class_id, s.name, t.name
+                 GROUP BY c.class_id, c.title, s.name, t.name, e.enroll_id, t.start_date
                  ORDER BY t.start_date DESC, s.name ASC"
             );
 
@@ -1014,21 +1017,24 @@ function renderAdminAttendanceWidget() {
         // Get recent periods with attendance data
         $stmt = $pdo->query(
             "SELECT 
-                p.period_date, 
-                p.period_label, 
-                c.title as class_title,
-                s.name as subject_name,
-                COUNT(a.att_id) as record_count,
-                SUM(CASE WHEN a.status = 'P' THEN 1 ELSE 0 END) as present_count,
-                SUM(CASE WHEN a.status = 'A' THEN 1 ELSE 0 END) as absent_count,
-                SUM(CASE WHEN a.status = 'L' THEN 1 ELSE 0 END) as late_count
+                p.period_id,
+                p.period_label,
+                c.class_id,
+                c.title,
+                s.name AS subject_name,
+                COUNT(DISTINCT e.enroll_id) AS total_students,
+                COUNT(a.att_id) AS records_count,
+                SUM(IF(a.status = 'P', 1, 0)) AS present_count,
+                SUM(IF(a.status = 'A', 1, 0)) AS absent_count,
+                SUM(IF(a.status = 'L', 1, 0)) AS late_count
              FROM periods p
              JOIN classes c ON p.class_id = c.class_id
              JOIN subjects s ON c.subject_id = s.subject_id
-             JOIN attendance a ON p.period_id = a.period_id
-             GROUP BY p.period_id
-             ORDER BY p.period_date DESC, p.period_label ASC
-             LIMIT 5"
+             JOIN enrollments e ON c.class_id = e.class_id
+             LEFT JOIN attendance a ON p.period_id = a.period_id AND e.enroll_id = a.enroll_id
+             WHERE c.teacher_id = :teacher_id AND p.period_date = :today
+             GROUP BY p.period_id, p.period_label, c.class_id, c.title, s.name
+             ORDER BY p.period_label"
         );
 
         $stats['recent_periods'] = $stmt->fetchAll();
@@ -1197,24 +1203,21 @@ function renderTeacherAttendanceWidget() {
     try {
         $stmt = $pdo->prepare(
             "SELECT 
-                p.period_id,
-                p.period_label,
-                c.class_id,
-                c.title,
-                s.name AS subject_name,
-                COUNT(DISTINCT e.enroll_id) AS total_students,
-                COUNT(a.att_id) AS records_count,
-                SUM(CASE WHEN a.status = 'P' THEN 1 ELSE 0 END) AS present_count,
-                SUM(CASE WHEN a.status = 'A' THEN 1 ELSE 0 END) AS absent_count,
-                SUM(CASE WHEN a.status = 'L' THEN 1 ELSE 0 END) AS late_count
+                p.period_date, 
+                p.period_label, 
+                c.title as class_title,
+                s.name as subject_name,
+                COUNT(a.att_id) as record_count,
+                SUM(IF(a.status = 'P', 1, 0)) as present_count,
+                SUM(IF(a.status = 'A', 1, 0)) as absent_count,
+                SUM(IF(a.status = 'L', 1, 0)) as late_count
              FROM periods p
              JOIN classes c ON p.class_id = c.class_id
              JOIN subjects s ON c.subject_id = s.subject_id
-             JOIN enrollments e ON c.class_id = e.class_id
-             LEFT JOIN attendance a ON p.period_id = a.period_id AND e.enroll_id = a.enroll_id
-             WHERE c.teacher_id = :teacher_id AND p.period_date = :today
-             GROUP BY p.period_id
-             ORDER BY p.period_label ASC"
+             JOIN attendance a ON p.period_id = a.period_id
+             GROUP BY p.period_id, p.period_date, p.period_label, c.title, s.name
+             ORDER BY p.period_date DESC, p.period_label
+             LIMIT 5"
         );
 
         $stmt->execute(['teacher_id' => $teacherId, 'today' => $today]);
@@ -1231,7 +1234,7 @@ function renderTeacherAttendanceWidget() {
     if (!$periodsToday) {
         $html .= '<div class="empty-message">No classes scheduled for today.</div>';
         $html .= '<div class="widget-footer">';
-        $html .= '<a href="teacher/attendance.php" class="widget-link">Manage Attendance</a>';
+        $html .= '<a href="/teacher/attendance.php" class="widget-link">Manage Attendance</a>';
         $html .= '</div>';
     } else {
         $html .= '<div class="today-attendance">';
@@ -2084,4 +2087,58 @@ function sanitizeRedirectUrl($url, $default = 'index.php') {
 
     // URL is relative, it's safe to use
     return $url;
+}
+
+/**
+ * Convert attendance status code to readable label
+ *
+ * @param string $status Attendance status code ('P', 'A', 'L')
+ * @return string Readable status label
+ */
+function getAttendanceStatusLabel($status) {
+    $labels = [
+        'P' => 'Present',
+        'A' => 'Absent',
+        'L' => 'Late'
+    ];
+    return $labels[$status] ?? 'Unknown';
+}
+
+/**
+ * Calculate attendance statistics for a set of attendance records
+ *
+ * @param array $attendance Array of attendance records
+ * @return array Statistics including total, present, absent, late, justified, and percentages
+ */
+function calculateAttendanceStats($attendance) {
+    $total = count($attendance);
+    $present = 0;
+    $absent = 0;
+    $late = 0;
+    $justified = 0;
+
+    foreach ($attendance as $record) {
+        if ($record['status'] === 'P') {
+            $present++;
+        } elseif ($record['status'] === 'A') {
+            $absent++;
+            if (!empty($record['justification']) && $record['approved'] == 1) {
+                $justified++;
+            }
+        } elseif ($record['status'] === 'L') {
+            $late++;
+        }
+    }
+
+    return [
+        'total' => $total,
+        'present' => $present,
+        'absent' => $absent,
+        'late' => $late,
+        'justified' => $justified,
+        'present_percent' => $total > 0 ? round(($present / $total) * 100, 1) : 0,
+        'absent_percent' => $total > 0 ? round(($absent / $total) * 100, 1) : 0,
+        'late_percent' => $total > 0 ? round(($late / $total) * 100, 1) : 0,
+        'justified_percent' => $absent > 0 ? round(($justified / $absent) * 100, 1) : 0,
+    ];
 }

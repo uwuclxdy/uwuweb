@@ -1,10 +1,10 @@
 <?php
 /**
  * Authentication and Session Management
- * 
+ *
  * Provides functions for user authentication, session management,
  * and role-based access control
- * 
+ *
  * Functions:
  * - isLoggedIn() - Checks if a user is currently logged in
  * - getUserRole() - Returns the current user's role ID
@@ -21,11 +21,11 @@
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
-    
+
     // Set session timeout to 30 minutes as per security notes
     ini_set('session.gc_maxlifetime', 1800);
     session_set_cookie_params(1800);
-    
+
     // Regenerate session ID periodically for security
     if (!isset($_SESSION['last_regeneration'])) {
         $_SESSION['last_regeneration'] = time();
@@ -33,15 +33,15 @@ if (session_status() === PHP_SESSION_NONE) {
         session_regenerate_id(true);
         $_SESSION['last_regeneration'] = time();
     }
-    
+
     // Initialize last activity time if not set
     if (!isset($_SESSION['last_activity'])) {
         $_SESSION['last_activity'] = time();
     }
-    
+
     // Check for session timeout due to inactivity
     checkSessionTimeout();
-    
+
     // Update last activity time for the current request
     if (isLoggedIn()) {
         updateLastActivityTime();
@@ -75,12 +75,12 @@ function requireRole($roleId) {
         header('Location: /index.php');
         exit;
     }
-    
+
     if (!hasRole($roleId) && !hasRole(1)) { // Role ID 1 is assumed to be admin with all access
         header('Location: /dashboard.php?error=unauthorized');
         exit;
     }
-    
+
     return true;
 }
 
@@ -115,7 +115,7 @@ function getRoleName($roleId) {
         ROLE_STUDENT => 'Student',
         ROLE_PARENT => 'Parent/Guardian'
     ];
-    
+
     return $roleNames[$roleId] ?? 'Unknown';
 }
 
@@ -127,14 +127,14 @@ function checkSessionTimeout() {
     // Only check timeout if user is logged in
     if (isLoggedIn()) {
         $max_idle_time = 1800; // 30 minutes in seconds
-        
+
         // If last activity was set and user has been inactive longer than the max idle time
-        if (isset($_SESSION['last_activity']) && 
+        if (isset($_SESSION['last_activity']) &&
             (time() - $_SESSION['last_activity'] > $max_idle_time)) {
-            
+
             // Clear all session variables
             $_SESSION = array();
-            
+
             // Destroy the session cookie
             if (ini_get("session.use_cookies")) {
                 $params = session_get_cookie_params();
@@ -143,10 +143,10 @@ function checkSessionTimeout() {
                     $params["secure"], $params["httponly"]
                 );
             }
-            
+
             // Destroy the session
             session_destroy();
-            
+
             // Redirect to login page with timeout message
             header('Location: /index.php?error=session_timeout');
             exit;

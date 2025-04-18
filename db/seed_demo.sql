@@ -156,7 +156,7 @@ WHERE s.class_code = '4.B' AND c.title LIKE '%4.B%';
 -- Create periods (class sessions)
 -- For Math 4.A (2 periods per week for 4 weeks)
 INSERT INTO periods (class_id, period_date, period_label)
-SELECT 
+SELECT
     (SELECT class_id FROM classes WHERE title = 'Mathematics 4.A - First Semester'),
     date,
     CONCAT('Period ', (ROW_NUMBER() OVER (ORDER BY date)))
@@ -175,7 +175,7 @@ FROM (
 
 -- For Math 4.B (2 periods per week for 4 weeks)
 INSERT INTO periods (class_id, period_date, period_label)
-SELECT 
+SELECT
     (SELECT class_id FROM classes WHERE title = 'Mathematics 4.B - First Semester'),
     date,
     CONCAT('Period ', (ROW_NUMBER() OVER (ORDER BY date)))
@@ -198,7 +198,7 @@ VALUES
     ((SELECT class_id FROM classes WHERE title = 'Mathematics 4.A - First Semester'), 'Quiz 1', 20.00, 1.00),
     ((SELECT class_id FROM classes WHERE title = 'Mathematics 4.A - First Semester'), 'Homework 1', 10.00, 0.50),
     ((SELECT class_id FROM classes WHERE title = 'Mathematics 4.A - First Semester'), 'Midterm Exam', 50.00, 2.00);
-    
+
 -- Grade items for Mathematics 4.B
 INSERT INTO grade_items (class_id, name, max_points, weight)
 VALUES
@@ -209,7 +209,7 @@ VALUES
 -- Add grades for Mathematics 4.A students
 -- Quiz 1 grades
 INSERT INTO grades (enroll_id, item_id, points, comment)
-SELECT 
+SELECT
     e.enroll_id,
     gi.item_id,
     FLOOR(10 + RAND() * 10), -- Random grade between 10-20
@@ -226,7 +226,7 @@ WHERE c.title = 'Mathematics 4.A - First Semester' AND gi.name = 'Quiz 1';
 
 -- Homework 1 grades
 INSERT INTO grades (enroll_id, item_id, points, comment)
-SELECT 
+SELECT
     e.enroll_id,
     gi.item_id,
     FLOOR(5 + RAND() * 5), -- Random grade between 5-10
@@ -244,7 +244,7 @@ WHERE c.title = 'Mathematics 4.A - First Semester' AND gi.name = 'Homework 1';
 -- Add grades for Mathematics 4.B students
 -- Quiz 1 grades
 INSERT INTO grades (enroll_id, item_id, points, comment)
-SELECT 
+SELECT
     e.enroll_id,
     gi.item_id,
     FLOOR(10 + RAND() * 10), -- Random grade between 10-20
@@ -261,7 +261,7 @@ WHERE c.title = 'Mathematics 4.B - First Semester' AND gi.name = 'Quiz 1';
 
 -- Homework 1 grades
 INSERT INTO grades (enroll_id, item_id, points, comment)
-SELECT 
+SELECT
     e.enroll_id,
     gi.item_id,
     FLOOR(5 + RAND() * 5), -- Random grade between 5-10
@@ -278,10 +278,10 @@ WHERE c.title = 'Mathematics 4.B - First Semester' AND gi.name = 'Homework 1';
 
 -- Add attendance records for 4.A Math periods
 INSERT INTO attendance (enroll_id, period_id, status, justification, approved)
-SELECT 
+SELECT
     e.enroll_id,
     p.period_id,
-    CASE 
+    CASE
         WHEN RAND() > 0.9 THEN 'A' -- 10% absent
         WHEN RAND() > 0.8 THEN 'L' -- 10% late
         ELSE 'P' -- 80% present
@@ -303,10 +303,10 @@ WHERE c.title = 'Mathematics 4.A - First Semester';
 
 -- Add attendance records for 4.B Math periods
 INSERT INTO attendance (enroll_id, period_id, status, justification, approved)
-SELECT 
+SELECT
     e.enroll_id,
     p.period_id,
-    CASE 
+    CASE
         WHEN RAND() > 0.9 THEN 'A' -- 10% absent
         WHEN RAND() > 0.8 THEN 'L' -- 10% late
         ELSE 'P' -- 80% present
@@ -327,13 +327,13 @@ JOIN classes c ON e.class_id = c.class_id
 WHERE c.title = 'Mathematics 4.B - First Semester';
 
 -- Add some pending absence justifications (without text for some absences)
-UPDATE attendance 
+UPDATE attendance
 SET justification = NULL
 WHERE status = 'A' AND RAND() > 0.5;
 
 -- Add reject reasons for rejected justifications
 UPDATE attendance
-SET reject_reason = CASE 
+SET reject_reason = CASE
     WHEN RAND() > 0.6 THEN 'Insufficient documentation provided'
     WHEN RAND() > 0.3 THEN 'Reason not acceptable per school policy'
     ELSE 'Late submission'

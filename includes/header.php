@@ -1,10 +1,10 @@
 <?php
 /**
  * Common Header File
- * 
+ *
  * Contains common HTML header structure included in all pages
  * Includes necessary CSS and initializes session
- * 
+ *
  * Functions:
  * - None (template file)
  */
@@ -43,18 +43,8 @@ $roleName = $currentRole ? getRoleName($currentRole) : 'Guest';
     <main class="container">
         <?php if (isset($_GET['error'])): ?>
             <div class="alert alert-error">
-                <?php 
-                    $errorMsg = '';
-                    switch($_GET['error']) {
-                        case 'unauthorized':
-                            $errorMsg = 'You are not authorized to access that resource.';
-                            break;
-                        case 'invalid_csrf':
-                            $errorMsg = 'Security token mismatch. Please try again.';
-                            break;
-                        default:
-                            $errorMsg = 'An error occurred.';
-                    }
+                <?php
+                    $errorMsg=match($_GET['error']){'unauthorized'=>'You are not authorized to access that resource.','invalid_csrf'=>'Security token mismatch. Please try again.',default=>'An error occurred.',};
                     echo htmlspecialchars($errorMsg);
                 ?>
             </div>

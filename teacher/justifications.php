@@ -51,7 +51,7 @@ function getTeacherClasses($teacherId) {
          JOIN subjects s ON c.subject_id = s.subject_id
          JOIN terms t ON c.term_id = t.term_id
          WHERE c.teacher_id = :teacher_id
-         ORDER BY t.start_date DESC, s.name ASC"
+         ORDER BY t.start_date DESC, s.name"
     );
 
     $stmt->execute(['teacher_id' => $teacherId]);
@@ -205,13 +205,12 @@ function getJustificationFileInfo($filename) {
     $filepath = '../uploads/justifications/' . $filename;
 
     if (file_exists($filepath)) {
-        $fileInfo = [
+        return [
             'name' => $filename,
             'path' => $filepath,
             'size' => filesize($filepath),
             'type' => mime_content_type($filepath)
         ];
-        return $fileInfo;
     }
 
     return null;
