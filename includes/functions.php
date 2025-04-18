@@ -1,9 +1,9 @@
 <?php
 /**
  * Common Utility Functions
- * 
+ *
  * Provides reusable functions used throughout the application
- * 
+ *
  * Functions:
  * - getUserInfo($userId) - Retrieves user information by ID
  * - generateCSRFToken() - Creates a CSRF token for form security
@@ -23,7 +23,10 @@
  * - renderParentAttendanceWidget() - Renders parent view of child attendance
  * - getTeacherId() - Gets teacher ID for current user
  * - getStudentId() - Gets student ID for current user
+ * - getParentId() - Gets parent ID for current user
  * - getUserId() - Gets current user ID from session
+ * - getCurrentTerm() - Gets the currently active academic term
+ * - getUserRole() - Gets the role ID of the current user from session
  * - getSchoolStatisticsWidget() - Renders school statistics widget
  * - getRecentActivityWidget() - Renders recent activity widget
  * - getClassAveragesWidget() - Renders class averages widget based on user role
@@ -38,19 +41,35 @@
  * - getStudentAttendanceWidget() - Renders student attendance widget
  * - getChildGradesWidget() - Renders parent view of child grades
  * - getChildAttendanceWidget() - Renders parent view of child attendance
+ * - sanitizeString($input) - Sanitizes string input
+ * - sanitizeHTML($input) - Sanitizes HTML input, allowing safe tags
+ * - sanitizeInt($input) - Sanitizes integer input
+ * - validateInt($input, $min, $max) - Validates integer input with optional range
+ * - validateEmail($email) - Validates email address
+ * - validateDate($date) - Validates date in Y-m-d format
+ * - sanitizeDbIdentifier($name) - Sanitizes database table/column names
+ * - sanitizeArray($inputArray, $type) - Sanitizes an array of inputs
+ * - sanitizeFilename($filename) - Sanitizes uploaded filenames
+ * - sanitizeRequest($request, $exceptions) - Sanitizes $_GET or $_POST data
+ * - sanitizeRedirectUrl($url, $default) - Validates a URL for safe redirection
  */
 
 // Get user information by ID
 function getUserInfo($userId) {
     require_once __DIR__ . '/db.php';
-    
+
     $pdo = getDBConnection();
+    if (!$pdo) {
+        error_log("Database connection failed in getUserInfo()");
+        return null;
+    }
+
     $stmt = $pdo->prepare("SELECT u.user_id, u.username, u.role_id, r.name as role_name 
                           FROM users u 
                           JOIN roles r ON u.role_id = r.role_id 
                           WHERE u.user_id = :user_id");
     $stmt->execute(['user_id' => $userId]);
-    
+
     return $stmt->fetch();
 }
 
@@ -65,7 +84,7 @@ function getRecentActivityWidget() {
 
 function getClassAveragesWidget() {
     $role = getUserRole();
-    
+
     // Call the appropriate rendering function based on user role
     switch ($role) {
         case ROLE_ADMIN:
@@ -88,8 +107,13 @@ function getClassAveragesWidget() {
  */
 function renderAdminClassAveragesWidget() {
     $pdo = getDBConnection();
+    if (!$pdo) {
+        error_log("Database connection failed in renderAdminClassAveragesWidget()");
+        return '<div class="widget-content"><div class="error-message">Unable to connect to database.</div></div>';
+    }
+
     $classAverages = [];
-    
+
     try {
         // Get all class averages across the school
         $stmt = $pdo->query(
@@ -118,14 +142,15 @@ function renderAdminClassAveragesWidget() {
              GROUP BY c.class_id, s.name, t.name
              ORDER BY avg_score DESC"
         );
-        
+
         $classAverages = $stmt->fetchAll();
     } catch (PDOException $e) {
         // Log the error
+        error_log("Database error in renderAdminClassAveragesWidget: " . $e->getMessage());
     }
-    
+
     $html = '<div class="widget-content">';
-    
+
     if (empty($classAverages)) {
         $html .= '<div class="empty-message">No class average data available.</div>';
     } else {
@@ -133,11 +158,11 @@ function renderAdminClassAveragesWidget() {
         $html .= '<table class="data-table">';
         $html .= '<thead><tr><th>Subject</th><th>Class</th><th>Teacher</th><th>Students</th><th>Average</th></tr></thead>';
         $html .= '<tbody>';
-        
+
         foreach ($classAverages as $class) {
             $avgScoreFormatted = $class['avg_score'] !== null ? number_format($class['avg_score'], 1) : 'N/A';
             $scoreClass = '';
-            
+
             if ($class['avg_score'] !== null) {
                 if ($class['avg_score'] >= 80) {
                     $scoreClass = 'score-excellent';
@@ -149,7 +174,7 @@ function renderAdminClassAveragesWidget() {
                     $scoreClass = 'score-poor';
                 }
             }
-            
+
             $html .= '<tr>';
             $html .= '<td>' . htmlspecialchars($class['subject_name']) . '</td>';
             $html .= '<td>' . htmlspecialchars($class['class_title']) . '</td>';
@@ -158,17 +183,17 @@ function renderAdminClassAveragesWidget() {
             $html .= '<td class="' . $scoreClass . '">' . $avgScoreFormatted . '%</td>';
             $html .= '</tr>';
         }
-        
+
         $html .= '</tbody>';
         $html .= '</table>';
         $html .= '</div>';
     }
-    
+
     $html .= '<div class="widget-footer">';
     $html .= '<a href="admin/reports.php?type=grades" class="widget-link">Full Grade Reports</a>';
     $html .= '</div>';
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -179,14 +204,19 @@ function renderAdminClassAveragesWidget() {
  */
 function renderTeacherClassAveragesWidget() {
     $teacherId = getTeacherId();
-    
+
     if (!$teacherId) {
         return renderPlaceholderWidget();
     }
-    
+
     $pdo = getDBConnection();
+    if (!$pdo) {
+        error_log("Database connection failed in renderTeacherClassAveragesWidget()");
+        return '<div class="widget-content"><div class="error-message">Unable to connect to database.</div></div>';
+    }
+
     $classAverages = [];
-    
+
     try {
         // Get class averages only for this teacher's classes
         $stmt = $pdo->prepare(
@@ -211,24 +241,25 @@ function renderTeacherClassAveragesWidget() {
              GROUP BY c.class_id, s.name, t.name
              ORDER BY t.start_date DESC, s.name ASC"
         );
-        
+
         $stmt->execute(['teacher_id' => $teacherId]);
         $classAverages = $stmt->fetchAll();
     } catch (PDOException $e) {
         // Log the error
+        error_log("Database error in renderTeacherClassAveragesWidget: " . $e->getMessage());
     }
-    
+
     $html = '<div class="widget-content">';
-    
+
     if (empty($classAverages)) {
         $html .= '<div class="empty-message">You have no classes with grade data.</div>';
     } else {
         $html .= '<div class="class-averages-container">';
-        
+
         foreach ($classAverages as $class) {
             $avgScoreFormatted = $class['avg_score'] !== null ? number_format($class['avg_score'], 1) : 'N/A';
             $scoreClass = '';
-            
+
             if ($class['avg_score'] !== null) {
                 if ($class['avg_score'] >= 80) {
                     $scoreClass = 'score-excellent';
@@ -240,37 +271,37 @@ function renderTeacherClassAveragesWidget() {
                     $scoreClass = 'score-poor';
                 }
             }
-            
+
             $html .= '<div class="class-average-card">';
             $html .= '<div class="class-header">';
             $html .= '<h4>' . htmlspecialchars($class['subject_name']) . '</h4>';
             $html .= '<div class="class-subtitle">' . htmlspecialchars($class['class_title']) . ' - ' . htmlspecialchars($class['term_name']) . '</div>';
             $html .= '</div>';
-            
+
             $html .= '<div class="class-stats">';
             $html .= '<div class="stat-item big">';
             $html .= '<div class="stat-value ' . $scoreClass . '">' . $avgScoreFormatted . '%</div>';
             $html .= '<div class="stat-label">Class Average</div>';
             $html .= '</div>';
-            
+
             $html .= '<div class="stat-item">';
             $html .= '<div class="stat-value">' . (int)$class['student_count'] . '</div>';
             $html .= '<div class="stat-label">Students</div>';
             $html .= '</div>';
             $html .= '</div>';
-            
+
             $html .= '<div class="class-footer">';
             $html .= '<a href="teacher/gradebook.php?class_id=' . (int)$class['class_id'] . '" class="widget-link">View Gradebook</a>';
             $html .= '</div>';
-            
+
             $html .= '</div>';
         }
-        
+
         $html .= '</div>';
     }
-    
+
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -281,15 +312,20 @@ function renderTeacherClassAveragesWidget() {
  */
 function renderStudentClassAveragesWidget() {
     $studentId = getStudentId();
-    
+
     if (!$studentId) {
         return renderPlaceholderWidget();
     }
-    
+
     $pdo = getDBConnection();
+    if (!$pdo) {
+        error_log("Database connection failed in renderStudentClassAveragesWidget()");
+        return '<div class="widget-content"><div class="error-message">Unable to connect to database.</div></div>';
+    }
+
     $classAverages = [];
     $studentGrades = [];
-    
+
     try {
         // Get both the student's individual grades and class averages
         $stmt = $pdo->prepare(
@@ -326,15 +362,16 @@ function renderStudentClassAveragesWidget() {
              GROUP BY c.class_id, s.name, t.name
              ORDER BY t.start_date DESC, s.name ASC"
         );
-        
+
         $stmt->execute(['student_id' => $studentId]);
         $studentGrades = $stmt->fetchAll();
     } catch (PDOException $e) {
         // Log the error
+        error_log("Database error in renderStudentClassAveragesWidget: " . $e->getMessage());
     }
-    
+
     $html = '<div class="widget-content">';
-    
+
     if (empty($studentGrades)) {
         $html .= '<div class="empty-message">You are not enrolled in any classes with grade data.</div>';
     } else {
@@ -342,15 +379,15 @@ function renderStudentClassAveragesWidget() {
         $html .= '<table class="data-table">';
         $html .= '<thead><tr><th>Subject</th><th>Class</th><th>Your Average</th><th>Class Average</th><th>Comparison</th></tr></thead>';
         $html .= '<tbody>';
-        
+
         foreach ($studentGrades as $grade) {
             $studentAvgFormatted = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) : 'N/A';
             $classAvgFormatted = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) : 'N/A';
-            
+
             $scoreClass = '';
             $comparisonText = '';
             $comparisonClass = '';
-            
+
             if ($grade['student_avg_score'] !== null) {
                 if ($grade['student_avg_score'] >= 80) {
                     $scoreClass = 'score-excellent';
@@ -361,11 +398,11 @@ function renderStudentClassAveragesWidget() {
                 } else {
                     $scoreClass = 'score-poor';
                 }
-                
+
                 // Calculate comparison to class average if both exist
                 if ($grade['class_avg_score'] !== null) {
                     $diff = $grade['student_avg_score'] - $grade['class_avg_score'];
-                    
+
                     if ($diff > 5) {
                         $comparisonText = '+' . number_format($diff, 1) . '%';
                         $comparisonClass = 'above-average';
@@ -378,7 +415,7 @@ function renderStudentClassAveragesWidget() {
                     }
                 }
             }
-            
+
             $html .= '<tr>';
             $html .= '<td>' . htmlspecialchars($grade['subject_name']) . '</td>';
             $html .= '<td>' . htmlspecialchars($grade['class_title']) . '</td>';
@@ -387,17 +424,17 @@ function renderStudentClassAveragesWidget() {
             $html .= '<td class="' . $comparisonClass . '">' . $comparisonText . '</td>';
             $html .= '</tr>';
         }
-        
+
         $html .= '</tbody>';
         $html .= '</table>';
         $html .= '</div>';
     }
-    
+
     $html .= '<div class="widget-footer">';
     $html .= '<a href="student/grades.php" class="widget-link">View All Grades</a>';
     $html .= '</div>';
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -409,8 +446,12 @@ function renderStudentClassAveragesWidget() {
 function renderParentChildClassAveragesWidget() {
     $userId = getUserId();
     $pdo = getDBConnection();
+    if (!$pdo) {
+        error_log("Database connection failed in renderParentChildClassAveragesWidget() [getting children]");
+        return renderPlaceholderWidget(); // Or return an error message widget
+    }
     $children = [];
-    
+
     try {
         $stmt = $pdo->prepare(
             "SELECT s.student_id, s.first_name, s.last_name
@@ -419,27 +460,40 @@ function renderParentChildClassAveragesWidget() {
              JOIN parents p ON sp.parent_id = p.parent_id
              WHERE p.user_id = :user_id"
         );
-        
+
         $stmt->execute(['user_id' => $userId]);
         $children = $stmt->fetchAll();
     } catch (PDOException $e) {
         // Log the error
-        return renderPlaceholderWidget();
+        error_log("Database error getting children in renderParentChildClassAveragesWidget: " . $e->getMessage());
+        return renderPlaceholderWidget(); // Or return an error message widget
     }
-    
+
     if (empty($children)) {
         return '<div class="widget-content"><div class="empty-message">No children assigned to your account.</div></div>';
     }
-    
+
     $html = '<div class="widget-content">';
-    
+
     foreach ($children as $child) {
         $studentId = $child['student_id'];
         $childGrades = [];
-        
+
+        // Re-establish connection for safety, though ideally one connection per request is better
+        $pdoChild = getDBConnection();
+        if (!$pdoChild) {
+            error_log("Database connection failed in renderParentChildClassAveragesWidget() [getting grades for child {$studentId}]");
+            // Skip this child or display an error for them
+            $html .= '<div class="child-grades-section">';
+            $html .= '<h4>' . htmlspecialchars($child['first_name'] . ' ' . $child['last_name']) . '</h4>';
+            $html .= '<div class="error-message">Could not load grade data.</div>';
+            $html .= '</div>';
+            continue;
+        }
+
         try {
             // Get both the student's individual grades and class averages for each child
-            $stmt = $pdo->prepare(
+            $stmt = $pdoChild->prepare(
                 "SELECT 
                     c.class_id,
                     c.title AS class_title,
@@ -473,16 +527,17 @@ function renderParentChildClassAveragesWidget() {
                  GROUP BY c.class_id, s.name, t.name
                  ORDER BY t.start_date DESC, s.name ASC"
             );
-            
+
             $stmt->execute(['student_id' => $studentId]);
             $childGrades = $stmt->fetchAll();
         } catch (PDOException $e) {
-            // Log the error
+            error_log("Database error getting grades in renderParentChildClassAveragesWidget for child {$studentId}: " . $e->getMessage());
+            // $childGrades remains empty, handled below
         }
-        
+
         $html .= '<div class="child-grades-section">';
         $html .= '<h4>' . htmlspecialchars($child['first_name'] . ' ' . $child['last_name']) . '</h4>';
-        
+
         if (empty($childGrades)) {
             $html .= '<div class="empty-message">No grade data available for this child.</div>';
         } else {
@@ -490,13 +545,13 @@ function renderParentChildClassAveragesWidget() {
             $html .= '<table class="data-table">';
             $html .= '<thead><tr><th>Subject</th><th>Class</th><th>Average</th><th>Class Average</th></tr></thead>';
             $html .= '<tbody>';
-            
+
             foreach ($childGrades as $grade) {
                 $studentAvgFormatted = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) : 'N/A';
                 $classAvgFormatted = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) : 'N/A';
-                
+
                 $scoreClass = '';
-                
+
                 if ($grade['student_avg_score'] !== null) {
                     if ($grade['student_avg_score'] >= 80) {
                         $scoreClass = 'score-excellent';
@@ -508,7 +563,7 @@ function renderParentChildClassAveragesWidget() {
                         $scoreClass = 'score-poor';
                     }
                 }
-                
+
                 $html .= '<tr>';
                 $html .= '<td>' . htmlspecialchars($grade['subject_name']) . '</td>';
                 $html .= '<td>' . htmlspecialchars($grade['class_title']) . '</td>';
@@ -516,20 +571,20 @@ function renderParentChildClassAveragesWidget() {
                 $html .= '<td>' . $classAvgFormatted . '%</td>';
                 $html .= '</tr>';
             }
-            
+
             $html .= '</tbody>';
             $html .= '</table>';
             $html .= '</div>';
         }
-        
+
         $html .= '<div class="child-footer">';
         $html .= '<a href="parent/grades.php?student_id=' . (int)$studentId . '" class="widget-link">View Full Grades</a>';
         $html .= '</div>';
         $html .= '</div>';
     }
-    
+
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -588,14 +643,14 @@ function verifyCSRFToken($token) {
  */
 function getNavItemsByRole($role) {
     $navItems = [];
-    
+
     // Items for all authenticated users
     $navItems[] = [
         'title' => 'Dashboard',
         'url' => 'dashboard.php',
         'icon' => 'dashboard'
     ];
-    
+
     // Role-specific items
     switch ($role) {
         case ROLE_ADMIN:
@@ -621,7 +676,7 @@ function getNavItemsByRole($role) {
                 'icon' => 'attendance'
             ];
             break;
-            
+
         case ROLE_TEACHER:
             $navItems[] = [
                 'title' => 'Grade Book',
@@ -634,7 +689,7 @@ function getNavItemsByRole($role) {
                 'icon' => 'attendance'
             ];
             break;
-            
+
         case ROLE_STUDENT:
             $navItems[] = [
                 'title' => 'My Grades',
@@ -652,7 +707,7 @@ function getNavItemsByRole($role) {
                 'icon' => 'justification'
             ];
             break;
-            
+
         case ROLE_PARENT:
             $navItems[] = [
                 'title' => 'Child Grades',
@@ -666,13 +721,13 @@ function getNavItemsByRole($role) {
             ];
             break;
     }
-    
+
     $navItems[] = [
         'title' => 'Logout',
         'url' => 'includes/logout.php',
         'icon' => 'logout'
     ];
-    
+
     return $navItems;
 }
 
@@ -683,13 +738,13 @@ function getNavItemsByRole($role) {
  */
 function getWidgetsByRole($role) {
     $widgets = [];
-    
+
     // Common widgets for all roles
     $widgets['recent_activity'] = [
         'title' => 'Recent Activity',
         'function' => 'renderRecentActivityWidget'
     ];
-    
+
     // Role-specific widgets
     switch ($role) {
         case ROLE_ADMIN:
@@ -710,7 +765,7 @@ function getWidgetsByRole($role) {
                 'function' => 'renderAdminClassAveragesWidget'
             ];
             break;
-            
+
         case ROLE_TEACHER:
             $widgets['class_overview'] = [
                 'title' => 'Class Overview',
@@ -729,7 +784,7 @@ function getWidgetsByRole($role) {
                 'function' => 'renderTeacherClassAveragesWidget'
             ];
             break;
-            
+
         case ROLE_STUDENT:
             $widgets['my_grades'] = [
                 'title' => 'My Recent Grades',
@@ -748,7 +803,7 @@ function getWidgetsByRole($role) {
                 'function' => 'renderStudentClassAveragesWidget'
             ];
             break;
-            
+
         case ROLE_PARENT:
             $widgets['child_grades'] = [
                 'title' => 'Child\'s Recent Grades',
@@ -764,7 +819,7 @@ function getWidgetsByRole($role) {
             ];
             break;
     }
-    
+
     return $widgets;
 }
 
@@ -780,7 +835,7 @@ function getRoleName($roleId) {
         ROLE_STUDENT => 'Student',
         ROLE_PARENT => 'Parent/Guardian'
     ];
-    
+
     return $roleNames[$roleId] ?? 'Unknown Role';
 }
 
@@ -803,7 +858,7 @@ function renderRecentActivityWidget() {
     $html .= '<div class="activity-item">No recent activity to display</div>';
     $html .= '</div>';
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -814,63 +869,67 @@ function renderRecentActivityWidget() {
 function renderAdminUserStatsWidget() {
     // Get user counts by role
     $pdo = getDBConnection();
-    
+    if (!$pdo) {
+        error_log("Database connection failed in renderAdminUserStatsWidget()");
+        return '<div class="widget-content"><div class="error-message">Unable to connect to database.</div></div>';
+    }
+
     $counts = [
         'total' => 0,
         'teachers' => 0,
         'students' => 0,
         'parents' => 0
     ];
-    
+
     try {
         // Get total users
         $stmt = $pdo->query("SELECT COUNT(*) FROM users");
         $counts['total'] = $stmt->fetchColumn();
-        
+
         // Get user counts by role
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM users WHERE role_id = ?");
-        
+
         $stmt->execute([ROLE_TEACHER]);
         $counts['teachers'] = $stmt->fetchColumn();
-        
+
         $stmt->execute([ROLE_STUDENT]);
         $counts['students'] = $stmt->fetchColumn();
-        
+
         $stmt->execute([ROLE_PARENT]);
         $counts['parents'] = $stmt->fetchColumn();
     } catch (PDOException $e) {
         // Log the error
     }
-    
+
     $html = '<div class="widget-content">';
     $html .= '<div class="stat-grid">';
-    
+
     $html .= '<div class="stat-item">';
     $html .= '<div class="stat-value">' . $counts['total'] . '</div>';
     $html .= '<div class="stat-label">Total Users</div>';
     $html .= '</div>';
-    
+
     $html .= '<div class="stat-item">';
     $html .= '<div class="stat-value">' . $counts['teachers'] . '</div>';
     $html .= '<div class="stat-label">Teachers</div>';
     $html .= '</div>';
-    
+
     $html .= '<div class="stat-item">';
     $html .= '<div class="stat-value">' . $counts['students'] . '</div>';
     $html .= '<div class="stat-label">Students</div>';
     $html .= '</div>';
-    
+
     $html .= '<div class="stat-item">';
     $html .= '<div class="stat-value">' . $counts['parents'] . '</div>';
     $html .= '<div class="stat-label">Parents</div>';
     $html .= '</div>';
-    
+
     $html .= '</div>';
     $html .= '<div class="widget-footer">';
     $html .= '<a href="admin/users.php" class="widget-link">Manage Users</a>';
     $html .= '</div>';
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -882,28 +941,28 @@ function renderAdminSystemStatusWidget() {
     // This would check various system statuses in a real implementation
     $html = '<div class="widget-content">';
     $html .= '<div class="status-list">';
-    
+
     $html .= '<div class="status-item">';
     $html .= '<span class="status-label">Database:</span>';
     $html .= '<span class="status-value status-ok">Connected</span>';
     $html .= '</div>';
-    
+
     $html .= '<div class="status-item">';
     $html .= '<span class="status-label">PHP Version:</span>';
-    $html .= '<span class="status-value">' . phpversion() . '</span>';
+    $html .= '<span class="status-value">' . PHP_VERSION . '</span>';
     $html .= '</div>';
-    
+
     $html .= '<div class="status-item">';
     $html .= '<span class="status-label">Server:</span>';
     $html .= '<span class="status-value">' . $_SERVER['SERVER_SOFTWARE'] . '</span>';
     $html .= '</div>';
-    
+
     $html .= '</div>';
     $html .= '<div class="widget-footer">';
     $html .= '<a href="admin/settings.php" class="widget-link">System Settings</a>';
     $html .= '</div>';
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -914,7 +973,11 @@ function renderAdminSystemStatusWidget() {
 function renderAdminAttendanceWidget() {
     // Get attendance statistics
     $pdo = getDBConnection();
-    
+    if (!$pdo) {
+        error_log("Database connection failed in renderAdminAttendanceWidget()");
+        return '<div class="widget-content"><div class="error-message">Unable to connect to database.</div></div>';
+    }
+
     $stats = [
         'total' => 0,
         'present' => 0,
@@ -923,7 +986,7 @@ function renderAdminAttendanceWidget() {
         'attendance_rate' => 0,
         'recent_periods' => []
     ];
-    
+
     try {
         // Get overall attendance statistics
         $stmt = $pdo->query(
@@ -934,20 +997,20 @@ function renderAdminAttendanceWidget() {
                 SUM(CASE WHEN status = 'L' THEN 1 ELSE 0 END) as late
              FROM attendance"
         );
-        
+
         $result = $stmt->fetch();
-        
+
         if ($result) {
             $stats['total'] = (int)$result['total'];
             $stats['present'] = (int)$result['present'];
             $stats['absent'] = (int)$result['absent'];
             $stats['late'] = (int)$result['late'];
-            
+
             if ($stats['total'] > 0) {
                 $stats['attendance_rate'] = round((($stats['present'] + $stats['late']) / $stats['total']) * 100, 1);
             }
         }
-        
+
         // Get recent periods with attendance data
         $stmt = $pdo->query(
             "SELECT 
@@ -967,15 +1030,15 @@ function renderAdminAttendanceWidget() {
              ORDER BY p.period_date DESC, p.period_label ASC
              LIMIT 5"
         );
-        
+
         $stats['recent_periods'] = $stmt->fetchAll();
     } catch (PDOException $e) {
         // Log the error
     }
-    
+
     // Generate widget HTML
     $html = '<div class="widget-content">';
-    
+
     // Show attendance rate chart/summary
     $html .= '<div class="attendance-summary">';
     $html .= '<div class="attendance-rate">';
@@ -988,7 +1051,7 @@ function renderAdminAttendanceWidget() {
     $html .= '</div>';
     $html .= '<div class="rate-label">Overall Attendance Rate</div>';
     $html .= '</div>';
-    
+
     // Show attendance breakdown
     $html .= '<div class="attendance-breakdown">';
     $html .= '<div class="breakdown-item present-color">';
@@ -1005,7 +1068,7 @@ function renderAdminAttendanceWidget() {
     $html .= '</div>';
     $html .= '</div>';
     $html .= '</div>';
-    
+
     // Show recent periods if available
     if (!empty($stats['recent_periods'])) {
         $html .= '<div class="recent-periods">';
@@ -1013,12 +1076,12 @@ function renderAdminAttendanceWidget() {
         $html .= '<table class="mini-table">';
         $html .= '<thead><tr><th>Date</th><th>Class</th><th>Present</th><th>Absent</th><th>Late</th></tr></thead>';
         $html .= '<tbody>';
-        
+
         foreach ($stats['recent_periods'] as $period) {
             $date = date('m/d', strtotime($period['period_date']));
             $periodLabel = $period['period_label'];
             $classTitle = $period['subject_name'] . ' - ' . $period['class_title'];
-            
+
             $html .= '<tr>';
             $html .= '<td>' . htmlspecialchars($date) . ' ' . htmlspecialchars($periodLabel) . '</td>';
             $html .= '<td title="' . htmlspecialchars($classTitle) . '">' . htmlspecialchars(substr($classTitle, 0, 20)) . (strlen($classTitle) > 20 ? '...' : '') . '</td>';
@@ -1027,17 +1090,17 @@ function renderAdminAttendanceWidget() {
             $html .= '<td class="late-color">' . (int)$period['late_count'] . '</td>';
             $html .= '</tr>';
         }
-        
+
         $html .= '</tbody>';
         $html .= '</table>';
         $html .= '</div>';
     }
-    
+
     $html .= '<div class="widget-footer">';
     $html .= '<a href="admin/reports.php?type=attendance" class="widget-link">Full Attendance Reports</a>';
     $html .= '</div>';
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -1048,14 +1111,18 @@ function renderAdminAttendanceWidget() {
 function renderTeacherClassOverviewWidget() {
     // Get teacher's classes
     $teacherId = getTeacherId();
-    
+
     if (!$teacherId) {
         return renderPlaceholderWidget();
     }
-    
+
     $pdo = getDBConnection();
+    if (!$pdo) {
+        error_log("Database connection failed in renderTeacherClassOverviewWidget()");
+        return '<div class="widget-content"><div class="error-message">Unable to connect to database.</div></div>';
+    }
     $classes = [];
-    
+
     try {
         $stmt = $pdo->prepare(
             "SELECT 
@@ -1071,20 +1138,22 @@ function renderTeacherClassOverviewWidget() {
              ORDER BY t.start_date DESC, s.name ASC
              LIMIT 5"
         );
-        
+
         $stmt->execute(['teacher_id' => $teacherId]);
         $classes = $stmt->fetchAll();
     } catch (PDOException $e) {
         // Log the error
+        error_log("Database error in renderTeacherClassOverviewWidget: " . $e->getMessage());
+        // $classes remains empty, handled below
     }
-    
+
     $html = '<div class="widget-content">';
-    
+
     if (empty($classes)) {
         $html .= '<div class="empty-message">You are not assigned to any classes yet.</div>';
     } else {
         $html .= '<div class="class-list">';
-        
+
         foreach ($classes as $class) {
             $html .= '<div class="class-item">';
             $html .= '<div class="class-title">' . htmlspecialchars($class['subject_name']) . ' - ' . htmlspecialchars($class['title']) . '</div>';
@@ -1095,12 +1164,12 @@ function renderTeacherClassOverviewWidget() {
             $html .= '</div>';
             $html .= '</div>';
         }
-        
+
         $html .= '</div>';
     }
-    
+
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -1111,16 +1180,20 @@ function renderTeacherClassOverviewWidget() {
 function renderTeacherAttendanceWidget() {
     // Get teacher's classes with today's attendance
     $teacherId = getTeacherId();
-    
+
     if (!$teacherId) {
         return renderPlaceholderWidget();
     }
-    
+
     $today = date('Y-m-d');
     $pdo = getDBConnection();
+    if (!$pdo) {
+        error_log("Database connection failed in renderTeacherAttendanceWidget()");
+        return '<div class="widget-content"><div class="error-message">Unable to connect to database.</div></div>';
+    }
     $attendanceData = [];
     $periodsToday = false;
-    
+
     try {
         $stmt = $pdo->prepare(
             "SELECT 
@@ -1143,16 +1216,18 @@ function renderTeacherAttendanceWidget() {
              GROUP BY p.period_id
              ORDER BY p.period_label ASC"
         );
-        
+
         $stmt->execute(['teacher_id' => $teacherId, 'today' => $today]);
         $attendanceData = $stmt->fetchAll();
         $periodsToday = !empty($attendanceData);
     } catch (PDOException $e) {
         // Log the error
+        error_log("Database error in renderTeacherAttendanceWidget: " . $e->getMessage());
+        // $attendanceData remains empty, handled below
     }
-    
+
     $html = '<div class="widget-content">';
-    
+
     if (!$periodsToday) {
         $html .= '<div class="empty-message">No classes scheduled for today.</div>';
         $html .= '<div class="widget-footer">';
@@ -1160,30 +1235,30 @@ function renderTeacherAttendanceWidget() {
         $html .= '</div>';
     } else {
         $html .= '<div class="today-attendance">';
-        
+
         foreach ($attendanceData as $period) {
             $needsAttention = $period['total_students'] > $period['records_count'];
             $html .= '<div class="period-item' . ($needsAttention ? ' needs-attention' : '') . '">';
             $html .= '<div class="period-header">';
             $html .= '<h4>' . htmlspecialchars($period['period_label']) . ': ' . htmlspecialchars($period['subject_name']) . '</h4>';
-            
+
             if ($needsAttention) {
                 $html .= '<span class="attention-badge">Needs Attention</span>';
             } else {
                 $html .= '<span class="complete-badge">Complete</span>';
             }
-            
+
             $html .= '</div>';
-            
+
             $html .= '<div class="period-stats">';
-            
+
             // Attendance completion progress bar
             $completionRate = $period['total_students'] > 0 ? round(($period['records_count'] / $period['total_students']) * 100) : 0;
             $html .= '<div class="completion-bar-container">';
             $html .= '<div class="completion-label">Completion: ' . $completionRate . '%</div>';
             $html .= '<div class="completion-bar"><div class="completion-fill" style="width: ' . $completionRate . '%;"></div></div>';
             $html .= '</div>';
-            
+
             // Quick attendance stats
             if ($period['records_count'] > 0) {
                 $html .= '<div class="attendance-stats">';
@@ -1192,23 +1267,23 @@ function renderTeacherAttendanceWidget() {
                 $html .= '<div class="stat late-color">' . $period['late_count'] . ' Late</div>';
                 $html .= '</div>';
             }
-            
+
             $html .= '</div>';
-            
+
             $html .= '<div class="period-actions">';
             $html .= '<a href="teacher/attendance.php?class_id=' . (int)$period['class_id'] . '&period_id=' . (int)$period['period_id'] . '" class="btn btn-small">';
             $html .= $needsAttention ? 'Take Attendance' : 'View/Edit';
             $html .= '</a>';
             $html .= '</div>';
-            
+
             $html .= '</div>';
         }
-        
+
         $html .= '</div>';
     }
-    
+
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -1219,14 +1294,19 @@ function renderTeacherAttendanceWidget() {
 function renderTeacherPendingJustificationsWidget() {
     // Get pending justifications for the teacher's classes
     $teacherId = getTeacherId();
-    
+
     if (!$teacherId) {
         return renderPlaceholderWidget();
     }
-    
+
     $pdo = getDBConnection();
+    if (!$pdo) {
+        error_log("Database connection failed in renderTeacherPendingJustificationsWidget()");
+        return '<div class="widget-content"><div class="error-message">Unable to connect to database.</div></div>';
+    }
+
     $pendingJustifications = [];
-    
+
     try {
         $stmt = $pdo->prepare(
             "SELECT 
@@ -1253,20 +1333,21 @@ function renderTeacherPendingJustificationsWidget() {
              ORDER BY p.period_date DESC
              LIMIT 5"
         );
-        
+
         $stmt->execute(['teacher_id' => $teacherId]);
         $pendingJustifications = $stmt->fetchAll();
     } catch (PDOException $e) {
         // Log the error
+        error_log("Database error in renderTeacherPendingJustificationsWidget: " . $e->getMessage());
     }
-    
+
     $html = '<div class="widget-content">';
-    
+
     if (empty($pendingJustifications)) {
         $html .= '<div class="empty-message">No pending absence justifications.</div>';
     } else {
         $html .= '<div class="justification-list">';
-        
+
         foreach ($pendingJustifications as $item) {
             $date = date('m/d', strtotime($item['period_date']));
             $html .= '<div class="justification-item">';
@@ -1278,16 +1359,16 @@ function renderTeacherPendingJustificationsWidget() {
             $html .= '</div>';
             $html .= '</div>';
         }
-        
+
         $html .= '</div>';
     }
-    
+
     $html .= '<div class="widget-footer">';
     $html .= '<a href="teacher/justifications.php" class="widget-link">All Justifications</a>';
     $html .= '</div>';
-    
+
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -1298,12 +1379,16 @@ function renderTeacherPendingJustificationsWidget() {
 function renderStudentAttendanceWidget() {
     // Get student's attendance summary
     $studentId = getStudentId();
-    
+
     if (!$studentId) {
         return renderPlaceholderWidget();
     }
-    
+
     $pdo = getDBConnection();
+    if (!$pdo) {
+        error_log("Database connection failed in renderStudentAttendanceWidget()");
+        return '<div class="widget-content"><div class="error-message">Unable to connect to database.</div></div>';
+    }
     $stats = [
         'total' => 0,
         'present' => 0,
@@ -1313,7 +1398,7 @@ function renderStudentAttendanceWidget() {
         'attendance_rate' => 0,
         'recent' => []
     ];
-    
+
     try {
         // Get overall attendance statistics for the student
         $stmt = $pdo->prepare(
@@ -1327,22 +1412,22 @@ function renderStudentAttendanceWidget() {
              JOIN enrollments e ON a.enroll_id = e.enroll_id
              WHERE e.student_id = :student_id"
         );
-        
+
         $stmt->execute(['student_id' => $studentId]);
         $result = $stmt->fetch();
-        
+
         if ($result) {
             $stats['total'] = (int)$result['total'];
             $stats['present'] = (int)$result['present'];
             $stats['absent'] = (int)$result['absent'];
             $stats['late'] = (int)$result['late'];
             $stats['justified'] = (int)$result['justified'];
-            
+
             if ($stats['total'] > 0) {
                 $stats['attendance_rate'] = round((($stats['present'] + $stats['late']) / $stats['total']) * 100, 1);
             }
         }
-        
+
         // Get recent attendance records
         $stmt = $pdo->prepare(
             "SELECT 
@@ -1362,16 +1447,18 @@ function renderStudentAttendanceWidget() {
              ORDER BY p.period_date DESC, p.period_label ASC
              LIMIT 5"
         );
-        
+
         $stmt->execute(['student_id' => $studentId]);
         $stats['recent'] = $stmt->fetchAll();
     } catch (PDOException $e) {
         // Log the error
+        error_log("Database error in renderStudentAttendanceWidget: " . $e->getMessage());
+        // Stats might be incomplete, handled by defaults and checks below
     }
-    
+
     // Generate widget HTML
     $html = '<div class="widget-content">';
-    
+
     // Show attendance rate circle
     $html .= '<div class="attendance-summary">';
     $html .= '<div class="attendance-rate">';
@@ -1384,7 +1471,7 @@ function renderStudentAttendanceWidget() {
     $html .= '</div>';
     $html .= '<div class="rate-label">Your Attendance Rate</div>';
     $html .= '</div>';
-    
+
     // Show attendance breakdown
     $html .= '<div class="attendance-breakdown">';
     $html .= '<div class="breakdown-item present-color">';
@@ -1405,7 +1492,7 @@ function renderStudentAttendanceWidget() {
     $html .= '</div>';
     $html .= '</div>';
     $html .= '</div>';
-    
+
     // Show recent attendance records
     if (!empty($stats['recent'])) {
         $html .= '<div class="recent-attendance">';
@@ -1413,14 +1500,14 @@ function renderStudentAttendanceWidget() {
         $html .= '<table class="mini-table">';
         $html .= '<thead><tr><th>Date</th><th>Class</th><th>Status</th></tr></thead>';
         $html .= '<tbody>';
-        
+
         foreach ($stats['recent'] as $record) {
             $date = date('m/d', strtotime($record['period_date']));
             $classInfo = $record['subject_name'] . ' - ' . $record['class_title'];
-            
+
             $statusClass = '';
             $statusLabel = '';
-            
+
             switch ($record['status']) {
                 case 'P':
                     $statusClass = 'present-status';
@@ -1435,30 +1522,30 @@ function renderStudentAttendanceWidget() {
                     $statusLabel = 'Late';
                     break;
             }
-            
+
             $html .= '<tr>';
             $html .= '<td>' . htmlspecialchars($date) . ' ' . htmlspecialchars($record['period_label']) . '</td>';
             $html .= '<td title="' . htmlspecialchars($classInfo) . '">' . htmlspecialchars(substr($classInfo, 0, 15)) . (strlen($classInfo) > 15 ? '...' : '') . '</td>';
             $html .= '<td class="' . $statusClass . '">' . $statusLabel . '</td>';
             $html .= '</tr>';
         }
-        
+
         $html .= '</tbody>';
         $html .= '</table>';
         $html .= '</div>';
     }
-    
+
     $html .= '<div class="widget-footer">';
     $html .= '<a href="student/attendance.php" class="widget-link">Full Attendance Record</a>';
-    
+
     // Add a link to submit justification if there are unjustified absences
     if ($stats['absent'] - $stats['justified'] > 0) {
         $html .= '<a href="student/justification.php" class="widget-link">Submit Justification</a>';
     }
-    
+
     $html .= '</div>';
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -1470,8 +1557,12 @@ function renderParentAttendanceWidget() {
     // Get parent's children
     $userId = getUserId();
     $pdo = getDBConnection();
+    if (!$pdo) {
+        error_log("Database connection failed in renderParentAttendanceWidget() [getting children]");
+        return renderPlaceholderWidget(); // Or return an error message widget
+    }
     $children = [];
-    
+
     try {
         $stmt = $pdo->prepare(
             "SELECT s.student_id, s.first_name, s.last_name
@@ -1480,21 +1571,22 @@ function renderParentAttendanceWidget() {
              JOIN parents p ON sp.parent_id = p.parent_id
              WHERE p.user_id = :user_id"
         );
-        
+
         $stmt->execute(['user_id' => $userId]);
         $children = $stmt->fetchAll();
     } catch (PDOException $e) {
         // Log the error
-        return renderPlaceholderWidget();
+        error_log("Database error getting children in renderParentAttendanceWidget: " . $e->getMessage());
+        return renderPlaceholderWidget(); // Or return an error message widget
     }
-    
+
     if (empty($children)) {
         return '<div class="widget-content"><div class="empty-message">No children assigned to your account.</div></div>';
     }
-    
+
     // Get attendance summary for each child
     $childrenAttendance = [];
-    
+
     foreach ($children as $child) {
         $stats = [
             'student_id' => $child['student_id'],
@@ -1507,10 +1599,19 @@ function renderParentAttendanceWidget() {
             'attendance_rate' => 0,
             'recent' => []
         ];
-        
+
+        // Re-establish connection for safety
+        $pdoChild = getDBConnection();
+        if (!$pdoChild) {
+            error_log("Database connection failed in renderParentAttendanceWidget() [getting stats for child {$child['student_id']}]");
+            // Add stats for this child with an error indication or skip
+            $childrenAttendance[] = $stats; // Add potentially incomplete stats
+            continue; // Move to the next child
+        }
+
         try {
             // Get overall attendance statistics for the student
-            $stmt = $pdo->prepare(
+            $stmt = $pdoChild->prepare(
                 "SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN a.status = 'P' THEN 1 ELSE 0 END) as present,
@@ -1521,24 +1622,24 @@ function renderParentAttendanceWidget() {
                  JOIN enrollments e ON a.enroll_id = e.enroll_id
                  WHERE e.student_id = :student_id"
             );
-            
+
             $stmt->execute(['student_id' => $child['student_id']]);
             $result = $stmt->fetch();
-            
+
             if ($result) {
                 $stats['total'] = (int)$result['total'];
                 $stats['present'] = (int)$result['present'];
                 $stats['absent'] = (int)$result['absent'];
                 $stats['late'] = (int)$result['late'];
                 $stats['justified'] = (int)$result['justified'];
-                
+
                 if ($stats['total'] > 0) {
                     $stats['attendance_rate'] = round((($stats['present'] + $stats['late']) / $stats['total']) * 100, 1);
                 }
             }
-            
+
             // Get most recent absences
-            $stmt = $pdo->prepare(
+            $stmt = $pdoChild->prepare(
                 "SELECT 
                     a.status,
                     a.justification,
@@ -1555,26 +1656,27 @@ function renderParentAttendanceWidget() {
                  ORDER BY p.period_date DESC
                  LIMIT 3"
             );
-            
+
             $stmt->execute(['student_id' => $child['student_id']]);
             $stats['recent'] = $stmt->fetchAll();
-            
+
             $childrenAttendance[] = $stats;
         } catch (PDOException $e) {
-            // Log the error
+            error_log("Database error getting stats in renderParentAttendanceWidget for child {$child['student_id']}: " . $e->getMessage());
+            $childrenAttendance[] = $stats; // Add potentially incomplete stats
         }
     }
-    
+
     // Generate widget HTML
     $html = '<div class="widget-content">';
-    
+
     foreach ($childrenAttendance as $childStats) {
         $html .= '<div class="child-attendance">';
         $html .= '<h4>' . htmlspecialchars($childStats['name']) . '</h4>';
-        
+
         // Show attendance summary
         $html .= '<div class="attendance-summary">';
-        
+
         // Attendance rate
         $html .= '<div class="summary-item">';
         $html .= '<div class="rate-circle mini" data-rate="' . $childStats['attendance_rate'] . '">';
@@ -1586,38 +1688,38 @@ function renderParentAttendanceWidget() {
         $html .= '<div class="mini-label">Attendance Rate</div>';
         $html .= '</div>';
         $html .= '</div>';
-        
+
         // Simple stats
         $html .= '<div class="mini-stats">';
         $html .= '<div class="mini-stat">';
         $html .= '<span class="mini-value present-color">' . $childStats['present'] . '</span>';
         $html .= '<span class="mini-label">Present</span>';
         $html .= '</div>';
-        
+
         $html .= '<div class="mini-stat">';
         $html .= '<span class="mini-value absent-color">' . $childStats['absent'] . '</span>';
         $html .= '<span class="mini-label">Absent</span>';
         $html .= '</div>';
-        
+
         $html .= '<div class="mini-stat">';
         $html .= '<span class="mini-value late-color">' . $childStats['late'] . '</span>';
         $html .= '<span class="mini-label">Late</span>';
         $html .= '</div>';
-        
+
         $html .= '<div class="mini-stat">';
         $html .= '<span class="mini-value justified-color">' . $childStats['justified'] . '</span>';
         $html .= '<span class="mini-label">Justified</span>';
         $html .= '</div>';
         $html .= '</div>';
-        
+
         $html .= '</div>';
-        
+
         // Recent absences if any
         if (!empty($childStats['recent'])) {
             $html .= '<div class="recent-absences">';
             $html .= '<h5>Recent Absences</h5>';
             $html .= '<ul class="absence-list">';
-            
+
             foreach ($childStats['recent'] as $absence) {
                 $date = date('m/d', strtotime($absence['period_date']));
                 $html .= '<li>';
@@ -1626,20 +1728,20 @@ function renderParentAttendanceWidget() {
                 $html .= '<span class="absence-status">' . ($absence['approved'] ? 'Justified' : 'Unjustified') . '</span>';
                 $html .= '</li>';
             }
-            
+
             $html .= '</ul>';
             $html .= '</div>';
         }
-        
+
         $html .= '<div class="child-footer">';
         $html .= '<a href="parent/attendance.php?student_id=' . (int)$childStats['student_id'] . '" class="widget-link">Full Record</a>';
         $html .= '</div>';
-        
+
         $html .= '</div>';
     }
-    
+
     $html .= '</div>';
-    
+
     return $html;
 }
 
@@ -1649,19 +1751,24 @@ function renderParentAttendanceWidget() {
  */
 function getTeacherId() {
     $userId = getUserId();
-    
+
     if (!$userId) {
         return null;
     }
-    
+
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            error_log("Database connection failed in getTeacherId()");
+            return null;
+        }
         $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = :user_id");
         $stmt->execute(['user_id' => $userId]);
         $result = $stmt->fetch();
-        
-        return $result ? $result['teacher_id'] : null;
+
+        return $result ? (int)$result['teacher_id'] : null;
     } catch (PDOException $e) {
+        error_log("Database error in getTeacherId(): " . $e->getMessage());
         return null;
     }
 }
@@ -1672,19 +1779,25 @@ function getTeacherId() {
  */
 function getStudentId() {
     $userId = getUserId();
-    
+
     if (!$userId) {
         return null;
     }
-    
+
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            error_log("Database connection failed in getStudentId()");
+            return null; // Return null if database connection fails
+        }
+
         $stmt = $pdo->prepare("SELECT student_id FROM students WHERE user_id = :user_id");
         $stmt->execute(['user_id' => $userId]);
         $result = $stmt->fetch();
-        
+
         return $result ? $result['student_id'] : null;
     } catch (PDOException $e) {
+        error_log("Database error in getStudentId(): " . $e->getMessage());
         return null;
     }
 }
@@ -1695,19 +1808,25 @@ function getStudentId() {
  */
 function getParentId() {
     $userId = getUserId();
-    
+
     if (!$userId) {
         return null;
     }
-    
+
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            error_log("Database connection failed in getParentId()");
+            return null; // Return null if database connection fails
+        }
+
         $stmt = $pdo->prepare("SELECT parent_id FROM parents WHERE user_id = :user_id");
         $stmt->execute(['user_id' => $userId]);
         $result = $stmt->fetch();
-        
+
         return $result ? $result['parent_id'] : null;
     } catch (PDOException $e) {
+        error_log("Database error in getParentId(): " . $e->getMessage());
         return null;
     }
 }
@@ -1719,6 +1838,10 @@ function getParentId() {
 function getCurrentTerm() {
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            error_log("Database connection failed in getCurrentTerm()");
+            return null;
+        }
         $stmt = $pdo->query(
             "SELECT 
                 term_id, 
@@ -1730,10 +1853,11 @@ function getCurrentTerm() {
              ORDER BY start_date DESC
              LIMIT 1"
         );
-        
+
         $result = $stmt->fetch();
         return $result ?: null;
     } catch (PDOException $e) {
+        error_log("Database error in getCurrentTerm(): " . $e->getMessage());
         return null;
     }
 }
@@ -1756,7 +1880,7 @@ function getUserRole() {
 function sanitizeString($input) {
     // First, trim whitespace
     $input = trim($input);
-    
+
     // Convert special characters to HTML entities
     return htmlspecialchars($input, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
@@ -1769,20 +1893,18 @@ function sanitizeString($input) {
 function sanitizeHTML($input) {
     // First, trim whitespace
     $input = trim($input);
-    
+
     // Define allowed HTML tags and attributes
     $allowedTags = [
         'p', 'br', 'b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li'
     ];
-    
+
     // Create tag string for strip_tags
     $allowedTagsString = '<' . implode('><', $allowedTags) . '>';
-    
+
     // Strip all but allowed tags
-    $stripped = strip_tags($input, $allowedTagsString);
-    
     // Return the sanitized HTML
-    return $stripped;
+    return strip_tags($input, $allowedTagsString);
 }
 
 /**
@@ -1803,19 +1925,19 @@ function sanitizeInt($input) {
  */
 function validateInt($input, $min = null, $max = null) {
     $options = [];
-    
+
     if ($min !== null) {
         $options['min_range'] = $min;
     }
-    
+
     if ($max !== null) {
         $options['max_range'] = $max;
     }
-    
+
     $filteredValue = filter_var($input, FILTER_VALIDATE_INT, [
         'options' => $options
     ]);
-    
+
     return $filteredValue;
 }
 
@@ -1836,15 +1958,15 @@ function validateEmail($email) {
 function validateDate($date) {
     // First, sanitize the string
     $date = sanitizeString($date);
-    
+
     // Try to convert to DateTime object to validate
     $dateTime = DateTime::createFromFormat('Y-m-d', $date);
-    
+
     // Check if it's a valid date
     if ($dateTime && $dateTime->format('Y-m-d') === $date) {
         return $date;
     }
-    
+
     return false;
 }
 
@@ -1856,10 +1978,10 @@ function validateDate($date) {
  */
 function sanitizeDbIdentifier($name) {
     // Only allow alphanumeric and underscore
-    if (preg_match('/^[a-zA-Z0-9_]+$/', $name)) {
+    if (preg_match('/^\w+$/', $name)) {
         return $name;
     }
-    
+
     return false;
 }
 
@@ -1873,13 +1995,13 @@ function sanitizeArray($inputArray, $type = 'string') {
     if (!is_array($inputArray)) {
         return [];
     }
-    
+
     $sanitized = [];
-    
+
     foreach ($inputArray as $key => $value) {
         // Sanitize the key (always as string)
         $sanitizedKey = sanitizeString($key);
-        
+
         if (is_array($value)) {
             // Recursively sanitize nested arrays
             $sanitized[$sanitizedKey] = sanitizeArray($value, $type);
@@ -1899,7 +2021,7 @@ function sanitizeArray($inputArray, $type = 'string') {
             }
         }
     }
-    
+
     return $sanitized;
 }
 
@@ -1911,10 +2033,10 @@ function sanitizeArray($inputArray, $type = 'string') {
 function sanitizeFilename($filename) {
     // Remove anything that isn't alphanumeric, dot, hyphen, or underscore
     $filename = preg_replace('/[^\w\.-]+/', '', $filename);
-    
+
     // Remove leading dots to prevent hidden file issues
     $filename = ltrim($filename, '.');
-    
+
     return $filename;
 }
 
@@ -1926,21 +2048,21 @@ function sanitizeFilename($filename) {
  */
 function sanitizeRequest($request, $exceptions = []) {
     $sanitized = [];
-    
+
     foreach ($request as $key => $value) {
         // Skip sanitization for excepted keys
-        if (in_array($key, $exceptions)) {
+        if (in_array($key, $exceptions, true)) {
             $sanitized[$key] = $value;
             continue;
         }
-        
+
         if (is_array($value)) {
             $sanitized[$key] = sanitizeArray($value);
         } else {
             $sanitized[$key] = sanitizeString($value);
         }
     }
-    
+
     return $sanitized;
 }
 
@@ -1953,13 +2075,13 @@ function sanitizeRequest($request, $exceptions = []) {
 function sanitizeRedirectUrl($url, $default = 'index.php') {
     // Remove any whitespace
     $url = trim($url);
-    
+
     // Check if URL is relative (starts with / or doesn't have protocol)
     if (empty($url) || strpos($url, '://') !== false || strpos($url, '//') === 0) {
         // URL is empty or absolute, use default
         return $default;
     }
-    
+
     // URL is relative, it's safe to use
     return $url;
 }

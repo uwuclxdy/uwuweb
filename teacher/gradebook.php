@@ -13,16 +13,30 @@
  * - getClassGrades($classId) - Gets all grades for a class
  */
 
-require_once '../includes/auth.php';
 require_once '../includes/db.php';
+require_once '../includes/auth.php';
 require_once '../includes/functions.php';
+require_once '../includes/header.php';
 
-// Require teacher role for access
+// Ensure only teachers can access this page
 requireRole(ROLE_TEACHER);
+
+// Get the teacher ID of the logged-in user
+$teacherId = getTeacherId(getUserId());
+if (!$teacherId) {
+    die('Error: Teacher account not found.');
+}
+
+// Database connection - using safe connection to prevent null pointer exceptions
+$pdo = safeGetDBConnection('teacher/gradebook.php');
 
 // Get teacher ID based on user ID
 function getTeacherId($userId) {
-    $pdo = getDBConnection();
+    $pdo = safeGetDBConnection('getTeacherId()', false);
+    if (!$pdo) {
+        return null;
+    }
+    
     $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = :user_id");
     $stmt->execute(['user_id' => $userId]);
     $result = $stmt->fetch();
@@ -31,7 +45,11 @@ function getTeacherId($userId) {
 
 // Get classes taught by teacher
 function getTeacherClasses($teacherId) {
-    $pdo = getDBConnection();
+    $pdo = safeGetDBConnection('getTeacherClasses()', false);
+    if (!$pdo) {
+        return [];
+    }
+    
     $stmt = $pdo->prepare(
         "SELECT c.class_id, c.title, s.name AS subject_name, t.name AS term_name
          FROM classes c
@@ -46,7 +64,11 @@ function getTeacherClasses($teacherId) {
 
 // Get students enrolled in a specific class
 function getClassStudents($classId) {
-    $pdo = getDBConnection();
+    $pdo = safeGetDBConnection('getClassStudents()', false);
+    if (!$pdo) {
+        return [];
+    }
+    
     $stmt = $pdo->prepare(
         "SELECT e.enroll_id, s.student_id, s.first_name, s.last_name, s.class_code
          FROM enrollments e
@@ -60,7 +82,11 @@ function getClassStudents($classId) {
 
 // Get grade items for a specific class
 function getGradeItems($classId) {
-    $pdo = getDBConnection();
+    $pdo = safeGetDBConnection('getGradeItems()', false);
+    if (!$pdo) {
+        return [];
+    }
+    
     $stmt = $pdo->prepare(
         "SELECT item_id, name, max_points, weight
          FROM grade_items
@@ -73,7 +99,11 @@ function getGradeItems($classId) {
 
 // Get grades for a specific class and its students
 function getClassGrades($classId) {
-    $pdo = getDBConnection();
+    $pdo = safeGetDBConnection('getClassGrades()', false);
+    if (!$pdo) {
+        return [];
+    }
+    
     $stmt = $pdo->prepare(
         "SELECT g.grade_id, g.enroll_id, g.item_id, g.points, g.comment
          FROM grades g
@@ -107,6 +137,9 @@ $hasClasses = !empty($classes);
 $students = $selectedClassId ? getClassStudents($selectedClassId) : [];
 $gradeItems = $selectedClassId ? getGradeItems($selectedClassId) : [];
 $grades = $selectedClassId ? getClassGrades($selectedClassId) : [];
+
+// Initialize $enrollId to prevent undefined variable warnings
+$enrollId = null;
 
 // Get selected class details for display
 $selectedClass = null;

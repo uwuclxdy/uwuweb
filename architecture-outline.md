@@ -4,7 +4,7 @@
 
 ## 1 Purpose & Scope
 
-A lightweight, role‑based grade and attendance tracker for a Slovenian high‑school, built **only** with HTML, CSS, JavaScript, PHP 8+ and MySQL 8. Runs on XAMPP localhost but is portable to any LAMP stack.
+A lightweight, role‑based grade and attendance tracker for a Slovenian high‑school, built **only** with HTML, CSS, JavaScript, PHP 8.2 and MySQL 8. Runs on XAMPP localhost but is portable to any LAMP stack.
 
 ---
 

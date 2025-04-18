@@ -1,10 +1,10 @@
 <?php
 /**
  * Grades API Endpoint
- * 
+ *
  * Handles CRUD operations for grade data
  * Returns JSON responses for AJAX requests
- * 
+ *
  * Functions:
  * - addGradeItem() - Creates a new grade item
  * - updateGradeItem() - Updates an existing grade item
@@ -24,21 +24,21 @@ header('Content-Type: application/json');
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405); // Method Not Allowed
-    echo json_encode(['error' => 'Only POST requests are allowed']);
+    echo json_encode(['error' => 'Only POST requests are allowed'], JSON_THROW_ON_ERROR);
     exit;
 }
 
 // Ensure CSRF token is valid
 if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
     http_response_code(403); // Forbidden
-    echo json_encode(['error' => 'Invalid CSRF token']);
+    echo json_encode(['error' => 'Invalid CSRF token'], JSON_THROW_ON_ERROR);
     exit;
 }
 
 // Require teacher role for access
 if (!isLoggedIn() || !hasRole(ROLE_TEACHER)) {
     http_response_code(403); // Forbidden
-    echo json_encode(['error' => 'Unauthorized access']);
+    echo json_encode(['error' => 'Unauthorized access'], JSON_THROW_ON_ERROR);
     exit;
 }
 
@@ -61,7 +61,7 @@ switch ($action) {
         break;
     default:
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid action requested']);
+        echo json_encode(['error' => 'Invalid action requested'], JSON_THROW_ON_ERROR);
         break;
 }
 
@@ -74,36 +74,40 @@ function addGradeItem() {
     $name = trim($_POST['name'] ?? '');
     $maxPoints = filter_input(INPUT_POST, 'max_points', FILTER_VALIDATE_FLOAT);
     $weight = filter_input(INPUT_POST, 'weight', FILTER_VALIDATE_FLOAT);
-    
+
     if (!$classId || empty($name) || $maxPoints === false || $maxPoints <= 0 || $weight === false || $weight <= 0) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid input data']);
+        echo json_encode(['error' => 'Invalid input data'], JSON_THROW_ON_ERROR);
         return;
     }
-    
+
     // Verify teacher has access to this class
     if (!teacherHasAccessToClass($classId)) {
         http_response_code(403); // Forbidden
-        echo json_encode(['error' => 'You do not have access to this class']);
+        echo json_encode(['error' => 'You do not have access to this class'], JSON_THROW_ON_ERROR);
         return;
     }
-    
+
     try {
-        $pdo = getDBConnection();
+        $pdo = safeGetDBConnection('api/grades.php - addGradeItem()', true);
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
+
         $stmt = $pdo->prepare(
             "INSERT INTO grade_items (class_id, name, max_points, weight) 
              VALUES (:class_id, :name, :max_points, :weight)"
         );
-        
+
         $stmt->execute([
             'class_id' => $classId,
             'name' => $name,
             'max_points' => $maxPoints,
             'weight' => $weight
         ]);
-        
+
         $itemId = $pdo->lastInsertId();
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Grade item added successfully',
@@ -114,10 +118,10 @@ function addGradeItem() {
                 'max_points' => $maxPoints,
                 'weight' => $weight
             ]
-        ]);
+        ], JSON_THROW_ON_ERROR);
     } catch (PDOException $e) {
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
     }
 }
 
@@ -130,35 +134,39 @@ function updateGradeItem() {
     $name = trim($_POST['name'] ?? '');
     $maxPoints = filter_input(INPUT_POST, 'max_points', FILTER_VALIDATE_FLOAT);
     $weight = filter_input(INPUT_POST, 'weight', FILTER_VALIDATE_FLOAT);
-    
+
     if (!$itemId || empty($name) || $maxPoints === false || $maxPoints <= 0 || $weight === false || $weight <= 0) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid input data']);
+        echo json_encode(['error' => 'Invalid input data'], JSON_THROW_ON_ERROR);
         return;
     }
-    
+
     // Verify teacher has access to this grade item
     if (!teacherHasAccessToGradeItem($itemId)) {
         http_response_code(403); // Forbidden
-        echo json_encode(['error' => 'You do not have access to this grade item']);
+        echo json_encode(['error' => 'You do not have access to this grade item'], JSON_THROW_ON_ERROR);
         return;
     }
-    
+
     try {
-        $pdo = getDBConnection();
+        $pdo = safeGetDBConnection('api/grades.php - updateGradeItem()', true);
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
+
         $stmt = $pdo->prepare(
             "UPDATE grade_items 
              SET name = :name, max_points = :max_points, weight = :weight
              WHERE item_id = :item_id"
         );
-        
+
         $stmt->execute([
             'item_id' => $itemId,
             'name' => $name,
             'max_points' => $maxPoints,
             'weight' => $weight
         ]);
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Grade item updated successfully',
@@ -168,10 +176,10 @@ function updateGradeItem() {
                 'max_points' => $maxPoints,
                 'weight' => $weight
             ]
-        ]);
+        ], JSON_THROW_ON_ERROR);
     } catch (PDOException $e) {
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
     }
 }
 
@@ -181,49 +189,52 @@ function updateGradeItem() {
 function deleteGradeItem() {
     // Validate input
     $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
-    
+
     if (!$itemId) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid grade item ID']);
+        echo json_encode(['error' => 'Invalid grade item ID'], JSON_THROW_ON_ERROR);
         return;
     }
-    
+
     // Verify teacher has access to this grade item
     if (!teacherHasAccessToGradeItem($itemId)) {
         http_response_code(403); // Forbidden
-        echo json_encode(['error' => 'You do not have access to this grade item']);
+        echo json_encode(['error' => 'You do not have access to this grade item'], JSON_THROW_ON_ERROR);
         return;
     }
-    
-    $pdo = getDBConnection();
-    
+
     try {
+        $pdo = safeGetDBConnection('api/grades.php - deleteGradeItem()', true);
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
+
         // Start transaction to ensure data integrity
         $pdo->beginTransaction();
-        
+
         // Delete related grades first
         $stmt = $pdo->prepare("DELETE FROM grades WHERE item_id = :item_id");
         $stmt->execute(['item_id' => $itemId]);
-        
+
         // Then delete the grade item
         $stmt = $pdo->prepare("DELETE FROM grade_items WHERE item_id = :item_id");
         $stmt->execute(['item_id' => $itemId]);
-        
+
         // Commit transaction
         $pdo->commit();
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Grade item deleted successfully'
-        ]);
+        ], JSON_THROW_ON_ERROR);
     } catch (PDOException $e) {
         // Rollback on error
-        if ($pdo->inTransaction()) {
+        if (isset($pdo) && $pdo && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
-        
+
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
     }
 }
 
@@ -236,23 +247,26 @@ function saveGrade() {
     $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
     $points = filter_input(INPUT_POST, 'points', FILTER_VALIDATE_FLOAT);
     $comment = trim($_POST['comment'] ?? '');
-    
+
     if (!$enrollId || !$itemId || $points === false) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid input data']);
+        echo json_encode(['error' => 'Invalid input data'], JSON_THROW_ON_ERROR);
         return;
     }
-    
+
     // Verify teacher has access to this enrollment and grade item
     if (!teacherHasAccessToEnrollment($enrollId) || !teacherHasAccessToGradeItem($itemId)) {
         http_response_code(403); // Forbidden
-        echo json_encode(['error' => 'You do not have access to this student or grade item']);
+        echo json_encode(['error' => 'You do not have access to this student or grade item'], JSON_THROW_ON_ERROR);
         return;
     }
-    
+
     try {
-        $pdo = getDBConnection();
-        
+        $pdo = safeGetDBConnection('api/grades.php - saveGrade()', true);
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
+
         // Check if grade already exists
         $stmt = $pdo->prepare("SELECT grade_id FROM grades WHERE enroll_id = :enroll_id AND item_id = :item_id");
         $stmt->execute([
@@ -260,7 +274,7 @@ function saveGrade() {
             'item_id' => $itemId
         ]);
         $existingGrade = $stmt->fetch();
-        
+
         if ($existingGrade) {
             // Update existing grade
             $stmt = $pdo->prepare(
@@ -268,14 +282,14 @@ function saveGrade() {
                  SET points = :points, comment = :comment
                  WHERE enroll_id = :enroll_id AND item_id = :item_id"
             );
-            
+
             $stmt->execute([
                 'enroll_id' => $enrollId,
                 'item_id' => $itemId,
                 'points' => $points,
                 'comment' => $comment
             ]);
-            
+
             $gradeId = $existingGrade['grade_id'];
         } else {
             // Insert new grade
@@ -283,24 +297,24 @@ function saveGrade() {
                 "INSERT INTO grades (enroll_id, item_id, points, comment) 
                  VALUES (:enroll_id, :item_id, :points, :comment)"
             );
-            
+
             $stmt->execute([
                 'enroll_id' => $enrollId,
                 'item_id' => $itemId,
                 'points' => $points,
                 'comment' => $comment
             ]);
-            
+
             $gradeId = $pdo->lastInsertId();
         }
-        
+
         // Get the max points for this grade item to calculate percentage
         $stmt = $pdo->prepare("SELECT max_points FROM grade_items WHERE item_id = :item_id");
         $stmt->execute(['item_id' => $itemId]);
         $gradeItem = $stmt->fetch();
         $maxPoints = $gradeItem['max_points'];
         $percentage = ($maxPoints > 0) ? (($points / $maxPoints) * 100) : 0;
-        
+
         echo json_encode([
             'success' => true,
             'message' => 'Grade saved successfully',
@@ -310,10 +324,10 @@ function saveGrade() {
                 'comment' => $comment,
                 'percentage' => round($percentage, 1)
             ]
-        ]);
+        ], JSON_THROW_ON_ERROR);
     } catch (PDOException $e) {
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
     }
 }
 
@@ -322,19 +336,23 @@ function saveGrade() {
  */
 function teacherHasAccessToClass($classId) {
     try {
-        $pdo = getDBConnection();
+        $pdo = safeGetDBConnection('teacherHasAccessToClass()', false);
+        if (!$pdo) {
+            return false; // Cannot verify access without DB connection
+        }
+
         $stmt = $pdo->prepare(
             "SELECT c.class_id
              FROM classes c
              JOIN teachers t ON c.teacher_id = t.teacher_id
              WHERE t.user_id = :user_id AND c.class_id = :class_id"
         );
-        
+
         $stmt->execute([
             'user_id' => getUserId(),
             'class_id' => $classId
         ]);
-        
+
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
         return false;
@@ -346,7 +364,11 @@ function teacherHasAccessToClass($classId) {
  */
 function teacherHasAccessToGradeItem($itemId) {
     try {
-        $pdo = getDBConnection();
+        $pdo = safeGetDBConnection('teacherHasAccessToGradeItem()', false);
+        if (!$pdo) {
+            return false; // Cannot verify access without DB connection
+        }
+
         $stmt = $pdo->prepare(
             "SELECT gi.item_id
              FROM grade_items gi
@@ -354,12 +376,12 @@ function teacherHasAccessToGradeItem($itemId) {
              JOIN teachers t ON c.teacher_id = t.teacher_id
              WHERE t.user_id = :user_id AND gi.item_id = :item_id"
         );
-        
+
         $stmt->execute([
             'user_id' => getUserId(),
             'item_id' => $itemId
         ]);
-        
+
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
         return false;
@@ -371,7 +393,11 @@ function teacherHasAccessToGradeItem($itemId) {
  */
 function teacherHasAccessToEnrollment($enrollId) {
     try {
-        $pdo = getDBConnection();
+        $pdo = safeGetDBConnection('teacherHasAccessToEnrollment()', false);
+        if (!$pdo) {
+            return false; // Cannot verify access without DB connection
+        }
+
         $stmt = $pdo->prepare(
             "SELECT e.enroll_id
              FROM enrollments e
@@ -379,12 +405,12 @@ function teacherHasAccessToEnrollment($enrollId) {
              JOIN teachers t ON c.teacher_id = t.teacher_id
              WHERE t.user_id = :user_id AND e.enroll_id = :enroll_id"
         );
-        
+
         $stmt->execute([
             'user_id' => getUserId(),
             'enroll_id' => $enrollId
         ]);
-        
+
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
         return false;

@@ -3,9 +3,6 @@
 # noinspection SpellCheckingInspectionForFile
 
 -- uwuweb Database Schema
--- Creation script for the school grade management system
-
--- Drop existing database if it exists and create new one
 DROP DATABASE IF EXISTS uwuweb;
 CREATE DATABASE uwuweb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE uwuweb;

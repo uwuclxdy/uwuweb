@@ -28,21 +28,21 @@ header('Content-Type: application/json');
 // Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405); // Method Not Allowed
-    echo json_encode(['error' => 'Only POST requests are allowed']);
+    echo json_encode(['error' => 'Only POST requests are allowed'], JSON_THROW_ON_ERROR);
     exit;
 }
 
 // Ensure CSRF token is valid
 if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
     http_response_code(403); // Forbidden
-    echo json_encode(['error' => 'Invalid CSRF token']);
+    echo json_encode(['error' => 'Invalid CSRF token'], JSON_THROW_ON_ERROR);
     exit;
 }
 
 // Require teacher or admin role for access
 if (!isLoggedIn() || (!hasRole(ROLE_TEACHER) && !hasRole(ROLE_ADMIN))) {
     http_response_code(403); // Forbidden
-    echo json_encode(['error' => 'Unauthorized access']);
+    echo json_encode(['error' => 'Unauthorized access'], JSON_THROW_ON_ERROR);
     exit;
 }
 
@@ -74,7 +74,7 @@ switch ($action) {
         break;
     default:
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid action requested']);
+        echo json_encode(['error' => 'Invalid action requested'], JSON_THROW_ON_ERROR);
         break;
 }
 
@@ -89,19 +89,23 @@ function addPeriod() {
 
     if (!$classId || empty($periodDate) || empty($periodLabel)) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid input data']);
+        echo json_encode(['error' => 'Invalid input data'], JSON_THROW_ON_ERROR);
         return;
     }
 
     // Verify teacher has access to this class
     if (!teacherHasAccessToClass($classId)) {
         http_response_code(403); // Forbidden
-        echo json_encode(['error' => 'You do not have access to this class']);
+        echo json_encode(['error' => 'You do not have access to this class'], JSON_THROW_ON_ERROR);
         return;
     }
 
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
+
         $stmt = $pdo->prepare(
             "INSERT INTO periods (class_id, period_date, period_label) 
              VALUES (:class_id, :period_date, :period_label)"
@@ -142,19 +146,23 @@ function updatePeriod() {
 
     if (!$periodId || empty($periodDate) || empty($periodLabel)) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid input data']);
+        echo json_encode(['error' => 'Invalid input data'], JSON_THROW_ON_ERROR);
         return;
     }
 
     // Verify teacher has access to this period
     if (!teacherHasAccessToPeriod($periodId)) {
         http_response_code(403); // Forbidden
-        echo json_encode(['error' => 'You do not have access to this period']);
+        echo json_encode(['error' => 'You do not have access to this period'], JSON_THROW_ON_ERROR);
         return;
     }
 
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
+
         $stmt = $pdo->prepare(
             "UPDATE periods 
              SET period_date = :period_date, period_label = :period_label
@@ -175,10 +183,10 @@ function updatePeriod() {
                 'period_date' => $periodDate,
                 'period_label' => $periodLabel
             ]
-        ]);
+        ], JSON_THROW_ON_ERROR);
     } catch (PDOException $e) {
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
     }
 }
 
@@ -191,20 +199,23 @@ function deletePeriod() {
 
     if (!$periodId) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid period ID']);
+        echo json_encode(['error' => 'Invalid period ID'], JSON_THROW_ON_ERROR);
         return;
     }
 
     // Verify teacher has access to this period
     if (!teacherHasAccessToPeriod($periodId)) {
         http_response_code(403); // Forbidden
-        echo json_encode(['error' => 'You do not have access to this period']);
+        echo json_encode(['error' => 'You do not have access to this period'], JSON_THROW_ON_ERROR);
         return;
     }
 
-    $pdo = getDBConnection();
-    
     try {
+        $pdo = getDBConnection();
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
+
         // Start transaction to ensure data integrity
         $pdo->beginTransaction();
 
@@ -222,15 +233,15 @@ function deletePeriod() {
         echo json_encode([
             'success' => true,
             'message' => 'Period deleted successfully'
-        ]);
+        ], JSON_THROW_ON_ERROR);
     } catch (PDOException $e) {
         // Rollback on error
-        if ($pdo->inTransaction()) {
+        if (isset($pdo) && $pdo && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
 
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
     }
 }
 
@@ -245,19 +256,22 @@ function saveAttendance() {
 
     if (!$enrollId || !$periodId || !in_array($status, ['P', 'A', 'L'])) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid input data']);
+        echo json_encode(['error' => 'Invalid input data'], JSON_THROW_ON_ERROR);
         return;
     }
 
     // Verify teacher has access to this period and enrollment
     if (!teacherHasAccessToPeriod($periodId) || !teacherHasAccessToEnrollment($enrollId)) {
         http_response_code(403); // Forbidden
-        echo json_encode(['error' => 'You do not have access to this student or period']);
+        echo json_encode(['error' => 'You do not have access to this student or period'], JSON_THROW_ON_ERROR);
         return;
     }
 
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
 
         // Check if attendance record already exists
         $stmt = $pdo->prepare(
@@ -312,10 +326,10 @@ function saveAttendance() {
                 'period_id' => $periodId,
                 'status' => $status
             ]
-        ]);
+        ], JSON_THROW_ON_ERROR);
     } catch (PDOException $e) {
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
     }
 }
 
@@ -325,24 +339,27 @@ function saveAttendance() {
 function bulkAttendance() {
     // Validate inputs
     $periodId = filter_input(INPUT_POST, 'period_id', FILTER_VALIDATE_INT);
-    $attendanceData = isset($_POST['attendance_data']) ? json_decode($_POST['attendance_data'], true) : null;
+    $attendanceData = isset($_POST['attendance_data']) ? json_decode($_POST['attendance_data'], true, 512, JSON_THROW_ON_ERROR) : null;
 
     if (!$periodId || !is_array($attendanceData)) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid input data']);
+        echo json_encode(['error' => 'Invalid input data'], JSON_THROW_ON_ERROR);
         return;
     }
 
     // Verify teacher has access to this period
     if (!teacherHasAccessToPeriod($periodId)) {
         http_response_code(403); // Forbidden
-        echo json_encode(['error' => 'You do not have access to this period']);
+        echo json_encode(['error' => 'You do not have access to this period'], JSON_THROW_ON_ERROR);
         return;
     }
 
-    $pdo = getDBConnection();
-    
     try {
+        $pdo = getDBConnection();
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
+
         $pdo->beginTransaction();
 
         $saved = 0;
@@ -413,23 +430,23 @@ function bulkAttendance() {
                 'success' => false,
                 'message' => 'Errors occurred while saving attendance',
                 'errors' => $errors
-            ]);
+            ], JSON_THROW_ON_ERROR);
         } else {
             $pdo->commit();
             echo json_encode([
                 'success' => true,
                 'message' => "Attendance saved successfully for $saved students",
                 'saved_count' => $saved
-            ]);
+            ], JSON_THROW_ON_ERROR);
         }
     } catch (PDOException $e) {
         // Rollback on error
-        if ($pdo->inTransaction()) {
+        if (isset($pdo) && $pdo && $pdo->inTransaction()) {
             $pdo->rollBack();
         }
 
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
     }
 }
 
@@ -444,13 +461,16 @@ function justifyAbsence() {
 
     if (!$attId || empty($justification)) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid input data']);
+        echo json_encode(['error' => 'Invalid input data'], JSON_THROW_ON_ERROR);
         return;
     }
 
-    $pdo = getDBConnection();
-    
     try {
+        $pdo = getDBConnection();
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
+
         // Check if the attendance record exists and if the user has access
         $stmt = $pdo->prepare(
             "SELECT a.att_id, a.status, a.justification, e.enroll_id, p.period_id, c.class_id, c.teacher_id
@@ -466,7 +486,7 @@ function justifyAbsence() {
 
         if (!$record) {
             http_response_code(404); // Not Found
-            echo json_encode(['error' => 'Attendance record not found']);
+            echo json_encode(['error' => 'Attendance record not found'], JSON_THROW_ON_ERROR);
             return;
         }
 
@@ -481,14 +501,14 @@ function justifyAbsence() {
         // Only allow teachers to approve justifications
         if ($approved !== null && (!$isTeacher || !$isTeacherOfClass)) {
             http_response_code(403); // Forbidden
-            echo json_encode(['error' => 'Only teachers can approve justifications']);
+            echo json_encode(['error' => 'Only teachers can approve justifications'], JSON_THROW_ON_ERROR);
             return;
         }
 
         // Only allow students to submit justifications or teachers to modify them
         if (!$isStudentOfEnrollment && !$isTeacherOfClass) {
             http_response_code(403); // Forbidden
-            echo json_encode(['error' => 'You do not have permission to modify this justification']);
+            echo json_encode(['error' => 'You do not have permission to modify this justification'], JSON_THROW_ON_ERROR);
             return;
         }
 
@@ -515,16 +535,22 @@ function justifyAbsence() {
 
         echo json_encode([
             'success' => true,
-            'message' => 'Justification ' . ($approved !== null ? ($approved ? 'approved' : 'rejected') : 'saved') . ' successfully',
+            'message' => 'Justification ' . (static function() use ($approved) {
+                            if ($approved === null) {
+                                return 'saved';
+                            }
+                            return $approved ? 'approved' : 'rejected';
+                        })() . ' successfully',
             'justification' => [
                 'att_id' => $attId,
                 'justification' => $justification,
                 'approved' => $approved
             ]
-        ]);
+        ], JSON_THROW_ON_ERROR);
     } catch (PDOException $e) {
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
+    } catch (JsonException $e) {
     }
 }
 
@@ -538,12 +564,15 @@ function getStudentAttendance() {
 
     if (!$studentId) {
         http_response_code(400); // Bad Request
-        echo json_encode(['error' => 'Invalid student ID']);
+        echo json_encode(['error' => 'Invalid student ID'], JSON_THROW_ON_ERROR);
         return;
     }
 
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            throw new PDOException("Failed to connect to database");
+        }
 
         // Build the query based on whether a specific class is requested
         $query = "
@@ -609,10 +638,10 @@ function getStudentAttendance() {
             'success' => true,
             'attendance' => $attendance,
             'summary' => $summary
-        ]);
+        ], JSON_THROW_ON_ERROR);
     } catch (PDOException $e) {
         http_response_code(500); // Internal Server Error
-        echo json_encode(['error' => 'Database error: ' . $e->getMessage()]);
+        echo json_encode(['error' => 'Database error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
     }
 }
 
@@ -622,6 +651,9 @@ function getStudentAttendance() {
 function teacherHasAccessToClass($classId) {
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            return false; // Cannot verify access without DB connection
+        }
 
         // Admins have access to all classes
         if (hasRole(ROLE_ADMIN)) {
@@ -652,6 +684,9 @@ function teacherHasAccessToClass($classId) {
 function teacherHasAccessToPeriod($periodId) {
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            return false; // Cannot verify access without DB connection
+        }
 
         // Admins have access to all periods
         if (hasRole(ROLE_ADMIN)) {
@@ -683,6 +718,9 @@ function teacherHasAccessToPeriod($periodId) {
 function teacherHasAccessToEnrollment($enrollId) {
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            return false; // Cannot verify access without DB connection
+        }
 
         // Admins have access to all enrollments
         if (hasRole(ROLE_ADMIN)) {
@@ -714,6 +752,9 @@ function teacherHasAccessToEnrollment($enrollId) {
 function studentOwnsEnrollment($enrollId) {
     try {
         $pdo = getDBConnection();
+        if (!$pdo) {
+            return false; // Cannot verify ownership without DB connection
+        }
 
         $stmt = $pdo->prepare(
             "SELECT e.enroll_id

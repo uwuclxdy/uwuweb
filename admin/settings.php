@@ -1,10 +1,10 @@
 <?php
 /**
  * Admin Settings Management
- * 
+ *
  * Provides functionality for administrators to manage system settings,
  * academic terms, and subjects
- * 
+ *
  * Functions:
  * - displayTermsList() - Displays a table of all terms with management actions
  * - displaySubjectsList() - Displays a table of all subjects with management actions
@@ -27,11 +27,16 @@ require_once '../includes/header.php';
 requireRole(ROLE_ADMIN);
 
 $pdo = getDBConnection();
+if (!$pdo) {
+    error_log("Database connection failed in admin/settings.php");
+    die("Database connection failed. Please check the error log for details.");
+}
+
 $message = '';
 $error = '';
 
 // Set default active tab
-$activeTab = isset($_GET['tab']) ? $_GET['tab'] : 'terms';
+$activeTab = $_GET['tab'] ?? 'terms';
 
 // Variables for form data
 $termDetails = null;
@@ -40,14 +45,14 @@ $subjectDetails = null;
 // Process form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formAction = $_POST['action'] ?? '';
-    
+
     // Verify CSRF token for all POST actions
     if (isset($_POST['csrf_token'])) {
         verifyCSRFToken($_POST['csrf_token']);
     } else {
         $error = 'Security token missing. Please try again.';
     }
-    
+
     if (empty($error)) {
         try {
             switch ($formAction) {
@@ -57,22 +62,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $name = trim($_POST['name']);
                     $startDate = trim($_POST['start_date']);
                     $endDate = trim($_POST['end_date']);
-                    
+
                     // Basic validation
                     if (empty($name) || empty($startDate) || empty($endDate)) {
                         $error = 'All fields are required.';
                         break;
                     }
-                    
+
                     // Validate dates
                     $startDateTime = new DateTime($startDate);
                     $endDateTime = new DateTime($endDate);
-                    
+
                     if ($endDateTime <= $startDateTime) {
                         $error = 'End date must be after start date.';
                         break;
                     }
-                    
+
                     // Check if term with same name exists
                     $stmt = $pdo->prepare("SELECT term_id FROM terms WHERE name = :name");
                     $stmt->execute(['name' => $name]);
@@ -80,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $error = 'Term name already exists. Please choose another.';
                         break;
                     }
-                    
+
                     // Insert term
                     $stmt = $pdo->prepare("INSERT INTO terms (name, start_date, end_date) 
                                         VALUES (:name, :start_date, :end_date)");
@@ -89,45 +94,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'start_date' => $startDate,
                         'end_date' => $endDate
                     ]);
-                    
+
                     $message = "Term '$name' created successfully.";
                     $activeTab = 'terms';
                     break;
-                    
+
                 case 'update_term':
                     // Update existing term
                     $termId = (int)$_POST['term_id'];
                     $name = trim($_POST['name']);
                     $startDate = trim($_POST['start_date']);
                     $endDate = trim($_POST['end_date']);
-                    
+
                     // Basic validation
                     if (empty($name) || empty($startDate) || empty($endDate)) {
                         $error = 'All fields are required.';
                         break;
                     }
-                    
+
                     // Validate dates
                     $startDateTime = new DateTime($startDate);
                     $endDateTime = new DateTime($endDate);
-                    
+
                     if ($endDateTime <= $startDateTime) {
                         $error = 'End date must be after start date.';
                         break;
                     }
-                    
+
                     // Check if term name exists (excluding current term)
                     $stmt = $pdo->prepare("SELECT term_id FROM terms WHERE name = :name AND term_id != :term_id");
                     $stmt->execute([
                         'name' => $name,
                         'term_id' => $termId
                     ]);
-                    
+
                     if ($stmt->fetch()) {
                         $error = 'Term name already exists. Please choose another.';
                         break;
                     }
-                    
+
                     // Update the term
                     $stmt = $pdo->prepare("UPDATE terms SET 
                                         name = :name, 
@@ -140,43 +145,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'end_date' => $endDate,
                         'term_id' => $termId
                     ]);
-                    
+
                     $message = "Term updated successfully.";
                     $activeTab = 'terms';
                     break;
-                    
+
                 case 'delete_term':
                     // Delete term if no classes use it
                     $termId = (int)$_POST['term_id'];
-                    
+
                     // Check if term has classes
                     $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM classes WHERE term_id = :term_id");
                     $stmt->execute(['term_id' => $termId]);
-                    
+
                     if ($stmt->fetch()['count'] > 0) {
                         $error = 'Cannot delete: Term has classes assigned to it.';
                         break;
                     }
-                    
+
                     // Delete term
                     $stmt = $pdo->prepare("DELETE FROM terms WHERE term_id = :term_id");
                     $stmt->execute(['term_id' => $termId]);
-                    
+
                     $message = "Term deleted successfully.";
                     $activeTab = 'terms';
                     break;
-                    
+
                 // Subject management actions
                 case 'create_subject':
                     // Create new subject
                     $name = trim($_POST['name']);
-                    
+
                     // Basic validation
                     if (empty($name)) {
                         $error = 'Subject name is required.';
                         break;
                     }
-                    
+
                     // Check if subject with same name exists
                     $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE name = :name");
                     $stmt->execute(['name' => $name]);
@@ -184,66 +189,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $error = 'Subject name already exists. Please choose another.';
                         break;
                     }
-                    
+
                     // Insert subject
                     $stmt = $pdo->prepare("INSERT INTO subjects (name) VALUES (:name)");
                     $stmt->execute(['name' => $name]);
-                    
+
                     $message = "Subject '$name' created successfully.";
                     $activeTab = 'subjects';
                     break;
-                    
+
                 case 'update_subject':
                     // Update existing subject
                     $subjectId = (int)$_POST['subject_id'];
                     $name = trim($_POST['name']);
-                    
+
                     // Basic validation
                     if (empty($name)) {
                         $error = 'Subject name is required.';
                         break;
                     }
-                    
+
                     // Check if subject name exists (excluding current subject)
                     $stmt = $pdo->prepare("SELECT subject_id FROM subjects WHERE name = :name AND subject_id != :subject_id");
                     $stmt->execute([
                         'name' => $name,
                         'subject_id' => $subjectId
                     ]);
-                    
+
                     if ($stmt->fetch()) {
                         $error = 'Subject name already exists. Please choose another.';
                         break;
                     }
-                    
+
                     // Update the subject
                     $stmt = $pdo->prepare("UPDATE subjects SET name = :name WHERE subject_id = :subject_id");
                     $stmt->execute([
                         'name' => $name,
                         'subject_id' => $subjectId
                     ]);
-                    
+
                     $message = "Subject updated successfully.";
                     $activeTab = 'subjects';
                     break;
-                    
+
                 case 'delete_subject':
                     // Delete subject if no classes use it
                     $subjectId = (int)$_POST['subject_id'];
-                    
+
                     // Check if subject has classes
                     $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM classes WHERE subject_id = :subject_id");
                     $stmt->execute(['subject_id' => $subjectId]);
-                    
+
                     if ($stmt->fetch()['count'] > 0) {
                         $error = 'Cannot delete: Subject has classes assigned to it.';
                         break;
                     }
-                    
+
                     // Delete subject
                     $stmt = $pdo->prepare("DELETE FROM subjects WHERE subject_id = :subject_id");
                     $stmt->execute(['subject_id' => $subjectId]);
-                    
+
                     $message = "Subject deleted successfully.";
                     $activeTab = 'subjects';
                     break;
@@ -270,57 +275,57 @@ if (isset($_GET['edit_subject']) && is_numeric($_GET['edit_subject'])) {
 
 /**
  * Retrieves detailed information about a specific term
- * 
+ *
  * @param int $termId The term ID to get details for
  * @return array|null Term details or null if not found
  */
 function getTermDetails($termId) {
     global $pdo;
-    
+
     $stmt = $pdo->prepare("
         SELECT term_id, name, start_date, end_date
         FROM terms
         WHERE term_id = :term_id
     ");
     $stmt->execute(['term_id' => $termId]);
-    
+
     return $stmt->fetch();
 }
 
 /**
  * Retrieves detailed information about a specific subject
- * 
+ *
  * @param int $subjectId The subject ID to get details for
  * @return array|null Subject details or null if not found
  */
 function getSubjectDetails($subjectId) {
     global $pdo;
-    
+
     $stmt = $pdo->prepare("
         SELECT subject_id, name
         FROM subjects
         WHERE subject_id = :subject_id
     ");
     $stmt->execute(['subject_id' => $subjectId]);
-    
+
     return $stmt->fetch();
 }
 
 /**
  * Displays a table of all terms with management actions
- * 
+ *
  * @return void
  */
 function displayTermsList() {
     global $pdo;
-    
+
     // Get all terms
     $stmt = $pdo->query("
         SELECT term_id, name, start_date, end_date
         FROM terms
         ORDER BY start_date DESC
     ");
-    
+
     $terms = $stmt->fetchAll();
 ?>
     <div class="terms-list">
@@ -361,19 +366,19 @@ function displayTermsList() {
 
 /**
  * Displays a table of all subjects with management actions
- * 
+ *
  * @return void
  */
 function displaySubjectsList() {
     global $pdo;
-    
+
     // Get all subjects
     $stmt = $pdo->query("
         SELECT subject_id, name
         FROM subjects
         ORDER BY name ASC
     ");
-    
+
     $subjects = $stmt->fetchAll();
 ?>
     <div class="subjects-list">
@@ -411,29 +416,29 @@ function displaySubjectsList() {
 
 <main class="container">
     <h1>System Settings</h1>
-    
+
     <?php if (!empty($message)): ?>
         <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
     <?php endif; ?>
-    
+
     <?php if (!empty($error)): ?>
         <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
     <?php endif; ?>
-    
+
     <div class="card">
         <div class="card-header">
             <ul class="nav nav-tabs card-header-tabs">
                 <li class="nav-item">
-                    <a class="nav-link <?= $activeTab === 'terms' ? 'active' : '' ?>" href="#" 
+                    <a class="nav-link <?= $activeTab === 'terms' ? 'active' : '' ?>" href="#"
                        onclick="showTab('terms')">Academic Terms</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= $activeTab === 'subjects' ? 'active' : '' ?>" href="#" 
+                    <a class="nav-link <?= $activeTab === 'subjects' ? 'active' : '' ?>" href="#"
                        onclick="showTab('subjects')">Subjects</a>
                 </li>
             </ul>
         </div>
-        
+
         <div class="card-body">
             <!-- Terms Tab -->
             <div id="terms" class="tab-content <?= $activeTab === 'terms' ? 'active' : '' ?>">
@@ -443,35 +448,35 @@ function displaySubjectsList() {
                         <button class="btn btn-primary" onclick="showForm('term-form')">Add New Term</button>
                     <?php endif; ?>
                 </div>
-                
+
                 <div id="term-form" class="form-section <?= !empty($termDetails) ? 'visible' : '' ?>">
                     <h3><?= empty($termDetails) ? 'Create New Term' : 'Edit Term' ?></h3>
                     <form method="post" action="settings.php?tab=terms">
                         <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
                         <input type="hidden" name="action" value="<?= empty($termDetails) ? 'create_term' : 'update_term' ?>">
-                        
+
                         <?php if (!empty($termDetails)): ?>
                             <input type="hidden" name="term_id" value="<?= $termDetails['term_id'] ?>">
                         <?php endif; ?>
-                        
+
                         <div class="form-group">
                             <label for="term_name">Term Name</label>
-                            <input type="text" class="form-control" id="term_name" name="name" 
+                            <input type="text" class="form-control" id="term_name" name="name"
                                    value="<?= htmlspecialchars($termDetails['name'] ?? '') ?>" required>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="start_date">Start Date</label>
-                            <input type="date" class="form-control" id="start_date" name="start_date" 
+                            <input type="date" class="form-control" id="start_date" name="start_date"
                                    value="<?= !empty($termDetails) ? date('Y-m-d', strtotime($termDetails['start_date'])) : '' ?>" required>
                         </div>
-                        
+
                         <div class="form-group">
                             <label for="end_date">End Date</label>
-                            <input type="date" class="form-control" id="end_date" name="end_date" 
+                            <input type="date" class="form-control" id="end_date" name="end_date"
                                    value="<?= !empty($termDetails) ? date('Y-m-d', strtotime($termDetails['end_date'])) : '' ?>" required>
                         </div>
-                        
+
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary">
                                 <?= empty($termDetails) ? 'Create Term' : 'Update Term' ?>
@@ -480,12 +485,12 @@ function displaySubjectsList() {
                         </div>
                     </form>
                 </div>
-                
+
                 <div class="list-section <?= empty($termDetails) ? 'visible' : '' ?>">
                     <?php displayTermsList(); ?>
                 </div>
             </div>
-            
+
             <!-- Subjects Tab -->
             <div id="subjects" class="tab-content <?= $activeTab === 'subjects' ? 'active' : '' ?>">
                 <div class="section-header">
@@ -494,23 +499,23 @@ function displaySubjectsList() {
                         <button class="btn btn-primary" onclick="showForm('subject-form')">Add New Subject</button>
                     <?php endif; ?>
                 </div>
-                
+
                 <div id="subject-form" class="form-section <?= !empty($subjectDetails) ? 'visible' : '' ?>">
                     <h3><?= empty($subjectDetails) ? 'Create New Subject' : 'Edit Subject' ?></h3>
                     <form method="post" action="settings.php?tab=subjects">
                         <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
                         <input type="hidden" name="action" value="<?= empty($subjectDetails) ? 'create_subject' : 'update_subject' ?>">
-                        
+
                         <?php if (!empty($subjectDetails)): ?>
                             <input type="hidden" name="subject_id" value="<?= $subjectDetails['subject_id'] ?>">
                         <?php endif; ?>
-                        
+
                         <div class="form-group">
                             <label for="subject_name">Subject Name</label>
-                            <input type="text" class="form-control" id="subject_name" name="name" 
+                            <input type="text" class="form-control" id="subject_name" name="name"
                                    value="<?= htmlspecialchars($subjectDetails['name'] ?? '') ?>" required>
                         </div>
-                        
+
                         <div class="form-actions">
                             <button type="submit" class="btn btn-primary">
                                 <?= empty($subjectDetails) ? 'Create Subject' : 'Update Subject' ?>
@@ -519,7 +524,7 @@ function displaySubjectsList() {
                         </div>
                     </form>
                 </div>
-                
+
                 <div class="list-section <?= empty($subjectDetails) ? 'visible' : '' ?>">
                     <?php displaySubjectsList(); ?>
                 </div>
@@ -537,10 +542,10 @@ function displaySubjectsList() {
             <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
             <input type="hidden" name="action" value="delete_term">
             <input type="hidden" name="term_id" id="delete-term-id">
-            
+
             <p>Are you sure you want to delete term: <span id="delete-term-name"></span>?</p>
             <p class="text-danger">Warning: This action cannot be undone!</p>
-            
+
             <div class="form-actions">
                 <button type="submit" class="btn btn-danger">Delete Term</button>
                 <button type="button" class="btn btn-secondary" onclick="closeModal('delete-term-modal')">Cancel</button>
@@ -558,10 +563,10 @@ function displaySubjectsList() {
             <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
             <input type="hidden" name="action" value="delete_subject">
             <input type="hidden" name="subject_id" id="delete-subject-id">
-            
+
             <p>Are you sure you want to delete subject: <span id="delete-subject-name"></span>?</p>
             <p class="text-danger">Warning: This action cannot be undone!</p>
-            
+
             <div class="form-actions">
                 <button type="submit" class="btn btn-danger">Delete Subject</button>
                 <button type="button" class="btn btn-secondary" onclick="closeModal('delete-subject-modal')">Cancel</button>
@@ -576,12 +581,12 @@ function showTab(tabId) {
         tab.classList.remove('active');
     });
     document.getElementById(tabId).classList.add('active');
-    
+
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
     });
     event.target.classList.add('active');
-    
+
     // Update URL with tab parameter
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tabId);
