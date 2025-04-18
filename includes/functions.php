@@ -81,6 +81,458 @@ function getClassAveragesWidget() {
     }
 }
 
+/**
+ * Renders school-wide class averages for administrators
+ * Admins can see all class averages across the school
+ * @return string HTML content for widget
+ */
+function renderAdminClassAveragesWidget() {
+    $pdo = getDBConnection();
+    $classAverages = [];
+    
+    try {
+        // Get all class averages across the school
+        $stmt = $pdo->query(
+            "SELECT 
+                c.class_id,
+                c.title AS class_title,
+                s.name AS subject_name,
+                t.name AS term_name,
+                teachers.teacher_id,
+                CONCAT(tu.username) AS teacher_name,
+                COUNT(DISTINCT e.student_id) AS student_count,
+                AVG(
+                    CASE WHEN g.points IS NOT NULL THEN 
+                        (g.points / gi.max_points) * 100 
+                    ELSE NULL END
+                ) AS avg_score
+             FROM classes c
+             JOIN subjects s ON c.subject_id = s.subject_id
+             JOIN terms t ON c.term_id = t.term_id
+             JOIN teachers ON c.teacher_id = teachers.teacher_id
+             JOIN users tu ON teachers.user_id = tu.user_id
+             LEFT JOIN enrollments e ON c.class_id = e.class_id
+             LEFT JOIN grade_items gi ON c.class_id = gi.class_id
+             LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id
+             WHERE t.end_date >= CURRENT_DATE
+             GROUP BY c.class_id, s.name, t.name
+             ORDER BY avg_score DESC"
+        );
+        
+        $classAverages = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        // Log the error
+    }
+    
+    $html = '<div class="widget-content">';
+    
+    if (empty($classAverages)) {
+        $html .= '<div class="empty-message">No class average data available.</div>';
+    } else {
+        $html .= '<div class="class-averages-table">';
+        $html .= '<table class="data-table">';
+        $html .= '<thead><tr><th>Subject</th><th>Class</th><th>Teacher</th><th>Students</th><th>Average</th></tr></thead>';
+        $html .= '<tbody>';
+        
+        foreach ($classAverages as $class) {
+            $avgScoreFormatted = $class['avg_score'] !== null ? number_format($class['avg_score'], 1) : 'N/A';
+            $scoreClass = '';
+            
+            if ($class['avg_score'] !== null) {
+                if ($class['avg_score'] >= 80) {
+                    $scoreClass = 'score-excellent';
+                } elseif ($class['avg_score'] >= 70) {
+                    $scoreClass = 'score-good';
+                } elseif ($class['avg_score'] >= 60) {
+                    $scoreClass = 'score-fair';
+                } else {
+                    $scoreClass = 'score-poor';
+                }
+            }
+            
+            $html .= '<tr>';
+            $html .= '<td>' . htmlspecialchars($class['subject_name']) . '</td>';
+            $html .= '<td>' . htmlspecialchars($class['class_title']) . '</td>';
+            $html .= '<td>' . htmlspecialchars($class['teacher_name']) . '</td>';
+            $html .= '<td>' . (int)$class['student_count'] . '</td>';
+            $html .= '<td class="' . $scoreClass . '">' . $avgScoreFormatted . '%</td>';
+            $html .= '</tr>';
+        }
+        
+        $html .= '</tbody>';
+        $html .= '</table>';
+        $html .= '</div>';
+    }
+    
+    $html .= '<div class="widget-footer">';
+    $html .= '<a href="admin/reports.php?type=grades" class="widget-link">Full Grade Reports</a>';
+    $html .= '</div>';
+    $html .= '</div>';
+    
+    return $html;
+}
+
+/**
+ * Renders class averages for a teacher's classes
+ * Teachers can only see averages for classes they teach
+ * @return string HTML content for widget
+ */
+function renderTeacherClassAveragesWidget() {
+    $teacherId = getTeacherId();
+    
+    if (!$teacherId) {
+        return renderPlaceholderWidget();
+    }
+    
+    $pdo = getDBConnection();
+    $classAverages = [];
+    
+    try {
+        // Get class averages only for this teacher's classes
+        $stmt = $pdo->prepare(
+            "SELECT 
+                c.class_id,
+                c.title AS class_title,
+                s.name AS subject_name,
+                t.name AS term_name,
+                COUNT(DISTINCT e.student_id) AS student_count,
+                AVG(
+                    CASE WHEN g.points IS NOT NULL THEN 
+                        (g.points / gi.max_points) * 100 
+                    ELSE NULL END
+                ) AS avg_score
+             FROM classes c
+             JOIN subjects s ON c.subject_id = s.subject_id
+             JOIN terms t ON c.term_id = t.term_id
+             LEFT JOIN enrollments e ON c.class_id = e.class_id
+             LEFT JOIN grade_items gi ON c.class_id = gi.class_id
+             LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id
+             WHERE c.teacher_id = :teacher_id AND t.end_date >= CURRENT_DATE
+             GROUP BY c.class_id, s.name, t.name
+             ORDER BY t.start_date DESC, s.name ASC"
+        );
+        
+        $stmt->execute(['teacher_id' => $teacherId]);
+        $classAverages = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        // Log the error
+    }
+    
+    $html = '<div class="widget-content">';
+    
+    if (empty($classAverages)) {
+        $html .= '<div class="empty-message">You have no classes with grade data.</div>';
+    } else {
+        $html .= '<div class="class-averages-container">';
+        
+        foreach ($classAverages as $class) {
+            $avgScoreFormatted = $class['avg_score'] !== null ? number_format($class['avg_score'], 1) : 'N/A';
+            $scoreClass = '';
+            
+            if ($class['avg_score'] !== null) {
+                if ($class['avg_score'] >= 80) {
+                    $scoreClass = 'score-excellent';
+                } elseif ($class['avg_score'] >= 70) {
+                    $scoreClass = 'score-good';
+                } elseif ($class['avg_score'] >= 60) {
+                    $scoreClass = 'score-fair';
+                } else {
+                    $scoreClass = 'score-poor';
+                }
+            }
+            
+            $html .= '<div class="class-average-card">';
+            $html .= '<div class="class-header">';
+            $html .= '<h4>' . htmlspecialchars($class['subject_name']) . '</h4>';
+            $html .= '<div class="class-subtitle">' . htmlspecialchars($class['class_title']) . ' - ' . htmlspecialchars($class['term_name']) . '</div>';
+            $html .= '</div>';
+            
+            $html .= '<div class="class-stats">';
+            $html .= '<div class="stat-item big">';
+            $html .= '<div class="stat-value ' . $scoreClass . '">' . $avgScoreFormatted . '%</div>';
+            $html .= '<div class="stat-label">Class Average</div>';
+            $html .= '</div>';
+            
+            $html .= '<div class="stat-item">';
+            $html .= '<div class="stat-value">' . (int)$class['student_count'] . '</div>';
+            $html .= '<div class="stat-label">Students</div>';
+            $html .= '</div>';
+            $html .= '</div>';
+            
+            $html .= '<div class="class-footer">';
+            $html .= '<a href="teacher/gradebook.php?class_id=' . (int)$class['class_id'] . '" class="widget-link">View Gradebook</a>';
+            $html .= '</div>';
+            
+            $html .= '</div>';
+        }
+        
+        $html .= '</div>';
+    }
+    
+    $html .= '</div>';
+    
+    return $html;
+}
+
+/**
+ * Renders class averages for a student's enrolled classes
+ * Students can only see averages for classes they're enrolled in
+ * @return string HTML content for widget
+ */
+function renderStudentClassAveragesWidget() {
+    $studentId = getStudentId();
+    
+    if (!$studentId) {
+        return renderPlaceholderWidget();
+    }
+    
+    $pdo = getDBConnection();
+    $classAverages = [];
+    $studentGrades = [];
+    
+    try {
+        // Get both the student's individual grades and class averages
+        $stmt = $pdo->prepare(
+            "SELECT 
+                c.class_id,
+                c.title AS class_title,
+                s.name AS subject_name,
+                t.name AS term_name,
+                e.enroll_id,
+                -- Student's own average
+                AVG(
+                    CASE WHEN g.points IS NOT NULL THEN 
+                        (g.points / gi.max_points) * 100 
+                    ELSE NULL END
+                ) AS student_avg_score,
+                -- Class average (all students)
+                (SELECT AVG(
+                    CASE WHEN g2.points IS NOT NULL THEN 
+                        (g2.points / gi2.max_points) * 100 
+                    ELSE NULL END
+                )
+                FROM enrollments e2
+                JOIN grades g2 ON e2.enroll_id = g2.enroll_id
+                JOIN grade_items gi2 ON g2.item_id = gi2.item_id
+                WHERE gi2.class_id = c.class_id
+                ) AS class_avg_score
+             FROM enrollments e
+             JOIN classes c ON e.class_id = c.class_id
+             JOIN subjects s ON c.subject_id = s.subject_id
+             JOIN terms t ON c.term_id = t.term_id
+             LEFT JOIN grade_items gi ON c.class_id = gi.class_id
+             LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id
+             WHERE e.student_id = :student_id
+             GROUP BY c.class_id, s.name, t.name
+             ORDER BY t.start_date DESC, s.name ASC"
+        );
+        
+        $stmt->execute(['student_id' => $studentId]);
+        $studentGrades = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        // Log the error
+    }
+    
+    $html = '<div class="widget-content">';
+    
+    if (empty($studentGrades)) {
+        $html .= '<div class="empty-message">You are not enrolled in any classes with grade data.</div>';
+    } else {
+        $html .= '<div class="class-averages-table">';
+        $html .= '<table class="data-table">';
+        $html .= '<thead><tr><th>Subject</th><th>Class</th><th>Your Average</th><th>Class Average</th><th>Comparison</th></tr></thead>';
+        $html .= '<tbody>';
+        
+        foreach ($studentGrades as $grade) {
+            $studentAvgFormatted = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) : 'N/A';
+            $classAvgFormatted = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) : 'N/A';
+            
+            $scoreClass = '';
+            $comparisonText = '';
+            $comparisonClass = '';
+            
+            if ($grade['student_avg_score'] !== null) {
+                if ($grade['student_avg_score'] >= 80) {
+                    $scoreClass = 'score-excellent';
+                } elseif ($grade['student_avg_score'] >= 70) {
+                    $scoreClass = 'score-good';
+                } elseif ($grade['student_avg_score'] >= 60) {
+                    $scoreClass = 'score-fair';
+                } else {
+                    $scoreClass = 'score-poor';
+                }
+                
+                // Calculate comparison to class average if both exist
+                if ($grade['class_avg_score'] !== null) {
+                    $diff = $grade['student_avg_score'] - $grade['class_avg_score'];
+                    
+                    if ($diff > 5) {
+                        $comparisonText = '+' . number_format($diff, 1) . '%';
+                        $comparisonClass = 'above-average';
+                    } elseif ($diff < -5) {
+                        $comparisonText = number_format($diff, 1) . '%';
+                        $comparisonClass = 'below-average';
+                    } else {
+                        $comparisonText = 'On par';
+                        $comparisonClass = 'at-average';
+                    }
+                }
+            }
+            
+            $html .= '<tr>';
+            $html .= '<td>' . htmlspecialchars($grade['subject_name']) . '</td>';
+            $html .= '<td>' . htmlspecialchars($grade['class_title']) . '</td>';
+            $html .= '<td class="' . $scoreClass . '">' . $studentAvgFormatted . '%</td>';
+            $html .= '<td>' . $classAvgFormatted . '%</td>';
+            $html .= '<td class="' . $comparisonClass . '">' . $comparisonText . '</td>';
+            $html .= '</tr>';
+        }
+        
+        $html .= '</tbody>';
+        $html .= '</table>';
+        $html .= '</div>';
+    }
+    
+    $html .= '<div class="widget-footer">';
+    $html .= '<a href="student/grades.php" class="widget-link">View All Grades</a>';
+    $html .= '</div>';
+    $html .= '</div>';
+    
+    return $html;
+}
+
+/**
+ * Renders class averages for a parent's children classes
+ * Parents can only see averages for classes their children are enrolled in
+ * @return string HTML content for widget
+ */
+function renderParentChildClassAveragesWidget() {
+    $userId = getUserId();
+    $pdo = getDBConnection();
+    $children = [];
+    
+    try {
+        $stmt = $pdo->prepare(
+            "SELECT s.student_id, s.first_name, s.last_name
+             FROM students s
+             JOIN student_parent sp ON s.student_id = sp.student_id
+             JOIN parents p ON sp.parent_id = p.parent_id
+             WHERE p.user_id = :user_id"
+        );
+        
+        $stmt->execute(['user_id' => $userId]);
+        $children = $stmt->fetchAll();
+    } catch (PDOException $e) {
+        // Log the error
+        return renderPlaceholderWidget();
+    }
+    
+    if (empty($children)) {
+        return '<div class="widget-content"><div class="empty-message">No children assigned to your account.</div></div>';
+    }
+    
+    $html = '<div class="widget-content">';
+    
+    foreach ($children as $child) {
+        $studentId = $child['student_id'];
+        $childGrades = [];
+        
+        try {
+            // Get both the student's individual grades and class averages for each child
+            $stmt = $pdo->prepare(
+                "SELECT 
+                    c.class_id,
+                    c.title AS class_title,
+                    s.name AS subject_name,
+                    t.name AS term_name,
+                    e.enroll_id,
+                    -- Student's own average
+                    AVG(
+                        CASE WHEN g.points IS NOT NULL THEN 
+                            (g.points / gi.max_points) * 100 
+                        ELSE NULL END
+                    ) AS student_avg_score,
+                    -- Class average (all students)
+                    (SELECT AVG(
+                        CASE WHEN g2.points IS NOT NULL THEN 
+                            (g2.points / gi2.max_points) * 100 
+                        ELSE NULL END
+                    )
+                    FROM enrollments e2
+                    JOIN grades g2 ON e2.enroll_id = g2.enroll_id
+                    JOIN grade_items gi2 ON g2.item_id = gi2.item_id
+                    WHERE gi2.class_id = c.class_id
+                    ) AS class_avg_score
+                 FROM enrollments e
+                 JOIN classes c ON e.class_id = c.class_id
+                 JOIN subjects s ON c.subject_id = s.subject_id
+                 JOIN terms t ON c.term_id = t.term_id
+                 LEFT JOIN grade_items gi ON c.class_id = gi.class_id
+                 LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id
+                 WHERE e.student_id = :student_id
+                 GROUP BY c.class_id, s.name, t.name
+                 ORDER BY t.start_date DESC, s.name ASC"
+            );
+            
+            $stmt->execute(['student_id' => $studentId]);
+            $childGrades = $stmt->fetchAll();
+        } catch (PDOException $e) {
+            // Log the error
+        }
+        
+        $html .= '<div class="child-grades-section">';
+        $html .= '<h4>' . htmlspecialchars($child['first_name'] . ' ' . $child['last_name']) . '</h4>';
+        
+        if (empty($childGrades)) {
+            $html .= '<div class="empty-message">No grade data available for this child.</div>';
+        } else {
+            $html .= '<div class="child-grades-table">';
+            $html .= '<table class="data-table">';
+            $html .= '<thead><tr><th>Subject</th><th>Class</th><th>Average</th><th>Class Average</th></tr></thead>';
+            $html .= '<tbody>';
+            
+            foreach ($childGrades as $grade) {
+                $studentAvgFormatted = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) : 'N/A';
+                $classAvgFormatted = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) : 'N/A';
+                
+                $scoreClass = '';
+                
+                if ($grade['student_avg_score'] !== null) {
+                    if ($grade['student_avg_score'] >= 80) {
+                        $scoreClass = 'score-excellent';
+                    } elseif ($grade['student_avg_score'] >= 70) {
+                        $scoreClass = 'score-good';
+                    } elseif ($grade['student_avg_score'] >= 60) {
+                        $scoreClass = 'score-fair';
+                    } else {
+                        $scoreClass = 'score-poor';
+                    }
+                }
+                
+                $html .= '<tr>';
+                $html .= '<td>' . htmlspecialchars($grade['subject_name']) . '</td>';
+                $html .= '<td>' . htmlspecialchars($grade['class_title']) . '</td>';
+                $html .= '<td class="' . $scoreClass . '">' . $studentAvgFormatted . '%</td>';
+                $html .= '<td>' . $classAvgFormatted . '%</td>';
+                $html .= '</tr>';
+            }
+            
+            $html .= '</tbody>';
+            $html .= '</table>';
+            $html .= '</div>';
+        }
+        
+        $html .= '<div class="child-footer">';
+        $html .= '<a href="parent/grades.php?student_id=' . (int)$studentId . '" class="widget-link">View Full Grades</a>';
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+    
+    $html .= '</div>';
+    
+    return $html;
+}
+
 function getTeacherClassesWidget() {
     return '<div class="widget-content">Teacher classes will be shown here.</div>';
 }
