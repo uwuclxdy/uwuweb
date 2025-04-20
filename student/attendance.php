@@ -118,157 +118,78 @@ $attendanceStats = calculateAttendanceStats($attendance);
 $availableTerms = getAvailableTerms();
 ?>
 
-<div class="page-container">
-    <h1 class="page-title">My Attendance</h1>
+<?php /* 
+    [STUDENT ATTENDANCE PAGE PLACEHOLDER]
+    Components:
+    - Page title "My Attendance"
+    
+    - Term selection card:
+      - Term dropdown with:
+        - Term name and date range for each option
+        - Auto-submit on change
+    
+    - Attendance summary statistics:
+      - Statistics card grid with 4 cards:
+        - Present: Percentage and count of periods
+        - Absent: Percentage and count of periods
+        - Late: Percentage and count of periods
+        - Justified: Percentage of absences justified and count
+    
+    - Attendance records display:
+      - Empty state message when no records available
+      
+      - When records exist:
+        - Table with columns:
+          - Date (formatted as dd.mm.yyyy)
+          - Period
+          - Subject
+          - Status (color-coded badges: green for present, red for absent, yellow for late)
+          - Justification status (Pending review, Approved, Rejected, Not justified, or N/A)
+          - "Justify" button for unjustified absences
+*/ ?>
 
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Term Selection</h3>
-        </div>
-        <div class="card-body">
-            <form method="get" action="/uwuweb/student/attendance.php" class="term-filter-form">
-                <div class="form-group">
-                    <label for="term_id" class="form-label">Term:</label>
-                    <select id="term_id" name="term_id" class="form-input" onchange="this.form.submit()">
-                        <?php foreach ($availableTerms as $term): ?>
-                            <option value="<?= (int)$term['term_id'] ?>" <?= $selectedTermId == $term['term_id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($term['name']) ?>
-                                (<?= date('d.m.Y', strtotime($term['start_date'])) ?> -
-                                 <?= date('d.m.Y', strtotime($term['end_date'])) ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div class="attendance-summary">
-        <div class="stats-container">
-        <div class="card-grid">
-            <div class="card stat-card">
-                <div class="card-header">
-                    <h3 class="card-title">Present</h3>
-                </div>
-                <div class="card-body">
-                    <div class="stat-value"><?= $attendanceStats['present_percent'] ?>%</div>
-                    <div class="stat-count">(<?= $attendanceStats['present'] ?> periods)</div>
-                </div>
-            </div>
-
-            <div class="card stat-card">
-                <div class="card-header">
-                    <h3 class="card-title">Absent</h3>
-                </div>
-                <div class="card-body">
-                    <div class="stat-value"><?= $attendanceStats['absent_percent'] ?>%</div>
-                    <div class="stat-count">(<?= $attendanceStats['absent'] ?> periods)</div>
-                </div>
-            </div>
-
-            <div class="card stat-card">
-                <div class="card-header">
-                    <h3 class="card-title">Late</h3>
-                </div>
-                <div class="card-body">
-                    <div class="stat-value"><?= $attendanceStats['late_percent'] ?>%</div>
-                    <div class="stat-count">(<?= $attendanceStats['late'] ?> periods)</div>
-                </div>
-            </div>
-
-            <div class="card stat-card">
-                <div class="card-header">
-                    <h3 class="card-title">Justified</h3>
-                </div>
-                <div class="card-body">
-                    <div class="stat-value"><?= $attendanceStats['justified_percent'] ?>%</div>
-                    <div class="stat-count">(<?= $attendanceStats['justified'] ?> of <?= $attendanceStats['absent'] ?> absences)</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <?php if (empty($attendance)): ?>
-        <div class="card">
-            <div class="card-body">
-                <p class="text-secondary">No attendance records found for the selected term.</p>
-            </div>
-        </div>
-    <?php else: ?>
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Attendance Records</h2>
-            </div>
-            <div class="card-body">
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Period</th>
-                                <th>Subject</th>
-                                <th>Status</th>
-                                <th>Justification</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($attendance as $record): ?>
-                                <?php
-                                    $formattedDate = date('d.m.Y', strtotime($record['period_date']));
-                                    $statusClass = "";
-                                    
-                                    if ($record['status'] === 'P') {
-                                        $statusClass = "badge badge-success";
-                                    } elseif ($record['status'] === 'A') {
-                                        $statusClass = "badge badge-error";
-                                    } elseif ($record['status'] === 'L') {
-                                        $statusClass = "badge badge-warning";
-                                    }
-                                    
-                                    $justificationStatus = '';
-                                    $justificationClass = '';
-
-                                    if ($record['status'] === 'A') {
-                                        if (!empty($record['justification'])) {
-                                            if ($record['approved'] === null) {
-                                                $justificationStatus = 'Pending review';
-                                                $justificationClass = 'badge badge-warning';
-                                            } elseif ($record['approved'] == 1) {
-                                                $justificationStatus = 'Approved';
-                                                $justificationClass = 'badge badge-success';
-                                            } else {
-                                                $justificationStatus = 'Rejected';
-                                                $justificationClass = 'badge badge-error';
-                                            }
-                                        } else {
-                                            $justificationStatus = 'Not justified';
-                                            $justificationClass = 'badge badge-error';
-                                        }
-                                    } elseif ($record['status'] === 'P' || $record['status'] === 'L') {
-                                        $justificationStatus = 'N/A';
-                                        $justificationClass = 'text-secondary';
-                                    }
-                                ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($formattedDate) ?></td>
-                                    <td><?= htmlspecialchars($record['period_label']) ?></td>
-                                    <td><?= htmlspecialchars($record['subject_name'] . ' - ' . $record['class_title']) ?></td>
-                                    <td><span class="<?= $statusClass ?>"><?= htmlspecialchars(getAttendanceStatusLabel($record['status'])) ?></span></td>
-                                    <td>
-                                        <span class="<?= $justificationClass ?>"><?= htmlspecialchars($justificationStatus) ?></span>
-                                        <?php if ($record['status'] === 'A' && empty($record['justification'])): ?>
-                                            <a href="/uwuweb/student/justification.php?att_id=<?= $record['att_id'] ?>" class="btn btn-primary btn-sm">Justify</a>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
-</div>
+<?php if (empty($attendance)): ?>
+    <?php /* [EMPTY ATTENDANCE PLACEHOLDER] - "No attendance records found for the selected term." */ ?>
+<?php else: ?>
+    <?php /* [ATTENDANCE TABLE PLACEHOLDER] - Contains attendance records with colorful status indicators */ ?>
+    
+    <?php foreach ($attendance as $record): ?>
+        <?php
+        // Format date
+        $formattedDate = date('d.m.Y', strtotime($record['period_date']));
+        
+        // Determine status display
+        $statusDisplay = getAttendanceStatusLabel($record['status']);
+        
+        // Determine justification status
+        $justificationStatus = 'N/A';
+        if ($record['status'] === 'A') {
+            if (!empty($record['justification'])) {
+                if ($record['approved'] === null) {
+                    $justificationStatus = 'Pending review';
+                } elseif ($record['approved'] == 1) {
+                    $justificationStatus = 'Approved';
+                } else {
+                    $justificationStatus = 'Rejected';
+                }
+            } else {
+                $justificationStatus = 'Not justified';
+            }
+        }
+        
+        $needsJustification = ($record['status'] === 'A' && empty($record['justification']));
+        ?>
+        
+        <?php /* [ATTENDANCE RECORD: 
+            Date: <?= $formattedDate ?>, 
+            Period: <?= htmlspecialchars($record['period_label']) ?>, 
+            Subject: <?= htmlspecialchars($record['subject_name']) ?> - <?= htmlspecialchars($record['class_title']) ?>, 
+            Status: <?= $statusDisplay ?>, 
+            Justification: <?= $justificationStatus ?> 
+            <?= $needsJustification ? '(Needs justification)' : '' ?>
+        ] */ ?>
+    <?php endforeach; ?>
+<?php endif; ?>
 
 <?php
 // Include page footer

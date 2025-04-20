@@ -63,52 +63,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - uwuweb Grade Management</title>
-    <link rel="stylesheet" href="/uwuweb/assets/css/login.css">
-</head>
-<body class="login-page">
-    <div class="login-container card">
-        <div class="card-header login-header">
-            <h1 class="card-title">uwuweb</h1>
-            <p>Grade Management System</p>
-        </div>
+<?php /* 
+    [LOGIN PAGE PLACEHOLDER]
+    Components:
+    - Custom HTML head with:
+      - Title "Login - uwuweb Grade Management"
+      - Login specific CSS stylesheet reference
+    
+    - Login container card with:
+      - Header section with:
+        - System name as title (uwuweb)
+        - Subtitle "Grade Management System"
+      
+      - Card body containing:
+        - Error alert (when $error is not empty)
+        - Success message (when logged_out parameter is present)
+        
+        - Login form with:
+          - Username field (with value preservation)
+          - Password field
+          - CSRF token (hidden)
+          - Submit button "Log In"
+*/ ?>
 
-        <div class="card-body">
-            <?php if (!empty($error)): ?>
-                <div class="alert alert-error">
-                    <?= htmlspecialchars($error) ?>
-                </div>
-            <?php endif; ?>
+<?php if (!empty($error)): ?>
+    <?php /* [ERROR ALERT PLACEHOLDER] - Displays login error message */ ?>
+<?php endif; ?>
 
-            <?php if (isset($_GET['msg']) && $_GET['msg'] === 'logged_out'): ?>
-                <div class="alert alert-success">
-                    You have been successfully logged out.
-                </div>
-            <?php endif; ?>
-
-            <form method="post" action="/uwuweb/index.php">
-                <div class="form-group">
-                    <label for="username" class="form-label">Username:</label>
-                    <input type="text" id="username" name="username" class="form-input" value="<?= htmlspecialchars($username) ?>" required autofocus>
-                </div>
-
-                <div class="form-group">
-                    <label for="password" class="form-label">Password:</label>
-                    <input type="password" id="password" name="password" class="form-input" required>
-            </div>
-
-                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Log In</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</body>
-</html>
+<?php if (isset($_GET['msg']) && $_GET['msg'] === 'logged_out'): ?>
+    <?php /* [SUCCESS ALERT PLACEHOLDER] - Displays logout success message */ ?>
+<?php endif; ?>

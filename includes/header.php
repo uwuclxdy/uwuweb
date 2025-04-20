@@ -16,39 +16,34 @@ require_once 'auth.php';
 $currentRole = getUserRole();
 $roleName = $currentRole ? getRoleName($currentRole) : 'Guest';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>uwuweb - Grade Management System</title>
-    <link rel="stylesheet" href="/uwuweb/assets/css/style.css">
-</head>
-<body>
-    <header class="navbar">
-        <div class="navbar-container container">
-            <h1 class="navbar-brand site-title">uwuweb</h1>
-            <?php if (isLoggedIn()): ?>
-                <button class="mobile-menu-toggle" aria-label="Toggle navigation menu" aria-expanded="false">
-                    <span class="icon">≡</span>
-                </button>
-                <div class="user-info">
-                    <span class="username"><?= htmlspecialchars($_SESSION['username'] ?? 'User') ?></span>
-                    <span class="badge badge-primary role-badge"><?= htmlspecialchars($roleName) ?></span>
-                    <a href="/uwuweb/includes/logout.php" class="btn btn-sm btn-secondary">Logout</a>
-                </div>
-            <?php endif; ?>
-        </div>
-    </header>
-    <main class="container">
-        <?php if (isset($_GET['error'])): ?>
-            <div class="alert alert-error">
-                <?php
-                    $errorMsg=match($_GET['error']){'unauthorized'=>'You are not authorized to access that resource.','invalid_csrf'=>'Security token mismatch. Please try again.',default=>'An error occurred.',};
-                    echo htmlspecialchars($errorMsg);
-                ?>
-            </div>
-        <?php endif; ?>
+<?php /* 
+    [HEADER HTML PLACEHOLDER]
+    Components:
+    - HTML doctype and opening tags
+    - Head section with meta tags
+    - Title "uwuweb - Grade Management System"
+    - CSS stylesheet reference
+    
+    - Main navigation header with:
+      - Site logo/title "uwuweb"
+      - Mobile navigation toggle (only when logged in)
+      - User info section showing:
+        - Username
+        - Role badge
+        - Logout button
+    
+    - Container for main content
+    - Error alert display when URL has error parameter
+*/ ?>
+<?php if (isset($_GET['error'])): 
+    $errorMsg = match($_GET['error']) {
+        'unauthorized' => 'You are not authorized to access that resource.',
+        'invalid_csrf' => 'Security token mismatch. Please try again.',
+        default => 'An error occurred.',
+    };
+?>
+    <?php /* [ERROR ALERT PLACEHOLDER] - Displays error message from $errorMsg */ ?>
+<?php endif; ?>
         <?php if (isset($_GET['success'])): ?>
             <div class="alert alert-success">
                 <?= htmlspecialchars($_GET['success']) ?>

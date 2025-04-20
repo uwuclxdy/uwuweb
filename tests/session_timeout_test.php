@@ -101,82 +101,30 @@ function displayResults($results) {
     $actual_timeout = $results['timed_out'];
     $test_passed = ($expected_timeout === $actual_timeout);
     
-    echo "<div style='margin: 10px; padding: 15px; border: 1px solid " . 
-         ($test_passed ? "green" : "red") . 
-         "; border-radius: 5px;'>";
+    // [PLACEHOLDER: Test result container with color-coded border based on test status]
     
-    echo "<h3>Test Case: " . ($results['inactivity_time'] >= TEST_TIMEOUT ? "After" : "Before") . 
-         " Timeout ({$results['inactivity_time']} seconds)</h3>";
+    // [PLACEHOLDER: Test case heading showing timeout status and inactivity time]
     
-    echo "<p>Inactivity time: {$results['inactivity_time']} seconds</p>";
-    echo "<p>Session timeout setting: " . TEST_TIMEOUT . " seconds</p>";
-    echo "<p>Logged in before check: " . ($results['before_check'] ? "Yes" : "No") . "</p>";
-    echo "<p>Logged in after check: " . ($results['after_check'] ? "Yes" : "No") . "</p>";
-    echo "<p>Session destroyed: " . ($results['session_destroyed'] ? "Yes" : "No") . "</p>";
-    echo "<p>Session timed out: " . ($results['timed_out'] ? "Yes" : "No") . "</p>";
+    // [PLACEHOLDER: Test details including inactivity time, timeout setting, session status before/after,
+    //               whether session was destroyed, and timeout status]
     
-    echo "<p><strong>Result: " . 
-         ($test_passed ? "PASSED - " . ($expected_timeout ? "Session correctly destroyed" : "Session correctly maintained") : 
-            "FAILED - Unexpected behavior") . 
-         "</strong></p>";
-    
-    echo "</div>";
+    // [PLACEHOLDER: Test result summary with PASSED/FAILED status and explanation]
 }
 
-// Output HTML header
+// Output HTML page structure
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>uwuweb - Session Timeout Test</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 0 20px;
-        }
-        .test-summary {
-            margin-top: 30px;
-            padding: 15px;
-            background-color: #f5f5f5;
-            border-radius: 5px;
-        }
-        .test-case {
-            margin: 10px 0;
-        }
-        h1, h2, h3 {
-            color: #333;
-        }
-        .note {
-            background-color: #ffffcc;
-            padding: 10px;
-            border-left: 5px solid #ffcc00;
-            margin: 20px 0;
-        }
-        .passed {
-            color: green;
-            font-weight: bold;
-        }
-        .failed {
-            color: red;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-    <h1>Session Timeout Test</h1>
-    <p>This script tests if the session timeout functionality works as expected (30 minutes).</p>
-    
-    <div class="note">
-        <p><strong>Note:</strong> In a real application, the <code>checkSessionTimeout()</code> function would 
-        redirect to the login page and exit the script when a timeout occurs. For testing purposes, we've 
-        created a modified version that doesn't redirect so we can view all test results.</p>
-    </div>
-    
-    <h2>Test Results</h2>
+<!-- [PLACEHOLDER: DOCTYPE and HTML opening tags] -->
+
+
+<!-- [PLACEHOLDER: Body opening tag] -->
+
+<!-- [PLACEHOLDER: Page header with title] -->
+
+<!-- [PLACEHOLDER: Test description paragraph] -->
+
+<!-- [PLACEHOLDER: Note explaining the test methodology] -->
+
+<!-- [PLACEHOLDER: Test results section heading] -->
     
     <?php
     // Run test cases
@@ -201,30 +149,17 @@ function displayResults($results) {
     }
     ?>
     
-    <div class="test-summary">
-        <h2>Test Summary</h2>
-        <p>The session timeout is set to <?php echo TEST_TIMEOUT; ?> seconds (30 minutes).</p>
-        <p>Expected behavior:</p>
-        <ul>
-            <li>Sessions with inactivity less than 30 minutes should remain active</li>
-            <li>Sessions with inactivity of 30 minutes or more should be destroyed</li>
-        </ul>
-        
-        <p class="<?php echo $all_tests_passed ? 'passed' : 'failed'; ?>">
-            Overall test result: <?php echo $all_tests_passed ? 'PASSED' : 'FAILED'; ?>
-        </p>
-    </div>
+    <!-- [PLACEHOLDER: Test summary section with:
+         - Summary heading
+         - Timeout setting information
+         - Expected behavior explanation with bullet points
+         - Overall test status (PASSED/FAILED) with appropriate styling] -->
     
-    <div class="note">
-        <h3>How to use this in your testing:</h3>
-        <ol>
-            <li>Log in to the application</li>
-            <li>Wait for 31+ minutes without any activity</li>
-            <li>Try to access a protected page</li>
-            <li>You should be redirected to the login page with a session timeout message</li>
-        </ol>
-    </div>
+    <!-- [PLACEHOLDER: Testing instructions note with:
+         - "How to use this in your testing" heading
+         - Step-by-step instructions in an ordered list
+         - Clear explanations of how to manually verify timeout behavior] -->
     
-    <p><a href="/uwuweb/dashboard.php">Return to Dashboard</a></p>
-</body>
-</html>
+    <!-- [PLACEHOLDER: Navigation link back to dashboard] -->
+
+<!-- [PLACEHOLDER: Body and HTML closing tags] -->

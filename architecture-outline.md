@@ -104,15 +104,6 @@ uwuweb/
 ├── /assets/
 │   ├── css/
 │   │   ├── style.css         # main stylesheet
-│   │   ├── login.css
-│   │   ├── parent-attendance.css
-│   │   ├── parent-grades.css
-│   │   ├── student-attendance.css
-│   │   ├── student-grades.css
-│   │   ├── student-justification.css
-│   │   ├── teacher-attendance.css
-│   │   ├── teacher-gradebook.css
-│   │   └── teacher-justifications.css
 │   └── js/
 │       └── main.js
 ├── /includes/

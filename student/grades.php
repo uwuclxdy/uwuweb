@@ -201,118 +201,67 @@ $gradeStats = calculateGradeStatistics($grades);
 $availableTerms = getAvailableTerms();
 ?>
 
-<div class="container">
-    <h1 class="page-title">My Grades</h1>
+<?php /* 
+    [STUDENT GRADES PAGE PLACEHOLDER]
+    Components:
+    - Page title "My Grades"
+    
+    - Term filter card:
+      - Term selection dropdown with:
+        - Term name and date range for each option
+        - Auto-submit on change
+    
+    - Grades display:
+      - Empty state message when no grades available
+      
+      - When grades exist:
+        - Organized by subject (outer cards)
+        - Each subject contains class cards
+        - Each class card includes:
+          - Class title and overall average percentage
+          - Table of assessments with:
+            - Assessment name
+            - Weight column
+            - Score (points achieved/total)
+            - Percentage with color-coded badge based on score
+            - Class average comparison
+*/ ?>
 
-    <div class="card">
-        <div class="card-body">
-            <form method="get" action="/uwuweb/student/grades.php" class="term-filter-form">
-                <div class="form-group">
-                    <label for="term_id" class="form-label">Term:</label>
-                    <select id="term_id" name="term_id" class="form-select" onchange="this.form.submit()">
-                        <?php foreach ($availableTerms as $term): ?>
-                            <option value="<?= (int)$term['term_id'] ?>" <?= $selectedTermId == $term['term_id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($term['name']) ?>
-                                (<?= date('d.m.Y', strtotime($term['start_date'])) ?> -
-                                 <?= date('d.m.Y', strtotime($term['end_date'])) ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <?php if (empty($gradeStats)): ?>
-        <div class="card">
-            <div class="card-body">
-                <p class="text-secondary">No grades found for the selected term.</p>
-            </div>
-        </div>
-    <?php else: ?>
-        <div class="grades-summary">
-            <?php foreach ($gradeStats as $subjectId => $subject): ?>
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title"><?= htmlspecialchars($subject['subject_name']) ?></h2>
-                    </div>
-                    <div class="card-body">
-                        <?php foreach ($subject['classes'] as $classId => $class): ?>
-                            <div class="card">
-                                <div class="card-header">
-                                    <h3 class="card-title"><?= htmlspecialchars($class['class_title']) ?></h3>
-                                    <div class="class-average">
-                                        Average: <span class="badge badge-primary"><?= $class['average'] ?>%</span>
-                                    </div>
-                                </div>
-
-                                <div class="card-body">
-                                    <div class="table-wrapper">
-                                        <table class="table">
-                                            <thead>
-                                                <tr>
-                                                    <th>Assessment</th>
-                                                    <th>Weight</th>
-                                                    <th>Your Score</th>
-                                                    <th>Percentage</th>
-                                                    <th>Class Average</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <?php
-                                                $classAverage = getClassAverage($classId);
-                                                $averagesByItemId = [];
-                                                foreach ($classAverage as $avg) {
-                                                    $averagesByItemId[$avg['item_id']] = $avg;
-                                                }
-
-                                                foreach ($class['grades'] as $grade):
-                                                    $percentage = round(($grade['points'] / $grade['max_points']) * 100, 1);
-                                                    $classAvgPercentage = 0;
-
-                                                    if (isset($averagesByItemId[$grade['item_id']])) {
-                                                        $avg = $averagesByItemId[$grade['item_id']];
-                                                        $classAvgPercentage = round(($avg['avg_points'] / $grade['max_points']) * 100, 1);
-                                                    }
-
-                                                    // Determine grade badge class based on percentage
-                                                    $gradeBadge = '';
-                                                    if ($percentage >= 90) {
-                                                        $gradeBadge = 'badge badge-success';
-                                                    }
-                                                    else if ($percentage >= 80) {
-                                                        $gradeBadge = 'badge badge-primary'; 
-                                                    }
-                                                    else if ($percentage >= 70) {
-                                                        $gradeBadge = 'badge badge-secondary';
-                                                    }
-                                                    else if ($percentage >= 60) {
-                                                        $gradeBadge = 'badge badge-warning';
-                                                    }
-                                                    else {
-                                                        $gradeBadge = 'badge badge-error';
-                                                    }
-                                                ?>
-                                                    <tr>
-                                                        <td><?= htmlspecialchars($grade['item_name']) ?></td>
-                                                        <td><?= $grade['weight'] ?>x</td>
-                                                        <td><?= $grade['points'] ?>/<?= $grade['max_points'] ?></td>
-                                                        <td><span class="<?= $gradeBadge ?>"><?= $percentage ?>%</span></td>
-                                                        <td><?= $classAvgPercentage ?>%</td>
-                                                    </tr>
-                                                <?php endforeach; ?>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
+<?php if (empty($gradeStats)): ?>
+    <?php /* [EMPTY GRADES PLACEHOLDER] - "No grades found for the selected term." */ ?>
+<?php else: ?>
+    <?php foreach ($gradeStats as $subjectId => $subject): ?>
+        <?php /* [SUBJECT CARD PLACEHOLDER: <?= $subject['subject_name'] ?>] */ ?>
+        
+        <?php foreach ($subject['classes'] as $classId => $class): ?>
+            <?php /* [CLASS CARD PLACEHOLDER: <?= $class['class_title'] ?> - Average: <?= $class['average'] ?>%] */ ?>
+            
+            <?php
+            // Process class average data
+            $classAverage = getClassAverage($classId);
+            $averagesByItemId = [];
+            foreach ($classAverage as $avg) {
+                $averagesByItemId[$avg['item_id']] = $avg;
+            }
+            ?>
+            
+            <?php foreach ($class['grades'] as $grade): ?>
+                <?php
+                // Calculate percentages
+                $percentage = round(($grade['points'] / $grade['max_points']) * 100, 1);
+                $classAvgPercentage = 0;
+                
+                if (isset($averagesByItemId[$grade['item_id']])) {
+                    $avg = $averagesByItemId[$grade['item_id']];
+                    $classAvgPercentage = round(($avg['avg_points'] / $grade['max_points']) * 100, 1);
+                }
+                ?>
+                
+                <?php /* [GRADE ITEM PLACEHOLDER] - <?= $grade['item_name'] ?> - <?= $grade['points'] ?>/<?= $grade['max_points'] ?> - <?= $percentage ?>% - Class Avg: <?= $classAvgPercentage ?>% */ ?>
             <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
-</div>
+        <?php endforeach; ?>
+    <?php endforeach; ?>
+<?php endif; ?>
 
 <?php
 // Include page footer

@@ -18,8 +18,7 @@ require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 require_once '../includes/header.php';
 
-// Add CSS link for this specific page
-echo '<link rel="stylesheet" href="/uwuweb/assets/css/teacher-gradebook.css">';
+// CSS styles are included in header.php
 
 // Ensure only teachers can access this page
 requireRole(ROLE_TEACHER);
@@ -39,7 +38,7 @@ function getTeacherId($userId) {
     if (!$pdo) {
         return null;
     }
-
+    
     $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = :user_id");
     $stmt->execute(['user_id' => $userId]);
     $result = $stmt->fetch();
@@ -52,7 +51,7 @@ function getTeacherClasses($teacherId) {
     if (!$pdo) {
         return [];
     }
-
+    
     $stmt = $pdo->prepare(
         "SELECT c.class_id, c.title, s.name AS subject_name, t.name AS term_name
          FROM classes c
@@ -65,13 +64,13 @@ function getTeacherClasses($teacherId) {
     return $stmt->fetchAll();
 }
 
-// Get students enrolled in a specific class
+// Get students enrolled in a class
 function getClassStudents($classId) {
     $pdo = safeGetDBConnection('getClassStudents()', false);
     if (!$pdo) {
         return [];
     }
-
+    
     $stmt = $pdo->prepare(
         "SELECT e.enroll_id, s.student_id, s.first_name, s.last_name, s.class_code
          FROM enrollments e
@@ -83,467 +82,243 @@ function getClassStudents($classId) {
     return $stmt->fetchAll();
 }
 
-// Get grade items for a specific class
+// Get grade items for a class
 function getGradeItems($classId) {
     $pdo = safeGetDBConnection('getGradeItems()', false);
     if (!$pdo) {
         return [];
     }
-
+    
     $stmt = $pdo->prepare(
-        "SELECT item_id, name, max_points, weight
+        "SELECT item_id, name, description, max_points, weight, DATE_FORMAT(date, '%Y-%m-%d') as item_date
          FROM grade_items
          WHERE class_id = :class_id
-         ORDER BY name"
+         ORDER BY date, name"
     );
     $stmt->execute(['class_id' => $classId]);
     return $stmt->fetchAll();
 }
 
-// Get grades for a specific class and its students
+// Get grades for a class
 function getClassGrades($classId) {
     $pdo = safeGetDBConnection('getClassGrades()', false);
     if (!$pdo) {
         return [];
     }
-
+    
     $stmt = $pdo->prepare(
-        "SELECT g.grade_id, g.enroll_id, g.item_id, g.points, g.comment
+        "SELECT g.grade_id, g.enroll_id, g.item_id, g.points, g.feedback
          FROM grades g
          JOIN enrollments e ON g.enroll_id = e.enroll_id
+         JOIN grade_items gi ON g.item_id = gi.item_id
          WHERE e.class_id = :class_id"
     );
     $stmt->execute(['class_id' => $classId]);
-
-    // Index grades by enroll_id and item_id for easier access
-    $grades = [];
-    foreach ($stmt->fetchAll() as $grade) {
-        $grades[$grade['enroll_id']][$grade['item_id']] = [
-            'grade_id' => $grade['grade_id'],
-            'points' => $grade['points'],
-            'comment' => $grade['comment']
-        ];
+    
+    // Index by enrollment_id and item_id for easier lookup
+    $result = [];
+    while ($row = $stmt->fetch()) {
+        $result[$row['enroll_id']][$row['item_id']] = $row;
     }
-
-    return $grades;
+    return $result;
 }
 
-// Get selected class and filters from request
-$teacherId = getTeacherId(getUserId());
-$classes = $teacherClasses = getTeacherClasses($teacherId);
-$selectedClassId = isset($_GET['class_id']) ? (int)$_GET['class_id'] : ($classes[0]['class_id'] ?? null);
+// Add a new grade item
+function addGradeItem($classId, $name, $description, $maxPoints, $weight, $date) {
+    $pdo = safeGetDBConnection('addGradeItem()', false);
+    if (!$pdo) {
+        return false;
+    }
+    
+    try {
+        $stmt = $pdo->prepare(
+            "INSERT INTO grade_items (class_id, name, description, max_points, weight, date)
+             VALUES (:class_id, :name, :description, :max_points, :weight, :date)"
+        );
+        return $stmt->execute([
+            'class_id' => $classId,
+            'name' => $name,
+            'description' => $description,
+            'max_points' => $maxPoints,
+            'weight' => $weight,
+            'date' => $date
+        ]);
+    } catch (PDOException $e) {
+        error_log("Error adding grade item: " . $e->getMessage());
+        return false;
+    }
+}
 
-// Only proceed if teacher has classes
-$hasClasses = !empty($classes);
+// Save a grade
+function saveGrade($enrollId, $itemId, $points, $feedback) {
+    $pdo = safeGetDBConnection('saveGrade()', false);
+    if (!$pdo) {
+        return false;
+    }
+    
+    try {
+        // Check if grade already exists
+        $stmt = $pdo->prepare(
+            "SELECT grade_id FROM grades
+             WHERE enroll_id = :enroll_id AND item_id = :item_id"
+        );
+        $stmt->execute([
+            'enroll_id' => $enrollId,
+            'item_id' => $itemId
+        ]);
+        $existing = $stmt->fetch();
+        
+        if ($existing) {
+            // Update existing grade
+            $stmt = $pdo->prepare(
+                "UPDATE grades
+                 SET points = :points, feedback = :feedback
+                 WHERE grade_id = :grade_id"
+            );
+            return $stmt->execute([
+                'grade_id' => $existing['grade_id'],
+                'points' => $points,
+                'feedback' => $feedback
+            ]);
+        } else {
+            // Insert new grade
+            $stmt = $pdo->prepare(
+                "INSERT INTO grades (enroll_id, item_id, points, feedback)
+                 VALUES (:enroll_id, :item_id, :points, :feedback)"
+            );
+            return $stmt->execute([
+                'enroll_id' => $enrollId,
+                'item_id' => $itemId,
+                'points' => $points,
+                'feedback' => $feedback
+            ]);
+        }
+    } catch (PDOException $e) {
+        error_log("Error saving grade: " . $e->getMessage());
+        return false;
+    }
+}
 
-// If a class is selected, get students, grade items, and grades
-$students = $selectedClassId ? getClassStudents($selectedClassId) : [];
-$gradeItems = $selectedClassId ? getGradeItems($selectedClassId) : [];
-$grades = $selectedClassId ? getClassGrades($selectedClassId) : [];
+// Process form submissions
+$message = '';
+$messageType = '';
 
-// Initialize $enrollId to prevent undefined variable warnings
-$enrollId = null;
-
-// Get selected class details for display
-$selectedClass = null;
-if ($selectedClassId) {
-    foreach ($classes as $class) {
-        if ($class['class_id'] == $selectedClassId) {
-            $selectedClass = $class;
-            break;
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
+        $message = 'Invalid form submission. Please try again.';
+        $messageType = 'error';
+    } else {
+        if (isset($_POST['add_grade_item'])) {
+            $classId = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
+            $name = isset($_POST['item_name']) ? trim($_POST['item_name']) : '';
+            $description = isset($_POST['item_description']) ? trim($_POST['item_description']) : '';
+            $maxPoints = isset($_POST['max_points']) ? (float)$_POST['max_points'] : 0;
+            $weight = isset($_POST['weight']) ? (float)$_POST['weight'] : 0;
+            $date = isset($_POST['item_date']) ? $_POST['item_date'] : date('Y-m-d');
+            
+            if ($classId <= 0 || empty($name) || $maxPoints <= 0) {
+                $message = 'Please fill out all required fields for the grade item.';
+                $messageType = 'error';
+            } else {
+                if (addGradeItem($classId, $name, $description, $maxPoints, $weight, $date)) {
+                    $message = 'New grade item added successfully.';
+                    $messageType = 'success';
+                } else {
+                    $message = 'Error adding grade item. Please try again.';
+                    $messageType = 'error';
+                }
+            }
+        } else if (isset($_POST['save_grades'])) {
+            $classId = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
+            $itemId = isset($_POST['item_id']) ? (int)$_POST['item_id'] : 0;
+            $grades = isset($_POST['grade']) ? $_POST['grade'] : [];
+            $feedback = isset($_POST['feedback']) ? $_POST['feedback'] : [];
+            
+            if ($classId <= 0 || $itemId <= 0) {
+                $message = 'Invalid grade data.';
+                $messageType = 'error';
+            } else {
+                $success = true;
+                foreach ($grades as $enrollId => $points) {
+                    $studentFeedback = isset($feedback[$enrollId]) ? $feedback[$enrollId] : '';
+                    if (!saveGrade($enrollId, $itemId, $points, $studentFeedback)) {
+                        $success = false;
+                    }
+                }
+                
+                if ($success) {
+                    $message = 'Grades saved successfully.';
+                    $messageType = 'success';
+                } else {
+                    $message = 'Some grades failed to save. Please try again.';
+                    $messageType = 'warning';
+                }
+            }
         }
     }
 }
 
-// Generate CSRF token for AJAX requests
+// Get teacher's classes
+$classes = getTeacherClasses($teacherId);
+
+// Selected class and grade item
+$selectedClassId = isset($_GET['class_id']) ? (int)$_GET['class_id'] : (isset($classes[0]['class_id']) ? $classes[0]['class_id'] : 0);
+$gradeItems = $selectedClassId ? getGradeItems($selectedClassId) : [];
+$selectedItemId = isset($_GET['item_id']) ? (int)$_GET['item_id'] : 0;
+
+// Get students and grades if a class is selected
+$students = $selectedClassId ? getClassStudents($selectedClassId) : [];
+$grades = $selectedClassId ? getClassGrades($selectedClassId) : [];
+
+// Generate CSRF token
 $csrfToken = generateCSRFToken();
 
-// Include page header
+// Include header
 include '../includes/header.php';
 ?>
 
-<div class="gradebook-container">
-    <h1>Teacher Grade Book</h1>
-
-    <?php if (!$hasClasses): ?>
-        <div class="alert alert-error">
-            You are not assigned to any classes. Please contact an administrator.
-        </div>
-    <?php else: ?>
-        <!-- Class selector -->
-        <div class="class-selector">
-            <form method="get" action="/uwuweb/teacher/gradebook.php">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                <div class="form-group">
-                    <label for="class_id" class="form-label">Select Class:</label>
-                    <select name="class_id" id="class_id" class="form-input form-select" onchange="this.form.submit()">
-                        <?php foreach ($classes as $class): ?>
-                            <option value="<?= htmlspecialchars($class['class_id']) ?>"
-                                    <?= $selectedClassId == $class['class_id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars("{$class['subject_name']} - {$class['title']} ({$class['term_name']})") ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </form>
-        </div>
-
-        <?php if ($selectedClassId): ?>
-            <div class="class-details">
-                <h2><?= htmlspecialchars($selectedClass['subject_name']) ?></h2>
-                <h3><?= htmlspecialchars($selectedClass['title']) ?> - <?= htmlspecialchars($selectedClass['term_name']) ?></h3>
-
-                <div class="action-buttons">
-                    <button id="btn-add-grade-item" class="btn btn-primary">Add Grade Item</button>
-                </div>
-
-                <!-- Status message container for AJAX feedback -->
-                <div id="status-message" class="alert" style="display: none;"></div>
-
-                <?php if (empty($gradeItems)): ?>
-                    <div class="alert alert-info">
-                        No grade items have been created for this class yet. Use the "Add Grade Item" button to create one.
-                    </div>
-                <?php elseif (empty($students)): ?>
-                    <div class="alert alert-info">
-                        No students are enrolled in this class.
-                    </div>
-                <?php else: ?>
-                    <!-- Grade Book Table -->
-                    <div class="table-wrapper gradebook-table-container">
-                        <table class="table gradebook-table">
-                            <thead>
-                                <tr>
-                                    <th rowspan="2" class="student-name">Student</th>
-                                    <?php foreach ($gradeItems as $item): ?>
-                                        <th class="grade-item">
-                                            <?= htmlspecialchars($item['name']) ?>
-                                            <span class="max-points">(<?= htmlspecialchars($item['max_points']) ?>)</span>
-                                        </th>
-                                    <?php endforeach; ?>
-                                    <th rowspan="2" class="average">Average</th>
-                                </tr>
-                                <tr class="weight-row">
-                                    <?php foreach ($gradeItems as $item): ?>
-                                        <th class="weight">
-                                            <?= htmlspecialchars("Weight: {$item['weight']}") ?>
-                                        </th>
-                                    <?php endforeach; ?>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($students as $student): ?>
-                                    <tr>
-                                        <td class="student-name">
-                                            <?= htmlspecialchars("{$student['last_name']}, {$student['first_name']}") ?>
-                                            <span class="class-code">[<?= htmlspecialchars($student['class_code']) ?>]</span>
-                                        </td>
-
-                                        <?php
-                                        $totalPoints = 0;
-                                        $totalMaxPoints = 0;
-                                        $totalWeight = 0;
-                                        $weightedPoints = 0;
-
-                                        foreach ($gradeItems as $item):
-                                            $enrollId = $student['enroll_id'];
-                                            $itemId = $item['item_id'];
-                                            $gradeValue = isset($grades[$enrollId][$itemId]) ?
-                                                $grades[$enrollId][$itemId]['points'] : '';
-                                            $comment = isset($grades[$enrollId][$itemId]) ?
-                                                $grades[$enrollId][$itemId]['comment'] : '';
-
-                                            // Calculate weighted average if grade exists
-                                            if ($gradeValue !== '') {
-                                                $points = (float)$gradeValue;
-                                                $maxPoints = (float)$item['max_points'];
-                                                $weight = (float)$item['weight'];
-
-                                                if ($maxPoints > 0) {
-                                                    $weightedPoints += ($points / $maxPoints) * $weight;
-                                                    $totalWeight += $weight;
-                                                }
-                                            }
-                                        ?>
-                                            <td class="grade-cell"
-                                                data-enroll-id="<?= htmlspecialchars($enrollId) ?>"
-                                                data-item-id="<?= htmlspecialchars($itemId) ?>"
-                                                data-comment="<?= htmlspecialchars($comment) ?>">
-                                                <span class="grade-display">
-                                                    <?= htmlspecialchars($gradeValue) ?>
-                                                </span>
-                                            </td>
-                                        <?php endforeach; ?>
-
-                                        <td class="average" id="average-<?= htmlspecialchars($enrollId) ?>">
-                                            <?php
-                                            if ($totalWeight > 0) {
-                                                $average = ($weightedPoints / $totalWeight) * 100;
-                                                echo htmlspecialchars(number_format($average, 1) . '%');
-                                            } else {
-                                                echo '&ndash;';
-                                            }
-                                            ?>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Grade Item Form Template (hidden) -->
-            <div id="grade-item-form-container" class="modal" style="display: none;">
-                <div class="modal-content card">
-                    <div class="card-header">
-                        <h3 class="card-title">Add Grade Item</h3>
-                    </div>
-                    <div class="card-body">
-                        <form id="grade-item-form">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                            <input type="hidden" name="action" value="add_grade_item">
-                            <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
+<?php /* 
+    [TEACHER GRADEBOOK PAGE PLACEHOLDER]
+    Components:
+    - Page container with gradebook layout
     
-                            <div class="form-group">
-                                <label for="name" class="form-label">Name:</label>
-                                <input type="text" id="name" name="name" class="form-input" required>
-                            </div>
+    - Page title "Grade Management"
     
-                            <div class="form-group">
-                                <label for="max_points" class="form-label">Maximum Points:</label>
-                                <input type="number" id="max_points" name="max_points" class="form-input" min="1" value="100" required>
-                            </div>
+    - Alert message display when $message is not empty
+      - Styling based on $messageType (success, error, warning)
     
-                            <div class="form-group">
-                                <label for="weight" class="form-label">Weight:</label>
-                                <input type="number" id="weight" name="weight" class="form-input" min="0.1" step="0.1" value="1" required>
-                            </div>
+    - Class selection form:
+      - Dropdown list of classes taught by teacher
+      - Submit button
     
-                            <div class="form-group">
-                                <button type="button" class="btn btn-secondary" onclick="closeGradeItemForm()">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Save</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Grade Edit Form Template (hidden) -->
-            <div id="grade-edit-form-container" class="modal" style="display: none;">
-                <div class="modal-content card">
-                    <div class="card-header">
-                        <h3 class="card-title">Edit Grade</h3>
-                    </div>
-                    <div class="card-body">
-                        <form id="grade-edit-form">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                            <input type="hidden" name="action" value="save_grade">
-                            <input type="hidden" name="enroll_id" id="edit_enroll_id">
-                            <input type="hidden" name="item_id" id="edit_item_id">
-    
-                            <div class="form-group">
-                                <label for="points" class="form-label">Points:</label>
-                                <input type="number" id="points" name="points" class="form-input" step="0.1" required>
-                            </div>
-    
-                            <div class="form-group">
-                                <label for="comment" class="form-label">Comment:</label>
-                                <textarea id="comment" name="comment" class="form-input" rows="3"></textarea>
-                            </div>
-    
-                            <div class="form-group">
-                                <button type="button" class="btn btn-secondary" onclick="closeGradeEditForm()">Cancel</button>
-                                <button type="submit" class="btn btn-primary">Save</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
-    <?php endif; ?>
-</div>
-
-<script>
-    // Function to show the grade item form
-    function showGradeItemForm() {
-        document.getElementById('grade-item-form-container').style.display = 'flex';
-    }
-
-    // Function to close the grade item form
-    function closeGradeItemForm() {
-        document.getElementById('grade-item-form-container').style.display = 'none';
-    }
-
-    // Function to show the grade edit form
-    function showGradeEditForm(enrollId, itemId, points, comment) {
-        document.getElementById('edit_enroll_id').value = enrollId;
-        document.getElementById('edit_item_id').value = itemId;
-        document.getElementById('points').value = points || '';
-        document.getElementById('comment').value = comment || '';
-
-        document.getElementById('grade-edit-form-container').style.display = 'flex';
-    }
-
-    // Function to close the grade edit form
-    function closeGradeEditForm() {
-        document.getElementById('grade-edit-form-container').style.display = 'none';
-    }
-
-    // Function to show status message
-    function showStatusMessage(message, type = 'success') {
-        const statusElement = document.getElementById('status-message');
-        statusElement.textContent = message;
-        statusElement.className = `status-message ${type}`;
-        statusElement.style.display = 'block';
-
-        // Hide message after 5 seconds
-        setTimeout(() => {
-            statusElement.style.display = 'none';
-        }, 5000);
-    }
-
-    // Event listener for the Add Grade Item button
-    document.getElementById('btn-add-grade-item')?.addEventListener('click', showGradeItemForm);
-
-    // Event listeners for grade cells (for inline editing)
-    document.querySelectorAll('.grade-cell').forEach(cell => {
-        cell.addEventListener('click', function() {
-            const enrollId = this.dataset.enrollId;
-            const itemId = this.dataset.itemId;
-            const points = this.querySelector('.grade-display').textContent.trim();
-            const comment = this.dataset.comment || '';
-
-            showGradeEditForm(enrollId, itemId, points, comment);
-        });
-    });
-
-    // Grade Item Form submission
-    document.getElementById('grade-item-form')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        // Get form data and convert to FormData object for AJAX submission
-        const formData = new FormData(this);
-
-        // Send AJAX request to API
-        fetch('/uwuweb/api/grades.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showStatusMessage(data.message, 'success');
-                // Reload the page to show the new grade item
-                // In a more advanced implementation, we could dynamically add the item to the table
-                window.location.reload();
-            } else {
-                showStatusMessage(data.error, 'error');
-            }
-        })
-        .catch(error => {
-            showStatusMessage('An error occurred: ' + error, 'error');
-        })
-        .finally(() => {
-            closeGradeItemForm();
-        });
-    });
-
-    // Grade Edit Form submission
-    document.getElementById('grade-edit-form')?.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        // Get form data
-        const formData = new FormData(this);
-        const enrollId = formData.get('enroll_id');
-        const itemId = formData.get('item_id');
-        const points = formData.get('points');
-        const comment = formData.get('comment');
-
-        // Send AJAX request to save the grade
-        fetch('/uwuweb/api/grades.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Update the cell with the new grade value
-                const cell = document.querySelector(`.grade-cell[data-enroll-id="${enrollId}"][data-item-id="${itemId}"]`);
-                if (cell) {
-                    cell.querySelector('.grade-display').textContent = points;
-                    cell.dataset.comment = comment;
-
-                    // Add highlighting effect to show the cell was updated
-                    cell.classList.add('updated');
-                    setTimeout(() => {
-                        cell.classList.remove('updated');
-                    }, 2000);
-
-                    // Recalculate student average (would typically be done server-side)
-                    calculateStudentAverage(enrollId);
-                }
-
-                showStatusMessage(data.message, 'success');
-            } else {
-                showStatusMessage(data.error, 'error');
-            }
-        })
-        .catch(error => {
-            showStatusMessage('An error occurred: ' + error, 'error');
-        })
-        .finally(() => {
-            closeGradeEditForm();
-        });
-    });
-
-    // Function to calculate student average (simplified version)
-    // In a real implementation, this would be calculated server-side
-    function calculateStudentAverage(enrollId) {
-        // Get all grade cells for this student
-        const cells = document.querySelectorAll(`.grade-cell[data-enroll-id="${enrollId}"]`);
-        let totalWeightedPoints = 0;
-        let totalWeight = 0;
-
-        cells.forEach(cell => {
-            const gradeValue = cell.querySelector('.grade-display').textContent.trim();
-
-            if (gradeValue !== '') {
-                // Find the item's weight and max points from the table header
-                const headerIndex = [...cell.parentNode.children].indexOf(cell);
-                const weightElement = document.querySelector(`.weight-row th:nth-child(${headerIndex})`);
-                const maxPointsElement = document.querySelector(`.grade-item:nth-child(${headerIndex}) .max-points`);
-
-                if (weightElement && maxPointsElement) {
-                    const weightText = weightElement.textContent;
-                    const maxPointsText = maxPointsElement.textContent;
-
-                    const weight = parseFloat(weightText.replace('Weight: ', ''));
-                    const maxPoints = parseFloat(maxPointsText.replace('(', '').replace(')', ''));
-
-                    if (!isNaN(weight) && !isNaN(maxPoints) && maxPoints > 0) {
-                        const points = parseFloat(gradeValue);
-                        totalWeightedPoints += (points / maxPoints) * weight;
-                        totalWeight += weight;
-                    }
-                }
-            }
-        });
-
-        // Update the average cell
-        const averageCell = document.getElementById(`average-${enrollId}`);
-        if (averageCell && totalWeight > 0) {
-            const average = (totalWeightedPoints / totalWeight) * 100;
-            averageCell.textContent = average.toFixed(1) + '%';
-
-            // Highlight the average cell
-            averageCell.classList.add('updated');
-            setTimeout(() => {
-                averageCell.classList.remove('updated');
-            }, 2000);
-        }
-    }
-</script>
+    - If class is selected:
+      - Tab navigation with:
+        - "Grade Items" tab for managing assessments
+        - "Enter Grades" tab for adding student scores
+        - "Grade Overview" tab for viewing all grades in the class
+      
+      - Grade Items tab containing:
+        - Table of existing grade items with:
+          - Name, Description, Max Points, Weight, Date
+          - Edit/Delete buttons for each item
+        - Form to add new grade item
+      
+      - Enter Grades tab containing:
+        - Grade item selection dropdown
+        - If grade item selected:
+          - Form with table of students
+          - For each student:
+            - Input field for points
+            - Input field for feedback
+          - Save button
+      
+      - Grade Overview tab containing:
+        - Comprehensive table with:
+          - Students listed in rows
+          - Grade items in columns
+          - Final average/grade in last column
+          - Color-coding based on grade performance
+*/ ?>
 
 <?php
 // Include page footer

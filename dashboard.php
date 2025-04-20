@@ -29,49 +29,39 @@ $userInfo = getUserInfo($_SESSION['user_id']);
 include 'includes/header.php';
 ?>
 
-<div class="page-wrapper dashboard">
-    <div class="sidebar">
-        <nav class="navbar-menu">
-            <ul>
-                <?php foreach ($navItems as $item): ?>
-                <li class="navbar-item">
-                    <a href="<?= htmlspecialchars($item['url']) ?>" class="navbar-link <?= $_SERVER['PHP_SELF'] == $item['url'] ? 'active' : '' ?>">
-                        <span class="icon icon-<?= htmlspecialchars($item['icon']) ?>"></span>
-                        <span class="title"><?= htmlspecialchars($item['title']) ?></span>
-                    </a>
-                </li>
-                <?php endforeach; ?>
-            </ul>
-        </nav>
-    </div>
+<?php /* 
+    [DASHBOARD PAGE PLACEHOLDER]
+    Components:
+    - Page wrapper with dashboard class
     
-    <div class="main-content">
-        <div class="container">
-            <h2 class="page-title">Welcome, <?= htmlspecialchars($_SESSION['username']) ?></h2>
-            <p class="role-info"><span class="badge badge-primary"><?= htmlspecialchars($userInfo['role_name'] ?? getRoleName($userRole)) ?></span></p>
-            
-            <div class="dashboard-grid">
-                <?php foreach ($widgets as $key => $widget): ?>
-                <div class="card metric-card" id="<?= htmlspecialchars($key) ?>">
-                    <div class="card-header">
-                        <h3 class="card-title"><?= htmlspecialchars($widget['title']) ?></h3>
-                    </div>
-                    <div class="card-body">
-                        <?php 
-                        // Call the widget's render function if it exists
-                        if (function_exists($widget['function'])) {
-                            echo call_user_func($widget['function']);
-                        } else {
-                            echo '<div class="card-content">Widget content not available</div>';
-                        }
-                        ?>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
-</div>
+    - Sidebar containing:
+      - Navigation menu with dynamic items based on user role
+      - Each navigation item includes:
+        - Icon based on item type
+        - Text link with highlighting for active page
+    
+    - Main content area containing:
+      - Welcome message with username
+      - User role badge display
+      
+      - Dashboard grid with:
+        - Dynamic widgets loaded based on user role
+        - Each widget is a card with:
+          - Header with widget title
+          - Body with content from the widget's render function
+*/ ?>
+
+<?php foreach ($widgets as $key => $widget): ?>
+    <?php /* [WIDGET CARD PLACEHOLDER: <?= $widget['title'] ?>] */ ?>
+    <?php 
+    // Call the widget's render function if it exists
+    if (function_exists($widget['function'])) {
+        echo call_user_func($widget['function']);
+    } else {
+        echo '<!-- Widget content not available -->';
+    }
+    ?>
+<?php endforeach; ?>
 
 <?php
 // Include page footer

@@ -19,6 +19,8 @@ require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 require_once '../includes/header.php';
 
+// CSS styles are included in header.php
+
 // Ensure only administrators can access this page
 requireRole(ROLE_ADMIN);
 
@@ -29,593 +31,314 @@ if (!$pdo) {
 }
 $message = '';
 $userDetails = null;
-$error = '';
 
 // Process form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $formAction = $_POST['action'] ?? '';
-
-    // Verify CSRF token for all POST actions
-    if (isset($_POST['csrf_token'])) {
-        verifyCSRFToken($_POST['csrf_token']);
+    // Verify CSRF token
+    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
+        $message = 'Invalid form submission. Please try again.';
     } else {
-        $error = 'Security token missing. Please try again.';
-    }
-
-    if (empty($error)) {
-        try {
-            switch ($formAction) {
-                case 'create':
-                    // Create new user
-                    $username = trim($_POST['username']);
-                    $password = trim($_POST['password']);
-                    $roleId = (int)$_POST['role_id'];
-
-                    // Basic validation
-                    if (empty($username) || empty($password)) {
-                        $error = 'Username and password are required.';
-                        break;
-                    }
-
-                    // Check if username already exists
-                    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE username = :username");
-                    $stmt->execute(['username' => $username]);
-                    if ($stmt->fetch()) {
-                        $error = 'Username already exists. Please choose another.';
-                        break;
-                    }
-
-                    // Hash password and insert user
-                    $passwordHash = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("INSERT INTO users (username, pass_hash, role_id, created_at) 
-                                        VALUES (:username, :pass_hash, :role_id, NOW())");
-                    $stmt->execute([
+        // Create new user
+        if (isset($_POST['create_user'])) {
+            $username = isset($_POST['username']) ? trim($_POST['username']) : '';
+            $password = isset($_POST['password']) ? $_POST['password'] : '';
+            $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+            $firstName = isset($_POST['first_name']) ? trim($_POST['first_name']) : '';
+            $lastName = isset($_POST['last_name']) ? trim($_POST['last_name']) : '';
+            $role = isset($_POST['role']) ? (int)$_POST['role'] : 0;
+            
+            if (empty($username) || empty($password) || empty($email) || empty($firstName) || empty($lastName) || $role === 0) {
+                $message = 'Please complete all required fields.';
+            } else if (strlen($password) < 8) {
+                $message = 'Password must be at least 8 characters long.';
+            } else {
+                // Check if username or email already exists
+                $stmt = $pdo->prepare("SELECT user_id FROM users WHERE username = :username OR email = :email");
+                $stmt->execute(['username' => $username, 'email' => $email]);
+                if ($stmt->rowCount() > 0) {
+                    $message = 'Username or email already exists.';
+                } else {
+                    // Create user
+                    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = $pdo->prepare(
+                        "INSERT INTO users (username, password, email, first_name, last_name, role)
+                         VALUES (:username, :password, :email, :first_name, :last_name, :role)"
+                    );
+                    $success = $stmt->execute([
                         'username' => $username,
-                        'pass_hash' => $passwordHash,
-                        'role_id' => $roleId
+                        'password' => $hashedPassword,
+                        'email' => $email,
+                        'first_name' => $firstName,
+                        'last_name' => $lastName,
+                        'role' => $role
                     ]);
-
-                    // Get new user ID
-                    $newUserId = $pdo->lastInsertId();
-
-                    // Create role-specific record if needed
-                    if ($roleId == ROLE_STUDENT) {
-                        // Add student record
-                        $stmt = $pdo->prepare("INSERT INTO students (user_id, first_name, last_name) 
-                                            VALUES (:user_id, :first_name, :last_name)");
-                        $stmt->execute([
-                            'user_id' => $newUserId,
-                            'first_name' => trim($_POST['first_name'] ?? ''),
-                            'last_name' => trim($_POST['last_name'] ?? '')
-                        ]);
-                    } elseif ($roleId == ROLE_TEACHER) {
-                        // Add teacher record
-                        $stmt = $pdo->prepare("INSERT INTO teachers (user_id) VALUES (:user_id)");
-                        $stmt->execute(['user_id' => $newUserId]);
-                    } elseif ($roleId == ROLE_PARENT) {
-                        // Add parent record
-                        $stmt = $pdo->prepare("INSERT INTO parents (user_id) VALUES (:user_id)");
-                        $stmt->execute(['user_id' => $newUserId]);
-
-                        // Link to student if specified
-                        if (!empty($_POST['linked_student_id'])) {
-                            $stmt = $pdo->prepare("INSERT INTO student_parent (student_id, parent_id) 
-                                                VALUES (:student_id, :parent_id)");
-                            $stmt->execute([
-                                'student_id' => (int)$_POST['linked_student_id'],
-                                'parent_id' => $pdo->lastInsertId()
-                            ]);
+                    
+                    if ($success) {
+                        $userId = $pdo->lastInsertId();
+                        
+                        // Create role-specific record if needed
+                        switch ($role) {
+                            case ROLE_TEACHER:
+                                $stmt = $pdo->prepare("INSERT INTO teachers (user_id, first_name, last_name) VALUES (:user_id, :first_name, :last_name)");
+                                $stmt->execute(['user_id' => $userId, 'first_name' => $firstName, 'last_name' => $lastName]);
+                                break;
+                            case ROLE_STUDENT:
+                                $classCode = isset($_POST['class_code']) ? trim($_POST['class_code']) : '';
+                                $stmt = $pdo->prepare("INSERT INTO students (user_id, first_name, last_name, class_code) VALUES (:user_id, :first_name, :last_name, :class_code)");
+                                $stmt->execute(['user_id' => $userId, 'first_name' => $firstName, 'last_name' => $lastName, 'class_code' => $classCode]);
+                                break;
+                            case ROLE_PARENT:
+                                $stmt = $pdo->prepare("INSERT INTO parents (user_id, first_name, last_name) VALUES (:user_id, :first_name, :last_name)");
+                                $stmt->execute(['user_id' => $userId, 'first_name' => $firstName, 'last_name' => $lastName]);
+                                break;
                         }
+                        
+                        $message = 'User created successfully.';
+                    } else {
+                        $message = 'Error creating user. Please try again.';
                     }
-
-                    $message = "User '$username' created successfully.";
-                    break;
-
-                case 'update':
-                    // Update existing user
-                    $userId = (int)$_POST['user_id'];
-                    $username = trim($_POST['username']);
-
-                    // Check if username exists (excluding current user)
-                    $stmt = $pdo->prepare("SELECT user_id FROM users WHERE username = :username AND user_id != :user_id");
-                    $stmt->execute([
-                        'username' => $username,
-                        'user_id' => $userId
-                    ]);
-
-                    if ($stmt->fetch()) {
-                        $error = 'Username already exists. Please choose another.';
-                        break;
-                    }
-
-                    // Update the user record
-                    $stmt = $pdo->prepare("UPDATE users SET username = :username WHERE user_id = :user_id");
-                    $stmt->execute([
-                        'username' => $username,
-                        'user_id' => $userId
-                    ]);
-
-                    // Update role-specific details
-                    $roleId = getUserRoleById($userId);
-                    if (isset($_POST['first_name'], $_POST['last_name']) && $roleId == ROLE_STUDENT) {
-                        $stmt = $pdo->prepare("UPDATE students SET 
-                                            first_name = :first_name, 
-                                            last_name = :last_name 
-                                            WHERE user_id = :user_id");
-                        $stmt->execute([
-                            'first_name' => trim($_POST['first_name']),
-                            'last_name' => trim($_POST['last_name']),
-                            'user_id' => $userId
-                        ]);
-                    }
-
-                    $message = "User updated successfully.";
-                    break;
-
-                case 'reset_password':
-                    // Reset user password
-                    $userId = (int)$_POST['user_id'];
-                    $newPassword = trim($_POST['new_password']);
-
-                    if (empty($newPassword)) {
-                        $error = 'New password cannot be empty.';
-                        break;
-                    }
-
-                    $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("UPDATE users SET pass_hash = :pass_hash WHERE user_id = :user_id");
-                    $stmt->execute([
-                        'pass_hash' => $passwordHash,
-                        'user_id' => $userId
-                    ]);
-
-                    $message = "Password reset successfully.";
-                    break;
-
-                case 'delete':
-                    // Delete user (if no dependencies)
-                    $userId = (int)$_POST['user_id'];
-
-                    // Begin transaction
-                    $pdo->beginTransaction();
-
-                    // Get user's role
-                    $stmt = $pdo->prepare("SELECT role_id FROM users WHERE user_id = :user_id");
-                    $stmt->execute(['user_id' => $userId]);
-                    $user = $stmt->fetch();
-
-                    if (!$user) {
-                        $error = 'User not found.';
-                        $pdo->rollBack();
-                        break;
-                    }
-
-                    $roleId = $user['role_id'];
-
-                    // Check for dependencies based on role
-                    if ($roleId == ROLE_TEACHER) {
-                        // Check if teacher has classes
-                        $stmt = $pdo->prepare("
-                            SELECT COUNT(*) as count FROM classes c
-                            JOIN teachers t ON t.teacher_id = c.teacher_id
-                            WHERE t.user_id = :user_id
-                        ");
-                        $stmt->execute(['user_id' => $userId]);
-                        if ($stmt->fetch()['count'] > 0) {
-                            $error = 'Cannot delete: Teacher has assigned classes.';
-                            $pdo->rollBack();
-                            break;
-                        }
-
-                        // Delete teacher record
-                        $stmt = $pdo->prepare("DELETE FROM teachers WHERE user_id = :user_id");
-                        $stmt->execute(['user_id' => $userId]);
-
-                    } elseif ($roleId == ROLE_STUDENT) {
-                        // Check if student has grades
-                        $stmt = $pdo->prepare("
-                            SELECT COUNT(*) as count FROM grades g
-                            JOIN enrollments e ON e.enroll_id = g.enroll_id
-                            JOIN students s ON s.student_id = e.student_id
-                            WHERE s.user_id = :user_id
-                        ");
-                        $stmt->execute(['user_id' => $userId]);
-                        if ($stmt->fetch()['count'] > 0) {
-                            $error = 'Cannot delete: Student has grades.';
-                            $pdo->rollBack();
-                            break;
-                        }
-
-                        // Check if student has attendance records
-                        $stmt = $pdo->prepare("
-                            SELECT COUNT(*) as count FROM attendance a
-                            JOIN enrollments e ON e.enroll_id = a.enroll_id
-                            JOIN students s ON s.student_id = e.student_id
-                            WHERE s.user_id = :user_id
-                        ");
-                        $stmt->execute(['user_id' => $userId]);
-                        if ($stmt->fetch()['count'] > 0) {
-                            $error = 'Cannot delete: Student has attendance records.';
-                            $pdo->rollBack();
-                            break;
-                        }
-
-                        // Delete student-parent relationships
-                        $stmt = $pdo->prepare("
-                            DELETE FROM student_parent 
-                            WHERE student_id = (SELECT student_id FROM students WHERE user_id = :user_id)
-                        ");
-                        $stmt->execute(['user_id' => $userId]);
-
-                        // Delete student record
-                        $stmt = $pdo->prepare("DELETE FROM students WHERE user_id = :user_id");
-                        $stmt->execute(['user_id' => $userId]);
-
-                    } elseif ($roleId == ROLE_PARENT) {
-                        // Delete student-parent relationships
-                        $stmt = $pdo->prepare("
-                            DELETE FROM student_parent 
-                            WHERE parent_id = (SELECT parent_id FROM parents WHERE user_id = :user_id)
-                        ");
-                        $stmt->execute(['user_id' => $userId]);
-
-                        // Delete parent record
-                        $stmt = $pdo->prepare("DELETE FROM parents WHERE user_id = :user_id");
-                        $stmt->execute(['user_id' => $userId]);
-                    }
-
-                    // Delete user record
-                    $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = :user_id");
-                    $stmt->execute(['user_id' => $userId]);
-
-                    // Commit transaction
-                    $pdo->commit();
-
-                    $message = "User deleted successfully.";
-                    break;
+                }
             }
-        } catch (PDOException $e) {
-            if ($pdo->inTransaction()) {
-                $pdo->rollBack();
+        }
+        
+        // Update user
+        else if (isset($_POST['update_user'])) {
+            $userId = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
+            $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+            $firstName = isset($_POST['first_name']) ? trim($_POST['first_name']) : '';
+            $lastName = isset($_POST['last_name']) ? trim($_POST['last_name']) : '';
+            
+            if ($userId <= 0 || empty($email) || empty($firstName) || empty($lastName)) {
+                $message = 'Please complete all required fields.';
+            } else {
+                // Check if email belongs to another user
+                $stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = :email AND user_id != :user_id");
+                $stmt->execute(['email' => $email, 'user_id' => $userId]);
+                if ($stmt->rowCount() > 0) {
+                    $message = 'Email already in use by another user.';
+                } else {
+                    // Update user
+                    $stmt = $pdo->prepare(
+                        "UPDATE users 
+                         SET email = :email, first_name = :first_name, last_name = :last_name
+                         WHERE user_id = :user_id"
+                    );
+                    $success = $stmt->execute([
+                        'user_id' => $userId,
+                        'email' => $email,
+                        'first_name' => $firstName,
+                        'last_name' => $lastName
+                    ]);
+                    
+                    if ($success) {
+                        $message = 'User updated successfully.';
+                    } else {
+                        $message = 'Error updating user. Please try again.';
+                    }
+                }
             }
-            $error = "Database error: " . $e->getMessage();
+        }
+        
+        // Reset password
+        else if (isset($_POST['reset_password'])) {
+            $userId = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
+            $newPassword = isset($_POST['new_password']) ? $_POST['new_password'] : '';
+            
+            if ($userId <= 0 || empty($newPassword)) {
+                $message = 'Please provide a new password.';
+            } else if (strlen($newPassword) < 8) {
+                $message = 'Password must be at least 8 characters long.';
+            } else {
+                // Update password
+                $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare(
+                    "UPDATE users 
+                     SET password = :password
+                     WHERE user_id = :user_id"
+                );
+                $success = $stmt->execute([
+                    'user_id' => $userId,
+                    'password' => $hashedPassword
+                ]);
+                
+                if ($success) {
+                    $message = 'Password reset successfully.';
+                } else {
+                    $message = 'Error resetting password. Please try again.';
+                }
+            }
+        }
+        
+        // Delete user
+        else if (isset($_POST['delete_user'])) {
+            $userId = isset($_POST['user_id']) ? (int)$_POST['user_id'] : 0;
+            
+            if ($userId <= 0) {
+                $message = 'Invalid user ID.';
+            } else if ($userId === getUserId()) {
+                $message = 'You cannot delete your own account.';
+            } else {
+                // Check if user has any dependencies before deleting
+                $canDelete = true;
+                $role = null;
+                
+                // Get user role
+                $stmt = $pdo->prepare("SELECT role FROM users WHERE user_id = :user_id");
+                $stmt->execute(['user_id' => $userId]);
+                $userData = $stmt->fetch();
+                
+                if ($userData) {
+                    $role = $userData['role'];
+                    
+                    switch ($role) {
+                        case ROLE_TEACHER:
+                            $stmt = $pdo->prepare("SELECT COUNT(*) AS count FROM classes WHERE teacher_id = (SELECT teacher_id FROM teachers WHERE user_id = :user_id)");
+                            $stmt->execute(['user_id' => $userId]);
+                            if ($stmt->fetch()['count'] > 0) {
+                                $canDelete = false;
+                                $message = 'Cannot delete user: This teacher has assigned classes.';
+                            }
+                            break;
+                        case ROLE_STUDENT:
+                            $stmt = $pdo->prepare("SELECT COUNT(*) AS count FROM enrollments WHERE student_id = (SELECT student_id FROM students WHERE user_id = :user_id)");
+                            $stmt->execute(['user_id' => $userId]);
+                            if ($stmt->fetch()['count'] > 0) {
+                                $canDelete = false;
+                                $message = 'Cannot delete user: This student is enrolled in classes.';
+                            }
+                            break;
+                        case ROLE_PARENT:
+                            $stmt = $pdo->prepare("SELECT COUNT(*) AS count FROM parent_student WHERE parent_id = (SELECT parent_id FROM parents WHERE user_id = :user_id)");
+                            $stmt->execute(['user_id' => $userId]);
+                            if ($stmt->fetch()['count'] > 0) {
+                                $canDelete = false;
+                                $message = 'Cannot delete user: This parent has linked students.';
+                            }
+                            break;
+                    }
+                    
+                    if ($canDelete) {
+                        // Delete role-specific records first
+                        switch ($role) {
+                            case ROLE_TEACHER:
+                                $stmt = $pdo->prepare("DELETE FROM teachers WHERE user_id = :user_id");
+                                $stmt->execute(['user_id' => $userId]);
+                                break;
+                            case ROLE_STUDENT:
+                                $stmt = $pdo->prepare("DELETE FROM students WHERE user_id = :user_id");
+                                $stmt->execute(['user_id' => $userId]);
+                                break;
+                            case ROLE_PARENT:
+                                $stmt = $pdo->prepare("DELETE FROM parents WHERE user_id = :user_id");
+                                $stmt->execute(['user_id' => $userId]);
+                                break;
+                        }
+                        
+                        // Then delete user
+                        $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = :user_id");
+                        $stmt->execute(['user_id' => $userId]);
+                        
+                        $message = 'User deleted successfully.';
+                    }
+                } else {
+                    $message = 'User not found.';
+                }
+            }
         }
     }
 }
 
-// Load user details for editing if user_id is in GET
-if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    $userId = (int)$_GET['edit'];
-    $userDetails = getUserDetails($userId);
-}
-
-/**
- * Retrieves detailed information about a specific user
- *
- * @param int $userId The user ID to get details for
- * @return array|null User details or null if not found
- */
-function getUserDetails($userId) {
-    global $pdo;
-
-    $stmt = $pdo->prepare("
-        SELECT u.user_id, u.username, u.role_id, r.name as role_name
-        FROM users u
-        JOIN roles r ON r.role_id = u.role_id
-        WHERE u.user_id = :user_id
-    ");
-    $stmt->execute(['user_id' => $userId]);
-    $user = $stmt->fetch();
-
-    if (!$user) {
-        return null;
-    }
-
-    // Get role-specific details
-    if ($user['role_id'] == ROLE_STUDENT) {
-        $stmt = $pdo->prepare("
-            SELECT first_name, last_name, dob, class_code
-            FROM students
-            WHERE user_id = :user_id
-        ");
+// Get user details if ID is provided in URL
+if (isset($_GET['id'])) {
+    $userId = (int)$_GET['id'];
+    if ($userId > 0) {
+        // Get user details
+        $stmt = $pdo->prepare(
+            "SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.role, u.created_at
+             FROM users u
+             WHERE u.user_id = :user_id"
+        );
         $stmt->execute(['user_id' => $userId]);
-        $studentDetails = $stmt->fetch();
-
-        if ($studentDetails) {
-            $user = array_merge($user, $studentDetails);
-        }
+        $userDetails = $stmt->fetch();
     }
-
-    return $user;
 }
 
-/**
- * Get user's role ID by user ID
- *
- * @param int $userId The user ID
- * @return int|null The role ID or null if not found
- */
-function getUserRoleById($userId) {
-    global $pdo;
+// Get all users for listing
+$stmt = $pdo->prepare(
+    "SELECT u.user_id, u.username, u.email, u.first_name, u.last_name, u.role, u.created_at 
+     FROM users u 
+     ORDER BY u.user_id"
+);
+$stmt->execute();
+$users = $stmt->fetchAll();
 
-    $stmt = $pdo->prepare("SELECT role_id FROM users WHERE user_id = :user_id");
-    $stmt->execute(['user_id' => $userId]);
-    $result = $stmt->fetch();
+// Generate CSRF token
+$csrfToken = generateCSRFToken();
 
-    return $result ? $result['role_id'] : null;
-}
-
-/**
- * Displays a table of all users with management actions
- *
- * @return void
- */
-function displayUserList() {
-    global $pdo;
-
-    // Get all users with roles
-    $stmt = $pdo->query("
-        SELECT u.user_id, u.username, r.role_id, r.name as role_name, u.created_at
-        FROM users u
-        JOIN roles r ON r.role_id = u.role_id
-        ORDER BY u.created_at DESC
-    ");
-
-    $users = $stmt->fetchAll();
+// Include header
+include '../includes/header.php';
 ?>
-    <div class="user-list">
-        <div class="table-wrapper">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Username</th>
-                        <th>Role</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($users as $user): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($user['user_id']) ?></td>
-                        <td><?= htmlspecialchars($user['username']) ?></td>
-                        <td><span class="badge badge-primary"><?= htmlspecialchars($user['role_name']) ?></span></td>
-                        <td><?= htmlspecialchars(date('Y-m-d', strtotime($user['created_at']))) ?></td>
-                        <td class="actions">
-                            <a href="?edit=<?= $user['user_id'] ?>" class="btn btn-secondary btn-icon">Edit</a>
-                            <button class="btn btn-warning" onclick="showPasswordResetModal(<?= $user['user_id'] ?>, '<?= htmlspecialchars($user['username']) ?>')">Reset</button>
-                            <button class="btn btn-error" onclick="confirmDelete(<?= $user['user_id'] ?>, '<?= htmlspecialchars($user['username']) ?>')">Delete</button>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
+
+<?php /* 
+    [ADMIN USERS PAGE PLACEHOLDER]
+    Components:
+    - Page container with admin user management layout
+    
+    - Page title "User Management"
+    
+    - Alert message display (when $message is not empty)
+      - For success/error notifications
+    
+    - Action buttons section:
+      - "Create New User" button that opens the user creation form
+    
+    - User listing table with:
+      - Headers: ID, Username, Name, Email, Role, Created, Actions
+      - For each user:
+        - User ID
+        - Username
+        - Full name (first + last)
+        - Email address
+        - Role name with appropriate badge
+        - Creation date
+        - Action buttons (Edit, Reset Password, Delete)
+    
+    - Modal components:
+      1. Create User Modal:
+         - Form with fields for:
+           - Username
+           - Password
+           - Email
+           - First Name
+           - Last Name
+           - Role selection
+           - Role-specific fields (conditionally shown based on role)
+         - Create and Cancel buttons
+      
+      2. Edit User Modal:
+         - Form with fields for:
+           - Email
+           - First Name
+           - Last Name
+         - Update and Cancel buttons
+      
+      3. Reset Password Modal:
+         - Form with fields for:
+           - New Password
+           - Confirm Password
+         - Reset and Cancel buttons
+      
+      4. Delete User Modal:
+         - Confirmation message
+         - Delete and Cancel buttons
+    
+    - Interactive features:
+      - Form validation
+      - Role-specific field toggling
+      - Confirmation for delete actions
+*/ ?>
+
 <?php
-}
+// Include page footer
+include '../includes/footer.php';
 ?>
-
-<main class="container">
-    <h1>User Management</h1>
-
-    <?php if (!empty($message)): ?>
-        <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
-    <?php endif; ?>
-
-    <?php if (!empty($error)): ?>
-        <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
-    <?php endif; ?>
-
-    <div class="card">
-        <div class="card-header">
-            <div class="tab-header">
-                <button class="tab-button <?= empty($userDetails) ? 'active' : '' ?>" onclick="showTab('user-list')">User List</button>
-                <button class="tab-button <?= !empty($userDetails) ? 'active' : '' ?>" onclick="showTab('user-form')">
-                    <?= empty($userDetails) ? 'Create User' : 'Edit User' ?>
-                </button>
-            </div>
-        </div>
-
-        <div class="card-body">
-            <div class="tab-container">
-                <div id="user-list" class="tab-content <?= empty($userDetails) ? 'active' : '' ?>">
-                    <?php displayUserList(); ?>
-                </div>
-    
-                <div id="user-form" class="tab-content <?= !empty($userDetails) ? 'active' : '' ?>">
-                <form method="post" action="/uwuweb/admin/users.php">
-                    <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
-                    <input type="hidden" name="action" value="<?= empty($userDetails) ? 'create' : 'update' ?>">
-
-                    <?php if (!empty($userDetails)): ?>
-                        <input type="hidden" name="user_id" value="<?= $userDetails['user_id'] ?>">
-                    <?php endif; ?>
-
-                    <div class="form-group">
-                        <label for="username" class="form-label">Username</label>
-                        <input type="text" class="form-input" id="username" name="username"
-                               value="<?= htmlspecialchars($userDetails['username'] ?? '') ?>" required>
-                    </div>
-
-                    <?php if (empty($userDetails)): ?>
-                        <div class="form-group">
-                            <label for="password" class="form-label">Password</label>
-                            <input type="password" class="form-input" id="password" name="password" required>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="role_id" class="form-label">Role</label>
-                            <select class="form-input form-select" id="role_id" name="role_id" onchange="toggleRoleFields()" required>
-                                <?php
-                                // Get all roles
-                                $stmt = $pdo->query("SELECT role_id, name FROM roles ORDER BY role_id");
-                                $roles = $stmt->fetchAll();
-
-                                foreach ($roles as $role): ?>
-                                    <option value="<?= $role['role_id'] ?>"><?= htmlspecialchars($role['name']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div id="student-fields" class="role-fields" style="display: none;">
-                            <div class="form-group">
-                                <label for="first_name" class="form-label">First Name</label>
-                                <input type="text" class="form-input" id="first_name" name="first_name">
-                            </div>
-                            <div class="form-group">
-                                <label for="last_name" class="form-label">Last Name</label>
-                                <input type="text" class="form-input" id="last_name" name="last_name">
-                            </div>
-                        </div>
-
-                        <div id="parent-fields" class="role-fields" style="display: none;">
-                            <div class="form-group">
-                                <label for="linked_student_id" class="form-label">Link to Student</label>
-                                <select class="form-input form-select" id="linked_student_id" name="linked_student_id">
-                                    <option value="">-- Select Student --</option>
-                                    <?php
-                                    // Get all students
-                                    $stmt = $pdo->query("
-                                        SELECT s.student_id, s.first_name, s.last_name 
-                                        FROM students s
-                                        ORDER BY s.last_name, s.first_name
-                                    ");
-                                    $students = $stmt->fetchAll();
-
-                                    foreach ($students as $student): ?>
-                                        <option value="<?= $student['student_id'] ?>">
-                                            <?= htmlspecialchars($student['last_name'] . ', ' . $student['first_name']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                    <?php else: ?>                            <?php if ($userDetails['role_id'] == ROLE_STUDENT): ?>
-                            <div class="form-group">
-                                <label for="first_name" class="form-label">First Name</label>
-                                <input type="text" class="form-input" id="first_name" name="first_name"
-                                       value="<?= htmlspecialchars($userDetails['first_name'] ?? '') ?>">
-                            </div>
-                            <div class="form-group">
-                                <label for="last_name" class="form-label">Last Name</label>
-                                <input type="text" class="form-input" id="last_name" name="last_name"
-                                       value="<?= htmlspecialchars($userDetails['last_name'] ?? '') ?>">
-                            </div>
-                        <?php endif; ?>
-                    <?php endif; ?>
-
-                    <div class="form-group">
-                        <button type="submit" class="btn btn-primary">
-                            <?= empty($userDetails) ? 'Create User' : 'Update User' ?>
-                        </button>
-                        <a href="/uwuweb/admin/users.php" class="btn btn-secondary">Cancel</a>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</main>
-
-<!-- Password Reset Modal -->
-<div id="password-reset-modal" class="modal">
-    <div class="modal-content card">
-        <div class="card-header">
-            <h2 class="card-title">Reset Password</h2>
-            <span class="close" onclick="closeModal('password-reset-modal')">&times;</span>
-        </div>
-        <div class="card-body">
-            <form id="reset-password-form" method="post" action="/uwuweb/admin/users.php">
-                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
-                <input type="hidden" name="action" value="reset_password">
-                <input type="hidden" name="user_id" id="reset-user-id">
-    
-                <p>Resetting password for: <span id="reset-username" class="badge badge-primary"></span></p>
-    
-                <div class="form-group">
-                    <label for="new_password" class="form-label">New Password</label>
-                    <input type="password" class="form-input" id="new_password" name="new_password" required>
-                </div>
-    
-                <div class="form-group">
-                    <button type="submit" class="btn btn-warning">Reset Password</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('password-reset-modal')">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-<div id="delete-modal" class="modal">
-    <div class="modal-content card">
-        <div class="card-header">
-            <h2 class="card-title">Confirm Deletion</h2>
-            <span class="close" onclick="closeModal('delete-modal')">&times;</span>
-        </div>
-        <div class="card-body">
-            <form id="delete-form" method="post" action="/uwuweb/admin/users.php">
-                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
-                <input type="hidden" name="action" value="delete">
-                <input type="hidden" name="user_id" id="delete-user-id">
-    
-                <p>Are you sure you want to delete user: <span id="delete-username" class="badge badge-primary"></span>?</p>
-                <p class="alert alert-error">Warning: This action cannot be undone!</p>
-    
-                <div class="form-group">
-                    <button type="submit" class="btn btn-error">Delete User</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('delete-modal')">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<script>
-function showTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    document.getElementById(tabId).classList.add('active');
-
-    document.querySelectorAll('.nav-link').forEach(link => {
-        link.classList.remove('active');
-    });
-    event.target.classList.add('active');
-}
-
-function toggleRoleFields() {
-    const roleId = document.getElementById('role_id').value;
-    const studentFields = document.getElementById('student-fields');
-    const parentFields = document.getElementById('parent-fields');
-
-    studentFields.style.display = (roleId === <?= ROLE_STUDENT ?>) ? 'block' : 'none';
-    parentFields.style.display = (roleId === <?= ROLE_PARENT ?>) ? 'block' : 'none';
-}
-
-function showPasswordResetModal(userId, username) {
-    document.getElementById('reset-user-id').value = userId;
-    document.getElementById('reset-username').textContent = username;
-    document.getElementById('password-reset-modal').style.display = 'block';
-}
-
-function confirmDelete(userId, username) {
-    document.getElementById('delete-user-id').value = userId;
-    document.getElementById('delete-username').textContent = username;
-    document.getElementById('delete-modal').style.display = 'block';
-}
-
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-// Initialize role fields visibility
-document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('role_id')) {
-        toggleRoleFields();
-    }
-});
-</script>
-
-<?php require_once '../includes/footer.php'; ?>

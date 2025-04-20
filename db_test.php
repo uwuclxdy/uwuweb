@@ -10,22 +10,17 @@
 // Include the database connection file
 require_once '../includes/db.php';
 
-// Run PHP syntax check on the DB file
-echo "<h2>PHP Syntax Check:</h2>";
+// [PLACEHOLDER: Page header]
+
+// [PLACEHOLDER: Database test section with heading for PHP syntax check]
 $output = [];
 exec('php -l /uwuweb/includes/db.php', $output, $return_var);
-echo "<pre>";
-foreach ($output as $line) {
-    echo htmlspecialchars($line) . "<br>";
-}
-echo "</pre>";
+// [PLACEHOLDER: Display syntax check results in formatted pre block]
 
-// Test database connection
-echo "<h2>Database Connection Test:</h2>";
-echo "<p>" . testDBConnection() . "</p>";
+// [PLACEHOLDER: Database connection test heading]
+// [PLACEHOLDER: Display connection test result]
 
-// Verify all tables exist
-echo "<h2>Database Schema Verification:</h2>";
+// [PLACEHOLDER: Database schema verification heading]
 try {
     $pdo = getDBConnection();
     if (!$pdo) {
@@ -45,27 +40,20 @@ try {
         $found_tables[] = $row["Tables_in_uwuweb"];
     }
 
-    // Check each expected table
-    echo "<ul>";
-    foreach ($expected_tables as $table) {
-        if (in_array($table, $found_tables, true)) {
-            echo "<li>✅ Table '{$table}' exists</li>";
-        } else {
-            echo "<li>❌ Table '{$table}' missing</li>";
-        }
-    }
-    echo "</ul>";
-
+    // [PLACEHOLDER: Unordered list showing table verification results]
+    // This will display a list of tables with checkmarks or X marks
+    // indicating whether each expected table exists in the database
+    
     // Additional verification: check admin user exists
     $stmt = $pdo->query("SELECT COUNT(*) as count FROM users WHERE username = 'admin'");
     $result = $stmt->fetch();
 
-    if ($result['count'] > 0) {
-        echo "<p>✅ Default admin user exists</p>";
-    } else {
-        echo "<p>❌ Default admin user is missing</p>";
-    }
+    // [PLACEHOLDER: Admin user verification result]
+    // This will display whether the default admin user exists or not
 
 } catch (PDOException $e) {
-    echo "<p>Error checking schema: " . htmlspecialchars($e->getMessage()) . "</p>";
+    // [PLACEHOLDER: Error message display]
+    // This will show a formatted error message if database checking fails
 }
+
+// [PLACEHOLDER: Page footer]

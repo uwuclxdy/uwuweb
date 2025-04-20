@@ -20,8 +20,7 @@ require_once '../includes/db.php';
 require_once '../includes/functions.php';
 require_once '../includes/header.php';
 
-// Add CSS link for this specific page
-echo '<link rel="stylesheet" href="/uwuweb/assets/css/teacher-attendance.css">';
+// CSS styles are included in header.php
 
 // Ensure only teachers can access this page
 requireRole(ROLE_TEACHER);
@@ -99,7 +98,7 @@ function getClassPeriods($classId) {
     $stmt = $pdo->prepare(
         "SELECT period_id, period_date, period_label 
          FROM periods 
-         WHERE class_id = :class_id
+         WHERE class_id = :class_id 
          ORDER BY period_date DESC, period_label"
     );
     $stmt->execute(['class_id' => $classId]);
@@ -115,45 +114,42 @@ function getPeriodAttendance($periodId) {
     }
 
     $stmt = $pdo->prepare(
-        "SELECT a.att_id, a.enroll_id, a.status, a.justification
+        "SELECT a.att_id, a.enroll_id, a.status
          FROM attendance a
          WHERE a.period_id = :period_id"
     );
     $stmt->execute(['period_id' => $periodId]);
-
-    // Index attendance by enrollment ID for easier access
-    $attendance = [];
-    foreach ($stmt->fetchAll() as $record) {
-        $attendance[$record['enroll_id']] = [
-            'att_id' => $record['att_id'],
-            'status' => $record['status'],
-            'justification' => $record['justification']
-        ];
+    
+    // Index by enrollment ID for easier lookup
+    $result = [];
+    while ($row = $stmt->fetch()) {
+        $result[$row['enroll_id']] = $row;
     }
-
-    return $attendance;
+    return $result;
 }
 
-// Add a new period to the class
+// Add a new period to a class
 function addPeriod($classId, $periodDate, $periodLabel) {
     $pdo = safeGetDBConnection('addPeriod()', false);
     if (!$pdo) {
         error_log("Database connection failed in addPeriod()");
-        throw new PDOException("Failed to connect to database");
+        return false;
     }
 
-    $stmt = $pdo->prepare(
-        "INSERT INTO periods (class_id, period_date, period_label)
-         VALUES (:class_id, :period_date, :period_label)"
-    );
-
-    $stmt->execute([
-        'class_id' => $classId,
-        'period_date' => $periodDate,
-        'period_label' => $periodLabel
-    ]);
-
-    return $pdo->lastInsertId();
+    try {
+        $stmt = $pdo->prepare(
+            "INSERT INTO periods (class_id, period_date, period_label)
+             VALUES (:class_id, :period_date, :period_label)"
+        );
+        return $stmt->execute([
+            'class_id' => $classId,
+            'period_date' => $periodDate,
+            'period_label' => $periodLabel
+        ]);
+    } catch (PDOException $e) {
+        error_log("Error adding period: " . $e->getMessage());
+        return false;
+    }
 }
 
 // Save attendance status for a student
@@ -161,90 +157,47 @@ function saveAttendance($enroll_id, $period_id, $status) {
     $pdo = safeGetDBConnection('saveAttendance()', false);
     if (!$pdo) {
         error_log("Database connection failed in saveAttendance()");
-        throw new PDOException("Failed to connect to database");
+        return false;
     }
 
-    // Check if record already exists
-    $stmt = $pdo->prepare(
-        "SELECT att_id FROM attendance 
-         WHERE enroll_id = :enroll_id AND period_id = :period_id"
-    );
-
-    $stmt->execute([
-        'enroll_id' => $enroll_id,
-        'period_id' => $period_id
-    ]);
-
-    $record = $stmt->fetch();
-
-    if ($record) {
-        // Update existing record
+    try {
+        // Check if a record already exists
         $stmt = $pdo->prepare(
-            "UPDATE attendance
-             SET status = :status
+            "SELECT att_id FROM attendance 
              WHERE enroll_id = :enroll_id AND period_id = :period_id"
         );
-
         $stmt->execute([
             'enroll_id' => $enroll_id,
-            'period_id' => $period_id,
-            'status' => $status
+            'period_id' => $period_id
         ]);
+        $existing = $stmt->fetch();
 
-        return $record['att_id'];
-    }
-
-    $stmt = $pdo->prepare(
-        "INSERT INTO attendance (enroll_id, period_id, status)
-         VALUES (:enroll_id, :period_id, :status)"
-    );
-
-    $stmt->execute([
-        'enroll_id' => $enroll_id,
-        'period_id' => $period_id,
-        'status' => $status
-    ]);
-
-    return $pdo->lastInsertId();
-}
-
-// Get selected class and period from request
-$teacherId = getTeacherId(getUserId());
-$classes = getTeacherClasses($teacherId);
-$selectedClassId = isset($_GET['class_id']) ? (int)$_GET['class_id'] : ($classes[0]['class_id'] ?? null);
-
-// Only proceed if teacher has classes
-$hasClasses = !empty($classes);
-
-// If a class is selected, get students and periods
-$students = $selectedClassId ? getClassStudents($selectedClassId) : [];
-$periods = $selectedClassId ? getClassPeriods($selectedClassId) : [];
-
-// Get selected period from request or use the most recent
-$selectedPeriodId = isset($_GET['period_id']) ? (int)$_GET['period_id'] : ($periods[0]['period_id'] ?? null);
-
-// Get attendance for selected period
-$attendance = $selectedPeriodId ? getPeriodAttendance($selectedPeriodId) : [];
-
-// Get selected class and period details for display
-$selectedClass = null;
-$selectedPeriod = null;
-
-if ($selectedClassId) {
-    foreach ($classes as $class) {
-        if ($class['class_id'] == $selectedClassId) {
-            $selectedClass = $class;
-            break;
+        if ($existing) {
+            // Update existing record
+            $stmt = $pdo->prepare(
+                "UPDATE attendance 
+                 SET status = :status
+                 WHERE att_id = :att_id"
+            );
+            return $stmt->execute([
+                'att_id' => $existing['att_id'],
+                'status' => $status
+            ]);
+        } else {
+            // Insert new record
+            $stmt = $pdo->prepare(
+                "INSERT INTO attendance (enroll_id, period_id, status)
+                 VALUES (:enroll_id, :period_id, :status)"
+            );
+            return $stmt->execute([
+                'enroll_id' => $enroll_id,
+                'period_id' => $period_id,
+                'status' => $status
+            ]);
         }
-    }
-}
-
-if ($selectedPeriodId && !empty($periods)) {
-    foreach ($periods as $period) {
-        if ($period['period_id'] == $selectedPeriodId) {
-            $selectedPeriod = $period;
-            break;
-        }
+    } catch (PDOException $e) {
+        error_log("Error saving attendance: " . $e->getMessage());
+        return false;
     }
 }
 
@@ -253,278 +206,104 @@ $message = '';
 $messageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Add new period
-    if (isset($_POST['add_period']) && $selectedClassId) {
-        $periodDate = $_POST['period_date'] ?? '';
-        $periodLabel = $_POST['period_label'] ?? '';
+    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
+        $message = 'Invalid form submission. Please try again.';
+        $messageType = 'error';
+    } else {
+        if (isset($_POST['add_period'])) {
+            $classId = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
+            $periodDate = isset($_POST['period_date']) ? $_POST['period_date'] : '';
+            $periodLabel = isset($_POST['period_label']) ? trim($_POST['period_label']) : '';
 
-        if (empty($periodDate) || empty($periodLabel)) {
-            $message = 'Date and label are required for a new period.';
-            $messageType = 'error';
-        } else {
-            try {
-                $newPeriodId = addPeriod($selectedClassId, $periodDate, $periodLabel);
-                $message = 'Period added successfully.';
-                $messageType = 'success';
-
-                // Redirect to the new period
-                header("Location: attendance.php?class_id=$selectedClassId&period_id=$newPeriodId&success=1");
-                exit;
-            } catch (PDOException $e) {
-                $message = 'Error adding period: ' . $e->getMessage();
+            if ($classId <= 0 || empty($periodDate) || empty($periodLabel)) {
+                $message = 'Please fill out all period details.';
                 $messageType = 'error';
+            } else {
+                if (addPeriod($classId, $periodDate, $periodLabel)) {
+                    $message = 'New period added successfully.';
+                    $messageType = 'success';
+                } else {
+                    $message = 'Error adding period. Please try again.';
+                    $messageType = 'error';
+                }
             }
-        }
-    }
+        } else if (isset($_POST['save_attendance'])) {
+            $periodId = isset($_POST['period_id']) ? (int)$_POST['period_id'] : 0;
+            $attendance = isset($_POST['attendance']) ? $_POST['attendance'] : [];
 
-    // Save attendance
-    if (isset($_POST['save_attendance']) && $selectedPeriodId) {
-        try {
-            foreach ($students as $student) {
-                $enroll_id = $student['enroll_id'];
-                $status = $_POST["status_$enroll_id"] ?? 'P'; // Default to Present
+            if ($periodId <= 0 || empty($attendance)) {
+                $message = 'Invalid attendance data.';
+                $messageType = 'error';
+            } else {
+                $success = true;
+                foreach ($attendance as $enrollId => $status) {
+                    if (!saveAttendance($enrollId, $periodId, $status)) {
+                        $success = false;
+                    }
+                }
 
-                saveAttendance($enroll_id, $selectedPeriodId, $status);
+                if ($success) {
+                    $message = 'Attendance saved successfully.';
+                    $messageType = 'success';
+                } else {
+                    $message = 'Some attendance records failed to save. Please try again.';
+                    $messageType = 'warning';
+                }
             }
-
-            $message = 'Attendance saved successfully.';
-            $messageType = 'success';
-
-            // Refresh attendance data
-            $attendance = getPeriodAttendance($selectedPeriodId);
-        } catch (PDOException $e) {
-            $message = 'Error saving attendance: ' . $e->getMessage();
-            $messageType = 'error';
         }
     }
 }
 
+// Get teacher's classes
+$classes = getTeacherClasses($teacherId);
+
+// Selected class and period
+$selectedClassId = isset($_GET['class_id']) ? (int)$_GET['class_id'] : (isset($classes[0]['class_id']) ? $classes[0]['class_id'] : 0);
+$periods = $selectedClassId ? getClassPeriods($selectedClassId) : [];
+$selectedPeriodId = isset($_GET['period_id']) ? (int)$_GET['period_id'] : (isset($periods[0]['period_id']) ? $periods[0]['period_id'] : 0);
+
+// Get students and attendance data if a period is selected
+$students = $selectedClassId ? getClassStudents($selectedClassId) : [];
+$attendanceData = $selectedPeriodId ? getPeriodAttendance($selectedPeriodId) : [];
+
 // Generate CSRF token
 $csrfToken = generateCSRFToken();
 
-// Include page header
+// Include header
 include '../includes/header.php';
 ?>
 
-<div class="page-container">
-    <h1 class="page-title">Teacher Attendance</h1>
-
-    <?php if (!$hasClasses): ?>
-        <div class="alert alert-error">
-            You are not assigned to any classes. Please contact an administrator.
-        </div>
-    <?php else: ?>
-        <!-- Class selector -->
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Select Class</h3>
-            </div>
-            <div class="card-body">
-                <form method="get" action="/uwuweb/teacher/attendance.php">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                    <div class="form-group">
-                        <label for="class_id" class="form-label">Select Class:</label>
-                        <select name="class_id" id="class_id" class="form-input" onchange="this.form.submit()">
-                            <?php foreach ($classes as $class): ?>
-                                <option value="<?= htmlspecialchars($class['class_id']) ?>"
-                                        <?= $selectedClassId == $class['class_id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars("{$class['subject_name']} - {$class['title']} ({$class['term_name']})") ?>
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <?php if ($selectedClassId): ?>
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title"><?= htmlspecialchars($selectedClass['subject_name']) ?></h2>
-                    <h3 class="card-subtitle"><?= htmlspecialchars($selectedClass['title']) ?> - <?= htmlspecialchars($selectedClass['term_name']) ?></h3>
-                </div>
-
-                <div class="card-body">
-                    <!-- Message display -->
-                    <?php if (!empty($message)): ?>
-                        <div class="alert alert-<?= htmlspecialchars($messageType) ?>">
-                            <?= htmlspecialchars($message) ?>
-                        </div>
-                    <?php elseif (isset($_GET['success'])): ?>
-                        <div class="alert alert-success">
-                            Period added successfully.
-                        </div>
-                    <?php endif; ?>
-
-                    <!-- Period management -->
-                    <div class="card stat-card">
-                        <div class="card-header">
-                            <h3 class="card-title">Period Management</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="period-actions">
-                                <button id="btn-add-period" class="btn btn-primary">Add New Period</button>
-
-                                <?php if (!empty($periods)): ?>
-                                    <form method="get" action="/uwuweb/teacher/attendance.php" class="period-selector">
-                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                                        <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
-                                        <div class="form-group">
-                                            <label for="period_id" class="form-label">Select Period:</label>
-                                            <select name="period_id" id="period_id" class="form-input" onchange="this.form.submit()">
-                                                <?php foreach ($periods as $period): ?>
-                                                    <option value="<?= htmlspecialchars($period['period_id']) ?>"
-                                                            <?= $selectedPeriodId == $period['period_id'] ? 'selected' : '' ?>>
-                                                        <?= htmlspecialchars(date('Y-m-d', strtotime($period['period_date'])) . " - " . $period['period_label']) ?>
-                                                    </option>
-                                                <?php endforeach; ?>
-                                            </select>
-                                        </div>
-                                    </form>
-                                <?php endif; ?>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Attendance Form -->
-                    <?php if ($selectedClassId): ?>
-                        <!-- Attendance Form -->
-                        <?php if ($selectedPeriodId && !empty($students)): ?>
-                            <div class="card">
-                                <div class="card-header">
-                                    <h3 class="card-title">Attendance for <?= htmlspecialchars(date('Y-m-d', strtotime($selectedPeriod['period_date']))) ?> - <?= htmlspecialchars($selectedPeriod['period_label']) ?></h3>
-                                </div>
-                                <div class="card-body">
-                                    <form method="post" action="/uwuweb/teacher/attendance.php" class="attendance-form">
-                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                                        <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
-                                        <input type="hidden" name="period_id" value="<?= htmlspecialchars($selectedPeriodId) ?>">
-
-                                        <div class="table-wrapper">
-                                            <table class="table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Student</th>
-                                                        <th>Status</th>
-                                                        <th>Justification</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <?php foreach ($students as $student): ?>
-                                                        <?php
-                                                            $enrollId = $student['enroll_id'];
-                                                            $currentStatus = isset($attendance[$enrollId]) ? $attendance[$enrollId]['status'] : 'P';
-                                                            $justification = isset($attendance[$enrollId]) ? $attendance[$enrollId]['justification'] : '';
-                                                        ?>
-                                                        <tr>
-                                                            <td class="student-name">
-                                                                <?= htmlspecialchars("{$student['last_name']}, {$student['first_name']}") ?>
-                                                                <span class="badge"><?= htmlspecialchars($student['class_code']) ?></span>
-                                                            </td>
-                                                            <td class="attendance-status">
-                                                                <div class="status-toggles">
-                                                                    <label class="radio-label">
-                                                                        <input type="radio" name="status_<?= htmlspecialchars($enrollId) ?>"
-                                                                            value="P" <?= $currentStatus === 'P' ? 'checked' : '' ?>>
-                                                                        <span class="status-text status-present">Present</span>
-                                                                    </label>
-                                                                    <label class="radio-label">
-                                                                        <input type="radio" name="status_<?= htmlspecialchars($enrollId) ?>"
-                                                                            value="A" <?= $currentStatus === 'A' ? 'checked' : '' ?>>
-                                                                        <span class="status-text status-absent">Absent</span>
-                                                                    </label>
-                                                                    <label class="radio-label">
-                                                                        <input type="radio" name="status_<?= htmlspecialchars($enrollId) ?>"
-                                                                            value="L" <?= $currentStatus === 'L' ? 'checked' : '' ?>>
-                                                                        <span class="status-text status-late">Late</span>
-                                                                    </label>
-                                                                </div>
-                                                            </td>
-                                                            <td class="justification">
-                                                                <?php if (!empty($justification)): ?>
-                                                                    <div class="justification-text">
-                                                                        <?= htmlspecialchars($justification) ?>
-                                                                    </div>
-                                                                <?php else: ?>
-                                                                    <div class="no-justification text-secondary">No justification provided</div>
-                                                                <?php endif; ?>
-                                                            </td>
-                                                        </tr>
-                                                    <?php endforeach; ?>
-                                                </tbody>
-                                            </table>
-                                        </div>
-
-                                        <div class="form-actions">
-                                            <button type="submit" name="save_attendance" class="btn btn-primary">Save Attendance</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        <?php elseif ($selectedClassId && empty($periods)): ?>
-                            <div class="alert alert-info">
-                                No periods have been created for this class yet. Use the "Add New Period" button to create one.
-                            </div>
-                        <?php elseif ($selectedClassId && empty($students)): ?>
-                            <div class="alert alert-info">
-                                No students are enrolled in this class.
-                            </div>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <!-- Add Period Form Modal -->
-            <div id="add-period-form-container" class="modal" style="display: none;">
-                <div class="modal-content card">
-                    <div class="card-header">
-                        <h3 class="card-title">Add New Period</h3>
-                    </div>
-                    <div class="card-body">
-                        <form method="post" action="/uwuweb/teacher/attendance.php">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                            <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
-
-                            <div class="form-group">
-                                <label for="period_date" class="form-label">Date:</label>
-                                <input type="date" id="period_date" name="period_date" class="form-input" required
-                                       value="<?= date('Y-m-d') ?>">
-                            </div>
-
-                            <div class="form-group">
-                                <label for="period_label" class="form-label">Label:</label>
-                                <input type="text" id="period_label" name="period_label" class="form-input" required
-                                       placeholder="e.g., Period 1, Morning Session, etc.">
-                            </div>
-
-                            <div class="form-actions">
-                                <button type="button" class="btn btn-secondary" onclick="closePeriodForm()">Cancel</button>
-                                <button type="submit" name="add_period" class="btn btn-primary">Add Period</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        <?php endif; ?>
-    <?php endif; ?>
-</div>
-
-<script>
-    // Function to show the add period form
-    function showPeriodForm() {
-        document.getElementById('add-period-form-container').style.display = 'flex';
-    }
-
-    // Function to close the add period form
-    function closePeriodForm() {
-        document.getElementById('add-period-form-container').style.display = 'none';
-    }
-
-    // Event listener for the Add Period button
-    document.getElementById('btn-add-period')?.addEventListener('click', showPeriodForm);
-</script>
+<?php /* 
+    [TEACHER ATTENDANCE PAGE PLACEHOLDER]
+    Components:
+    - Page container with teacher attendance layout
+    
+    - Page title "Attendance Management"
+    
+    - Alert message display (when $message is not empty)
+      - Different styling based on $messageType (success, error, warning)
+    
+    - Class selection form:
+      - Dropdown list of classes taught by teacher
+      - Label "Select Class"
+      - Submit button to select class
+    
+    - If class is selected:
+      - Period selection panel with:
+        - Existing periods dropdown
+        - Form to add new period with date and label inputs
+      
+      - If period is selected:
+        - Attendance form with:
+          - Table of students with attendance status options
+            (Present/Absent/Late/Excused)
+          - For each student row:
+            - Student name
+            - Radio buttons for attendance status
+          - Save button for submitting attendance
+*/ ?>
 
 <?php
-// Include page footer
+// Include footer
 include '../includes/footer.php';
 ?>

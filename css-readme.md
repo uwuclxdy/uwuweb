@@ -1,136 +1,143 @@
-# uwuweb CSS Documentation
+# uwuweb CSS Elements Reference
 
-This document provides a structured overview of the CSS assets used in the uwuweb Grade Management System and Šolski center Celje design system. It is organized so that an AI system can parse component definitions, design tokens, and role-specific layouts effectively.
+## CSS Variables
 
-## CSS Files Inventory
+### Colors
+- `--bg-primary`: Main background color
+- `--bg-secondary`: Card backgrounds, secondary elements
+- `--bg-tertiary`: Form inputs, elevated elements
+- `--accent-primary`: Primary buttons, links, focus states
+- `--accent-secondary`: Secondary actions, highlights
+- `--accent-tertiary`: Tertiary elements, decorative accents
+- `--accent-warning`: Warnings, notifications
+- `--text-primary`: Main text color
+- `--text-secondary`: Secondary text color
+- `--text-disabled`: Disabled text color
 
-The uwuweb project contains the following CSS files:
+### Typography
+- `--font-primary`: Primary font family
+- `--font-size-xs`: Extra small text (12px)
+- `--font-size-sm`: Small text (14px)
+- `--font-size-md`: Medium text (16px)
+- `--font-size-lg`: Large text (20px)
+- `--font-size-xl`: Extra large text (24px)
+- `--font-size-xxl`: Extra-extra large text (32px)
+- `--font-weight-normal`: Normal font weight (400)
+- `--font-weight-medium`: Medium font weight (500)
+- `--font-weight-bold`: Bold font weight (700)
 
-- **assets/css/style.css** - Main stylesheet with global variables, reset styles, and common components
-- **assets/css/advanced-components.css** - Role-specific layouts and specialized components
-- **assets/css/login.css** - Login page specific styles
-- **assets/css/parent-attendance.css** - Parent attendance view styles
-- **assets/css/parent-grades.css** - Parent grades view styles
-- **assets/css/student-attendance.css** - Student attendance view styles
-- **assets/css/student-grades.css** - Student grades view styles
-- **assets/css/student-justification.css** - Student absence justification page styles
-- **assets/css/teacher-attendance.css** - Teacher attendance management styles
-- **assets/css/teacher-gradebook.css** - Teacher gradebook styles
-- **assets/css/teacher-justifications.css** - Teacher justification review styles
+### Spacing
+- `--space-xs`: Extra small spacing (4px)
+- `--space-sm`: Small spacing (8px)
+- `--space-md`: Medium spacing (16px)
+- `--space-lg`: Large spacing (24px)
+- `--space-xl`: Extra large spacing (32px)
+- `--space-xxl`: Extra-extra large spacing (48px)
 
----
+### Component Variables
+- `--card-radius`: Border radius for cards
+- `--card-shadow`: Shadow for cards
+- `--card-padding`: Padding inside cards
+- `--button-radius`: Border radius for buttons
+- `--button-shadow`: Shadow for buttons
+- `--button-shadow-hover`: Shadow for buttons on hover
+- `--button-shadow-active`: Shadow for buttons when active
+- `--transition-fast`: Fast transition speed (150ms)
+- `--transition-normal`: Normal transition speed (250ms)
+- `--transition-slow`: Slow transition speed (350ms)
 
-## 1. Design Tokens & Variables
+## Core Components
 
-**File Reference:** Core theme variables in `style.css` and Šolski center variables.
+### Layout
+- `.dashboard-grid`: Grid layout for dashboard cards
 
-- **Color Palette** (`--sc-primary`, `--sc-gray`, extended shades `--sc-primary-100` through `--sc-primary-900`, `--sc-gray-100` through `--sc-gray-900`). citeturn0file1
-- **Semantic Colors** (`--accent-primary`, `--accent-secondary`, `--accent-tertiary`, `--accent-success`, `--accent-warning`, `--accent-error`, `--accent-info`). citeturn0file1
-- **Backgrounds** (`--bg-base`, `--bg-surface`, `--bg-primary`, `--bg-secondary`, `--bg-tertiary`, `--bg-elevated`). citeturn0file1
-- **Typography** (`--font-heading`, `--font-primary`, scale `--font-size-xs` to `--font-size-xxxl`, line-heights, letter-spacing). citeturn0file1
-- **Spacing Scale** (`--space-3xs` to `--space-3xl`). citeturn0file1
-- **Border Radius** (`--radius-sm` to `--radius-full`, `--card-radius`). citeturn0file1
-- **Shadows** (`--shadow-xs` to `--shadow-xl`, `--card-shadow`). citeturn0file1
-- **Transitions & Easing** (`--transition-fast`, `--transition-normal`, `--transition-slow`, `--ease-*`). citeturn0file1
+### Cards
+- `.card`: Basic card component
+- `.card-entrance`: Animation for card entrance
 
----
+### Buttons
+- `.btn`: Basic button
+- `.btn-primary`: Primary action button
+- `.btn-secondary`: Secondary action button
 
-## 2. Core Components
+### Forms
+- `.form-group`: Container for form elements
+- `.form-input`: Input fields
+- `.form-label`: Labels for form elements
 
-**File Reference:** Advanced components and core framework in `advanced-components.css` and `style.css`.
+### Tables
+- `.data-table`: Table for displaying data
+- `.data-table th`: Table headers
+- `.data-table td`: Table cells
 
-### 2.1 Card (`.card`, `.card-compact`, `.card-expanded`)
-- Container with background, radius, shadow.
-- States: `.is-selected`, `.is-disabled`.
-- Usage: `<div class="card [variant] [state]">...</div>`.
+### Navigation
+- `.navbar`: Top navigation bar
+- `.navbar-logo`: Logo in navigation
+- `.navbar-menu`: Navigation menu
+- `.navbar-link`: Navigation links
+- `.navbar-toggle`: Mobile navigation toggle
 
-### 2.2 Button (`.btn`, variants `.btn-primary`, `.btn-secondary`, `.btn-tertiary`, `.btn-error`)
-- Base styling, padding, border-radius, shadow.
-- States: `.is-loading` (spinner), `.is-disabled`.
-- Usage: `<button class="btn btn-primary">Label</button>`.
+### Role Indicators
+- `.profile-admin`: Admin profile indicator
+- `.profile-teacher`: Teacher profile indicator
+- `.profile-student`: Student profile indicator
+- `.profile-parent`: Parent profile indicator
 
-### 2.3 Form Elements (`.form-input`, `.form-select`, `.form-textarea`)
-- Variants for inputs, selects, textareas.
-- Validation states: `.has-error`, `.has-success`.
-- Usage: `<input class="form-input has-error">`.
+## State Indicators
 
-### 2.4 Table (`.data-table`, `.data-table-responsive`)
-- Responsive tables with sticky headers.
-- Sorting: `.is-sortable`, `.is-sorted`.
+### Status
+- `.status-success`: Success status
+- `.status-warning`: Warning status
+- `.status-error`: Error status
+- `.status-info`: Information status
 
-### 2.5 Navigation (`.navbar`, `.sidebar`, `.mobile-nav`)
-- Stateful: `.is-active`, `.is-expanded`.
-- Tab container: `.tab-container`, `.tab-button`, `.tab-content`.
+### Form States
+- `.is-valid`: Valid form input
+- `.is-invalid`: Invalid form input
+- `.feedback-text`: Feedback text for forms
+- `.feedback-invalid`: Invalid feedback text
 
-### 2.6 Alert / Notification (`.alert`, variants `.alert-success`, `.alert-warning`, `.alert-error`)
-- Dismissible: `.is-dismissible`.
+### Attendance Status
+- `.attendance-status`: Attendance status container
+- `.status-present`: Present status
+- `.status-absent`: Absent status
+- `.status-late`: Late status
 
-### 2.7 Modal (`.modal-overlay`, `.modal`, `.is-active`)
-- Overlay with focus isolation.
+### Grade Display
+- `.grade`: Grade display container
+- `.grade-high`: High grade
+- `.grade-medium`: Medium grade
+- `.grade-low`: Low grade
 
-### 2.8 Calendar & Dates
-- Calendar grid: `.calendar`, `.calendar-day`, states `.today`, `.is-selected`, `.outside-month`.
-- Indicators: `.day-indicator`, status colors.
-- Detail views: `.calendar-event`, event types.
+## Utility Classes
 
-### 2.9 Charts
-- Containers: `.chart-container`, `.bar-chart`, `.line-chart`, `.donut-chart`.
-- Legend: `.chart-legend`, `.legend-item`.
-- Interactive states: `.is-interactive`.
+### Margin Utilities
+- `.mt-*`: Margin top (xs, sm, md, lg, xl)
+- `.mb-*`: Margin bottom (xs, sm, md, lg, xl)
+- `.ml-*`: Margin left (xs, sm, md, lg, xl)
+- `.mr-*`: Margin right (xs, sm, md, lg, xl)
 
----
+### Display Utilities
+- `.d-flex`: Display flex
+- `.d-grid`: Display grid
+- `.d-none`: Display none
 
-## 3. Role-Specific Layouts
+### Flex Utilities
+- `.flex-row`: Flex direction row
+- `.flex-column`: Flex direction column
+- `.items-center`: Align items center
+- `.justify-between`: Justify content space between
+- `.justify-center`: Justify content center
+- `.gap-*`: Gap (sm, md, lg)
 
-**File References:** Role styles in `admin`, `teacher-*`, `student-*`, `parent-*` CSS.
+### Text Utilities
+- `.text-center`: Text align center
+- `.text-right`: Text align right
+- `.text-primary`: Text color primary
+- `.text-secondary`: Text color secondary
+- `.text-disabled`: Text color disabled
 
-### 3.1 Administrator
-- Grid dashboard: `.admin-dashboard`.
-- User management: `.user-management`, `.filter-bar`, `.search-group`.
-- Analytics: `.metric-card`, `.metric-value`, `.metric-change`.
-- Timeline: `.term-timeline`, `.timeline-item`, states `.active`, hover.
-
-### 3.2 Teacher
-- Gradebook: `.gradebook-container`, `.gradebook-table`, `.grade-input`, inline editing states.
-- Attendance: `.attendance-calendar`, day indicators.
-- Justifications: `.justifications-container`, modals, status classes. citeturn0file2
-
-### 3.3 Student
-- Grade overview: `.grade-overview`, `.subject-card`, progress bar `.progress-fill`, grade classification colors.
-- Attendance: `.attendance-summary`, `.attendance-item`, status classes. citeturn0file7
-
-### 3.4 Parent
-- Multi-student selector: `.student-selector`, `.student-option`.
-- Consolidated grade view: `.consolidated-grades`, badges, notification badge.
-- Attendance: `.attendance-container`, summary cards. citeturn0file9
-
----
-
-## 4. File Upload Components
-
-**File Reference:** Core in `advanced-components.css`.
-
-- Upload area: `.file-upload`, drag & drop states.
-- Uploaded file list: `.uploaded-file`, `.file-icon`, progress bars.
-
----
-
-## 5. Utility & Helper Classes
-
-- **Resets & Base**: `*`, `html`, `body`, `h1–h6`, `p`, `a`, `img` resets. citeturn0file1
-- **Layout Helpers**: `.container`, `.dashboard-grid`, responsive media queries.
-- **Typography Helpers**: text align, truncation, ellipsis.
-- **Visibility & Animation**: `.is-active`, `.is-loading`, keyframe animations like `highlightBackground`.
-
----
-
-### Parsing Instructions for AI
-
-1. **Token Extraction:** Map all `--variable` definitions into a key–value object for theme lookup.
-2. **Component Registry:** Build a registry of class selectors and their descriptions under sections (Core, Role-specific).
-3. **State Recognition:** Associate state classes (e.g., `.is-disabled`, `.active`, `.modal-active`) with toggles in UI logic.
-4. **Variant Resolution:** Link base component with variant modifiers (e.g., `.btn` + `.btn-primary`).
-5. **Responsive Breakpoints:** Note media query ranges (`max-width: 768px`) for mobile adjustments.
-6. **Hierarchy & Nesting:** Preserve nesting contexts (e.g., `.navbar .navbar-menu.active`).
-
----
+## Animations
+- `.page-transition`: Fade in transition for pages
+- `@keyframes fadeIn`: Fade in animation
+- `@keyframes slideUp`: Slide up animation

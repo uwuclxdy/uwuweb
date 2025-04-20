@@ -18,8 +18,7 @@ require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 require_once '../includes/header.php';
 
-// Add CSS link for this specific page
-echo '<link rel="stylesheet" href="/uwuweb/assets/css/student-justification.css">';
+// CSS styles are included in header.php
 
 // Ensure only students can access this page
 requireRole(ROLE_STUDENT);
@@ -253,291 +252,89 @@ $csrfToken = generateCSRFToken();
 include '../includes/header.php';
 ?>
 
-<div class="page-container">
-    <h1 class="page-title">Absence Justifications</h1>
+<?php /* 
+    [STUDENT JUSTIFICATION PAGE PLACEHOLDER]
+    Components:
+    - Page container with justification page layout
+    
+    - Page title "Absence Justifications"
+    
+    - Alert message display (when $message is not empty)
+      - Different styling based on $messageType (success, error, warning)
+    
+    - Information card explaining:
+      - Purpose of the page
+      - Instructions for submitting justifications
+      
+    - Conditional content based on $absences:
+      IF empty($absences):
+        - Card showing "You have no absences that require justification"
+      ELSE:
+        - Card with table of absences containing:
+          - Headers: Date, Period, Subject, Status, Action
+          - For each absence, a row showing:
+              - Formatted date
+              - Period label
+              - Subject name and class title
+              - Status badge with appropriate styling
+              - Action button based on justification status
+*/ ?>
 
-    <?php if (!empty($message)): ?>
-        <div class="alert alert-<?= htmlspecialchars($messageType) ?>">
-            <?= htmlspecialchars($message) ?>
-        </div>
-    <?php endif; ?>
+<?php foreach ($absences as $absence): ?>
+    <?php
+        $formattedDate = date('d.m.Y', strtotime($absence['period_date']));
+        $justificationStatus = '';
+        $badgeClass = '';
 
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Information</h3>
-        </div>
-        <div class="card-body">
-            <p>Here you can submit justifications for your absences. Provide a valid reason and optionally attach supporting documents.</p>
-        </div>
-    </div>
+        if (!empty($absence['justification'])) {
+            if ($absence['approved'] === null) {
+                $justificationStatus = 'Pending review';
+                $badgeClass = 'badge badge-warning';
+            } elseif ($absence['approved'] == 1) {
+                $justificationStatus = 'Approved';
+                $badgeClass = 'badge badge-success';
+            } else {
+                $justificationStatus = 'Rejected';
+                $badgeClass = 'badge badge-error';
+            }
+        } else {
+            $justificationStatus = 'Not justified';
+            $badgeClass = 'badge badge-error';
+        }
+    ?>
+<?php endforeach; ?>
 
-    <?php if (empty($absences)): ?>
-        <div class="card">
-            <div class="card-body">
-                <p class="text-secondary">You have no absences that require justification.</p>
-            </div>
-        </div>
-    <?php else: ?>
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Your Absences</h2>
-            </div>
-            <div class="card-body">
-                <div class="table-wrapper">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Period</th>
-                                <th>Subject</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($absences as $absence): ?>
-                                <?php
-                                    $formattedDate = date('d.m.Y', strtotime($absence['period_date']));
-                                    $justificationStatus = '';
-                                    $badgeClass = '';
+<?php /* 
+    [JUSTIFICATION MODAL PLACEHOLDERS]
+    Components:
+    
+    1. Justification Form Modal:
+       - Modal dialog with card styling
+       - Header with title and close button
+       - Form containing:
+         - Hidden CSRF token and absence ID fields
+         - Textarea for justification explanation
+         - File upload field for supporting documents
+         - Submit and cancel buttons
+    
+    2. View Justification Modal:
+       - Modal dialog with card styling
+       - Header with title and close button
+       - Absence details display
+       - Justification text display
+       - File attachment section (if present)
+       - Status display showing approval state
+       - Close button
+*/ ?>
 
-                                    if (!empty($absence['justification'])) {
-                                        if ($absence['approved'] === null) {
-                                            $justificationStatus = 'Pending review';
-                                            $badgeClass = 'badge badge-warning';
-                                        } elseif ($absence['approved'] == 1) {
-                                            $justificationStatus = 'Approved';
-                                            $badgeClass = 'badge badge-success';
-                                        } else {
-                                            $justificationStatus = 'Rejected';
-                                            $badgeClass = 'badge badge-error';
-                                        }
-                                    } else {
-                                        $justificationStatus = 'Not justified';
-                                        $badgeClass = 'badge badge-error';
-                                    }
-                                ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($formattedDate) ?></td>
-                                    <td><?= htmlspecialchars($absence['period_label']) ?></td>
-                                    <td><?= htmlspecialchars($absence['subject_name'] . ' - ' . $absence['class_title']) ?></td>
-                                    <td>
-                                        <span class="<?= $badgeClass ?>"><?= htmlspecialchars($justificationStatus) ?></span>
-                                    </td>
-                                    <td>
-                                        <?php if (empty($absence['justification'])): ?>
-                                            <button class="btn btn-primary open-justification"
-                                                    data-absence-id="<?= (int)$absence['att_id'] ?>"
-                                                    data-date="<?= htmlspecialchars($formattedDate) ?>"
-                                                    data-class="<?= htmlspecialchars($absence['subject_name']) ?>">
-                                                Submit Justification
-                                            </button>
-                                        <?php elseif ($absence['approved'] === null): ?>
-                                            <button class="btn btn-secondary open-justification"
-                                                    data-absence-id="<?= (int)$absence['att_id'] ?>"
-                                                    data-date="<?= htmlspecialchars($formattedDate) ?>"
-                                                    data-class="<?= htmlspecialchars($absence['subject_name']) ?>"
-                                                    data-justification="<?= htmlspecialchars($absence['justification']) ?>">
-                                                Edit
-                                            </button>
-                                        <?php elseif ($absence['approved'] == 0): ?>
-                                            <button class="btn btn-warning open-justification"
-                                                    data-absence-id="<?= (int)$absence['att_id'] ?>"
-                                                    data-date="<?= htmlspecialchars($formattedDate) ?>"
-                                                    data-class="<?= htmlspecialchars($absence['subject_name']) ?>"
-                                                    data-justification="<?= htmlspecialchars($absence['justification']) ?>">
-                                                Resubmit
-                                            </button>
-                                        <?php else: ?>
-                                            <button class="btn btn-secondary open-view-justification"
-                                                    data-absence-id="<?= (int)$absence['att_id'] ?>"
-                                                    data-date="<?= htmlspecialchars($formattedDate) ?>"
-                                                    data-class="<?= htmlspecialchars($absence['subject_name']) ?>"
-                                                    data-justification="<?= htmlspecialchars($absence['justification']) ?>">
-                                                View
-                                            </button>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
-
-    <!-- Justification Form Modal -->
-    <div id="justification-form-modal" class="modal" style="display: none;">
-        <div class="modal-content card">
-            <div class="card-header">
-                <h3 class="card-title">Submit Justification</h3>
-                <span class="close-modal">&times;</span>
-            </div>
-            <div class="card-body">
-                <p id="absence-details"></p>
-
-                <form id="justification-form" method="post" action="/uwuweb/student/justification.php" enctype="multipart/form-data">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                    <input type="hidden" name="absence_id" id="absence_id" value="">
-
-                    <div class="form-group">
-                        <label for="justification" class="form-label">Justification:</label>
-                        <textarea id="justification" name="justification" class="form-input" rows="5" required></textarea>
-                        <small class="text-secondary">Please provide a detailed explanation for your absence.</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="justification_file" class="form-label">Supporting Document (optional):</label>
-                        <input type="file" id="justification_file" name="justification_file" class="form-input">
-                        <small class="text-secondary">Upload a doctor's note, official document, or other supporting evidence (max 2MB).</small>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary close-modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Submit Justification</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <!-- View Justification Modal -->
-    <div id="view-justification-modal" class="modal" style="display: none;">
-        <div class="modal-content card">
-            <div class="card-header">
-                <h3 class="card-title">Justification Details</h3>
-                <span class="close-modal">&times;</span>
-            </div>
-            <div class="card-body">
-                <p id="view-absence-details"></p>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="card-title">Your Justification</h4>
-                    </div>
-                    <div class="card-body">
-                        <div id="view-justification-text"></div>
-                    </div>
-                </div>
-
-                <div id="view-file-section" class="card" style="display: none;">
-                    <div class="card-header">
-                        <h4 class="card-title">Attached Document</h4>
-                    </div>
-                    <div class="card-body">
-                        <div id="view-file-info"></div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="card-title">Status</h4>
-                    </div>
-                    <div class="card-body">
-                        <div id="view-approval-status"></div>
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary close-modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Open justification form
-        document.querySelectorAll('.open-justification').forEach(button => {
-            button.addEventListener('click', function() {
-                const absenceId = this.getAttribute('data-absence-id');
-                const date = this.getAttribute('data-date');
-                const className = this.getAttribute('data-class');
-                const justification = this.getAttribute('data-justification');
-                
-                document.getElementById('absence-id').value = absenceId;
-                document.getElementById('absence-details').textContent = `Absence on ${date} for ${className}`;
-                
-                if (justification) {
-                    document.getElementById('justification').value = justification;
-                }
-                
-                document.getElementById('justification-form-modal').style.display = 'flex';
-            });
-        });
-        
-        // Open view justification
-        document.querySelectorAll('.open-view-justification').forEach(button => {
-            button.addEventListener('click', function() {
-                const absenceId = this.getAttribute('data-absence-id');
-                const date = this.getAttribute('data-date');
-                const className = this.getAttribute('data-class');
-                const justification = this.getAttribute('data-justification');
-                
-                document.getElementById('view-absence-details').textContent = `Absence on ${date} for ${className}`;
-                document.getElementById('view-justification-text').textContent = justification;
-                
-                // Check if there's an attached file
-                fetch('/uwuweb/api/justifications.php?action=get&absence_id=' + absenceId)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success && data.justification.justification_file) {
-                            document.getElementById('view-file-section').style.display = 'block';
-                            const fileLink = `<a href="/uwuweb/uploads/justifications/${data.justification.justification_file}" class="btn btn-secondary" target="_blank">View Document</a>`;
-                            document.getElementById('view-file-info').innerHTML = fileLink;
-                            
-                            let status = '';
-                            let statusClass = '';
-                            
-                            if (data.justification.approved === null) {
-                                status = 'Pending review';
-                                statusClass = 'badge badge-warning';
-                            } else if (data.justification.approved === 1) {
-                                status = 'Approved';
-                                statusClass = 'badge badge-success';
-                            } else {
-                                status = 'Rejected';
-                                statusClass = 'badge badge-error';
-                                
-                                if (data.justification.reject_reason) {
-                                    status += `: ${data.justification.reject_reason}`;
-                                }
-                            }
-                            
-                            document.getElementById('view-approval-status').innerHTML = `<span class="${statusClass}">${status}</span>`;
-                        } else {
-                            document.getElementById('view-file-section').style.display = 'none';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching justification details:', error);
-                    });
-                
-                document.getElementById('view-justification-modal').style.display = 'flex';
-            });
-        });
-        
-        // Close modals
-        document.querySelectorAll('.close-modal').forEach(button => {
-            button.addEventListener('click', function() {
-                document.querySelectorAll('.modal').forEach(modal => {
-                    modal.style.display = 'none';
-                });
-            });
-        });
-        
-        // Close modal when clicking outside it
-        window.addEventListener('click', function(event) {
-            document.querySelectorAll('.modal').forEach(modal => {
-                if (event.target === modal) {
-                    modal.style.display = 'none';
-                }
-            });
-        });
-    });
-</script>
+<?php /* 
+    [JUSTIFICATION PAGE JAVASCRIPT PLACEHOLDER]
+    Components:
+    - Event listeners for opening/closing modals
+    - Form handling and validation
+    - API calls to get justification file information
+    - Dynamic content updates for modal displays
+*/ ?>
 
 <?php
 // Include page footer
