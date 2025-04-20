@@ -225,6 +225,6 @@ function displayResults($results) {
         </ol>
     </div>
     
-    <p><a href="../dashboard.php">Return to Dashboard</a></p>
+    <p><a href="/uwuweb/dashboard.php">Return to Dashboard</a></p>
 </body>
 </html>

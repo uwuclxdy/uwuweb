@@ -364,32 +364,34 @@ function displayUserList() {
     $users = $stmt->fetchAll();
 ?>
     <div class="user-list">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($users as $user): ?>
-                <tr>
-                    <td><?= htmlspecialchars($user['user_id']) ?></td>
-                    <td><?= htmlspecialchars($user['username']) ?></td>
-                    <td><?= htmlspecialchars($user['role_name']) ?></td>
-                    <td><?= htmlspecialchars(date('Y-m-d', strtotime($user['created_at']))) ?></td>
-                    <td class="actions">
-                        <a href="?edit=<?= $user['user_id'] ?>" class="btn btn-edit">Edit</a>
-                        <button class="btn btn-danger" onclick="showPasswordResetModal(<?= $user['user_id'] ?>, '<?= htmlspecialchars($user['username']) ?>')">Reset Password</button>
-                        <button class="btn btn-danger" onclick="confirmDelete(<?= $user['user_id'] ?>, '<?= htmlspecialchars($user['username']) ?>')">Delete</button>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($users as $user): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($user['user_id']) ?></td>
+                        <td><?= htmlspecialchars($user['username']) ?></td>
+                        <td><span class="badge badge-primary"><?= htmlspecialchars($user['role_name']) ?></span></td>
+                        <td><?= htmlspecialchars(date('Y-m-d', strtotime($user['created_at']))) ?></td>
+                        <td class="actions">
+                            <a href="?edit=<?= $user['user_id'] ?>" class="btn btn-secondary btn-icon">Edit</a>
+                            <button class="btn btn-warning" onclick="showPasswordResetModal(<?= $user['user_id'] ?>, '<?= htmlspecialchars($user['username']) ?>')">Reset</button>
+                            <button class="btn btn-error" onclick="confirmDelete(<?= $user['user_id'] ?>, '<?= htmlspecialchars($user['username']) ?>')">Delete</button>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 <?php
 }
@@ -408,25 +410,22 @@ function displayUserList() {
 
     <div class="card">
         <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs">
-                <li class="nav-item">
-                    <a class="nav-link <?= empty($userDetails) ? 'active' : '' ?>" href="#" onclick="showTab('user-list')">User List</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= !empty($userDetails) ? 'active' : '' ?>" href="#" onclick="showTab('user-form')">
-                        <?= empty($userDetails) ? 'Create User' : 'Edit User' ?>
-                    </a>
-                </li>
-            </ul>
+            <div class="tab-header">
+                <button class="tab-button <?= empty($userDetails) ? 'active' : '' ?>" onclick="showTab('user-list')">User List</button>
+                <button class="tab-button <?= !empty($userDetails) ? 'active' : '' ?>" onclick="showTab('user-form')">
+                    <?= empty($userDetails) ? 'Create User' : 'Edit User' ?>
+                </button>
+            </div>
         </div>
 
         <div class="card-body">
-            <div id="user-list" class="tab-content <?= empty($userDetails) ? 'active' : '' ?>">
-                <?php displayUserList(); ?>
-            </div>
-
-            <div id="user-form" class="tab-content <?= !empty($userDetails) ? 'active' : '' ?>">
-                <form method="post" action="users.php">
+            <div class="tab-container">
+                <div id="user-list" class="tab-content <?= empty($userDetails) ? 'active' : '' ?>">
+                    <?php displayUserList(); ?>
+                </div>
+    
+                <div id="user-form" class="tab-content <?= !empty($userDetails) ? 'active' : '' ?>">
+                <form method="post" action="/uwuweb/admin/users.php">
                     <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
                     <input type="hidden" name="action" value="<?= empty($userDetails) ? 'create' : 'update' ?>">
 
@@ -435,20 +434,20 @@ function displayUserList() {
                     <?php endif; ?>
 
                     <div class="form-group">
-                        <label for="username">Username</label>
-                        <input type="text" class="form-control" id="username" name="username"
+                        <label for="username" class="form-label">Username</label>
+                        <input type="text" class="form-input" id="username" name="username"
                                value="<?= htmlspecialchars($userDetails['username'] ?? '') ?>" required>
                     </div>
 
                     <?php if (empty($userDetails)): ?>
                         <div class="form-group">
-                            <label for="password">Password</label>
-                            <input type="password" class="form-control" id="password" name="password" required>
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-input" id="password" name="password" required>
                         </div>
 
                         <div class="form-group">
-                            <label for="role_id">Role</label>
-                            <select class="form-control" id="role_id" name="role_id" onchange="toggleRoleFields()" required>
+                            <label for="role_id" class="form-label">Role</label>
+                            <select class="form-input form-select" id="role_id" name="role_id" onchange="toggleRoleFields()" required>
                                 <?php
                                 // Get all roles
                                 $stmt = $pdo->query("SELECT role_id, name FROM roles ORDER BY role_id");
@@ -462,19 +461,19 @@ function displayUserList() {
 
                         <div id="student-fields" class="role-fields" style="display: none;">
                             <div class="form-group">
-                                <label for="first_name">First Name</label>
-                                <input type="text" class="form-control" id="first_name" name="first_name">
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-input" id="first_name" name="first_name">
                             </div>
                             <div class="form-group">
-                                <label for="last_name">Last Name</label>
-                                <input type="text" class="form-control" id="last_name" name="last_name">
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-input" id="last_name" name="last_name">
                             </div>
                         </div>
 
                         <div id="parent-fields" class="role-fields" style="display: none;">
                             <div class="form-group">
-                                <label for="linked_student_id">Link to Student</label>
-                                <select class="form-control" id="linked_student_id" name="linked_student_id">
+                                <label for="linked_student_id" class="form-label">Link to Student</label>
+                                <select class="form-input form-select" id="linked_student_id" name="linked_student_id">
                                     <option value="">-- Select Student --</option>
                                     <?php
                                     // Get all students
@@ -493,26 +492,25 @@ function displayUserList() {
                                 </select>
                             </div>
                         </div>
-                    <?php else: ?>
-                        <?php if ($userDetails['role_id'] == ROLE_STUDENT): ?>
+                    <?php else: ?>                            <?php if ($userDetails['role_id'] == ROLE_STUDENT): ?>
                             <div class="form-group">
-                                <label for="first_name">First Name</label>
-                                <input type="text" class="form-control" id="first_name" name="first_name"
+                                <label for="first_name" class="form-label">First Name</label>
+                                <input type="text" class="form-input" id="first_name" name="first_name"
                                        value="<?= htmlspecialchars($userDetails['first_name'] ?? '') ?>">
                             </div>
                             <div class="form-group">
-                                <label for="last_name">Last Name</label>
-                                <input type="text" class="form-control" id="last_name" name="last_name"
+                                <label for="last_name" class="form-label">Last Name</label>
+                                <input type="text" class="form-input" id="last_name" name="last_name"
                                        value="<?= htmlspecialchars($userDetails['last_name'] ?? '') ?>">
                             </div>
                         <?php endif; ?>
                     <?php endif; ?>
 
-                    <div class="form-actions">
+                    <div class="form-group">
                         <button type="submit" class="btn btn-primary">
                             <?= empty($userDetails) ? 'Create User' : 'Update User' ?>
                         </button>
-                        <a href="users.php" class="btn btn-secondary">Cancel</a>
+                        <a href="/uwuweb/admin/users.php" class="btn btn-secondary">Cancel</a>
                     </div>
                 </form>
             </div>
@@ -522,47 +520,55 @@ function displayUserList() {
 
 <!-- Password Reset Modal -->
 <div id="password-reset-modal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal('password-reset-modal')">&times;</span>
-        <h2>Reset Password</h2>
-        <form id="reset-password-form" method="post" action="users.php">
-            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
-            <input type="hidden" name="action" value="reset_password">
-            <input type="hidden" name="user_id" id="reset-user-id">
-
-            <p>Resetting password for: <span id="reset-username"></span></p>
-
-            <div class="form-group">
-                <label for="new_password">New Password</label>
-                <input type="password" class="form-control" id="new_password" name="new_password" required>
-            </div>
-
-            <div class="form-actions">
-                <button type="submit" class="btn btn-warning">Reset Password</button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal('password-reset-modal')">Cancel</button>
-            </div>
-        </form>
+    <div class="modal-content card">
+        <div class="card-header">
+            <h2 class="card-title">Reset Password</h2>
+            <span class="close" onclick="closeModal('password-reset-modal')">&times;</span>
+        </div>
+        <div class="card-body">
+            <form id="reset-password-form" method="post" action="/uwuweb/admin/users.php">
+                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                <input type="hidden" name="action" value="reset_password">
+                <input type="hidden" name="user_id" id="reset-user-id">
+    
+                <p>Resetting password for: <span id="reset-username" class="badge badge-primary"></span></p>
+    
+                <div class="form-group">
+                    <label for="new_password" class="form-label">New Password</label>
+                    <input type="password" class="form-input" id="new_password" name="new_password" required>
+                </div>
+    
+                <div class="form-group">
+                    <button type="submit" class="btn btn-warning">Reset Password</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('password-reset-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <!-- Delete Confirmation Modal -->
 <div id="delete-modal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal('delete-modal')">&times;</span>
-        <h2>Confirm Deletion</h2>
-        <form id="delete-form" method="post" action="users.php">
-            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
-            <input type="hidden" name="action" value="delete">
-            <input type="hidden" name="user_id" id="delete-user-id">
-
-            <p>Are you sure you want to delete user: <span id="delete-username"></span>?</p>
-            <p class="text-danger">Warning: This action cannot be undone!</p>
-
-            <div class="form-actions">
-                <button type="submit" class="btn btn-danger">Delete User</button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal('delete-modal')">Cancel</button>
-            </div>
-        </form>
+    <div class="modal-content card">
+        <div class="card-header">
+            <h2 class="card-title">Confirm Deletion</h2>
+            <span class="close" onclick="closeModal('delete-modal')">&times;</span>
+        </div>
+        <div class="card-body">
+            <form id="delete-form" method="post" action="/uwuweb/admin/users.php">
+                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="user_id" id="delete-user-id">
+    
+                <p>Are you sure you want to delete user: <span id="delete-username" class="badge badge-primary"></span>?</p>
+                <p class="alert alert-error">Warning: This action cannot be undone!</p>
+    
+                <div class="form-group">
+                    <button type="submit" class="btn btn-error">Delete User</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('delete-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 

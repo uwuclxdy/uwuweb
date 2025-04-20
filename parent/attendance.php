@@ -16,6 +16,9 @@ require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 require_once '../includes/header.php';
 
+// Add CSS link for this specific page
+echo '<link rel="stylesheet" href="/uwuweb/assets/css/parent-attendance.css">';
+
 // Ensure only parents can access this page
 requireRole(ROLE_PARENT);
 
@@ -175,149 +178,204 @@ foreach ($students as $student) {
 include '../includes/header.php';
 ?>
 
-<div class="attendance-container">
-    <h1>Student Attendance</h1>
+<div class="page-container">
+    <h1 class="page-title">Student Attendance</h1>
 
-    <div class="attendance-filter">
-        <form method="get" action="" class="filter-form">
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="student_id">Student:</label>
-                    <select id="student_id" name="student_id" onchange="this.form.submit()">
-                        <?php foreach ($students as $student): ?>
-                            <option value="<?= (int)$student['student_id'] ?>" <?= $selectedStudentId == $student['student_id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?>
-                                (<?= htmlspecialchars($student['class_code']) ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Filter Options</h3>
+        </div>
+        <div class="card-body">
+            <form method="get" action="/uwuweb/parent/attendance.php" class="filter-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="student_id" class="form-label">Student:</label>
+                        <select id="student_id" name="student_id" class="form-input" onchange="this.form.submit()">
+                            <?php foreach ($students as $student): ?>
+                                <option value="<?= (int)$student['student_id'] ?>" <?= $selectedStudentId == $student['student_id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?>
+                                    (<?= htmlspecialchars($student['class_code']) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
 
-                <div class="form-group">
-                    <label for="term_id">Term:</label>
-                    <select id="term_id" name="term_id" onchange="this.form.submit()">
-                        <?php foreach ($availableTerms as $term): ?>
-                            <option value="<?= (int)$term['term_id'] ?>" <?= $selectedTermId == $term['term_id'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($term['name']) ?>
-                                (<?= date('d.m.Y', strtotime($term['start_date'])) ?> -
-                                 <?= date('d.m.Y', strtotime($term['end_date'])) ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <div class="form-group">
+                        <label for="term_id" class="form-label">Term:</label>
+                        <select id="term_id" name="term_id" class="form-input" onchange="this.form.submit()">
+                            <?php foreach ($availableTerms as $term): ?>
+                                <option value="<?= (int)$term['term_id'] ?>" <?= $selectedTermId == $term['term_id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($term['name']) ?>
+                                    (<?= date('d.m.Y', strtotime($term['start_date'])) ?> -
+                                     <?= date('d.m.Y', strtotime($term['end_date'])) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 
     <?php if ($selectedStudent): ?>
-        <div class="student-info">
-            <h2>
-                <?= htmlspecialchars($selectedStudent['first_name'] . ' ' . $selectedStudent['last_name']) ?>
-                <span class="class-code">(<?= htmlspecialchars($selectedStudent['class_code']) ?>)</span>
-            </h2>
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <?= htmlspecialchars($selectedStudent['first_name'] . ' ' . $selectedStudent['last_name']) ?>
+                    <span class="badge"><?= htmlspecialchars($selectedStudent['class_code']) ?></span>
+                </h2>
+            </div>
         </div>
 
-        <div class="attendance-summary">
-            <div class="stat-card">
-                <div class="stat-value"><?= $attendanceStats['present_percent'] ?>%</div>
-                <div class="stat-label">Present</div>
-                <div class="stat-count">(<?= $attendanceStats['present'] ?> periods)</div>
-            </div>
+        <div class="stats-container">
+            <div class="card-grid">
+                <div class="card stat-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Present</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-value"><?= $attendanceStats['present_percent'] ?>%</div>
+                        <div class="stat-count">(<?= $attendanceStats['present'] ?> periods)</div>
+                    </div>
+                </div>
 
-            <div class="stat-card">
-                <div class="stat-value"><?= $attendanceStats['absent_percent'] ?>%</div>
-                <div class="stat-label">Absent</div>
-                <div class="stat-count">(<?= $attendanceStats['absent'] ?> periods)</div>
-            </div>
+                <div class="card stat-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Absent</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-value"><?= $attendanceStats['absent_percent'] ?>%</div>
+                        <div class="stat-count">(<?= $attendanceStats['absent'] ?> periods)</div>
+                    </div>
+                </div>
 
-            <div class="stat-card">
-                <div class="stat-value"><?= $attendanceStats['late_percent'] ?>%</div>
-                <div class="stat-label">Late</div>
-                <div class="stat-count">(<?= $attendanceStats['late'] ?> periods)</div>
-            </div>
+                <div class="card stat-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Late</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-value"><?= $attendanceStats['late_percent'] ?>%</div>
+                        <div class="stat-count">(<?= $attendanceStats['late'] ?> periods)</div>
+                    </div>
+                </div>
 
-            <div class="stat-card">
-                <div class="stat-value"><?= $attendanceStats['justified_percent'] ?>%</div>
-                <div class="stat-label">Justified</div>
-                <div class="stat-count">(<?= $attendanceStats['justified'] ?> of <?= $attendanceStats['absent'] ?> absences)</div>
+                <div class="card stat-card">
+                    <div class="card-header">
+                        <h3 class="card-title">Justified</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="stat-value"><?= $attendanceStats['justified_percent'] ?>%</div>
+                        <div class="stat-count">(<?= $attendanceStats['justified'] ?> of <?= $attendanceStats['absent'] ?> absences)</div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <?php if (empty($attendance)): ?>
-            <div class="attendance-list empty">
-                <p class="empty-message">No attendance records found for the selected student and term.</p>
+            <div class="card">
+                <div class="card-body">
+                    <p class="text-secondary">No attendance records found for the selected student and term.</p>
+                </div>
             </div>
         <?php else: ?>
-            <div class="attendance-list">
-                <h3>Attendance Records</h3>
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Period</th>
-                            <th>Subject</th>
-                            <th>Status</th>
-                            <th>Justification</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($attendance as $record): ?>
-                            <?php
-                                $formattedDate = date('d.m.Y', strtotime($record['period_date']));
-                                $statusClass = strtolower($record['status']);
-                                $justificationStatus = '';
-
-                                if ($record['status'] === 'A') {
-                                    if (!empty($record['justification'])) {
-                                        if ($record['approved'] === null) {
-                                            $justificationStatus = 'Pending review';
-                                        } elseif ($record['approved'] == 1) {
-                                            $justificationStatus = 'Approved';
-                                        } else {
-                                            $justificationStatus = 'Rejected';
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Attendance Records</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-wrapper">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Period</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Justification</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($attendance as $record): ?>
+                                    <?php
+                                        $formattedDate = date('d.m.Y', strtotime($record['period_date']));
+                                        
+                                        // Determine status badge class
+                                        $statusBadge = '';
+                                        if ($record['status'] === 'P') {
+                                            $statusBadge = 'badge badge-success';
+                                        } elseif ($record['status'] === 'A') {
+                                            $statusBadge = 'badge badge-error';
+                                        } elseif ($record['status'] === 'L') {
+                                            $statusBadge = 'badge badge-warning';
                                         }
-                                    } else {
-                                        $justificationStatus = 'Not justified';
-                                    }
-                                } elseif ($record['status'] === 'P' || $record['status'] === 'L') {
-                                    $justificationStatus = 'N/A';
-                                }
-                            ?>
-                            <tr>
-                                <td><?= htmlspecialchars($formattedDate) ?></td>
-                                <td><?= htmlspecialchars($record['period_label']) ?></td>
-                                <td><?= htmlspecialchars($record['subject_name'] . ' - ' . $record['class_title']) ?></td>
-                                <td class="status-<?= $statusClass ?>">
-                                    <?= htmlspecialchars(getAttendanceStatusLabel($record['status'])) ?>
-                                </td>
-                                <td class="justification-status <?= strtolower(str_replace(' ', '-', $justificationStatus)) ?>">
-                                    <?= htmlspecialchars($justificationStatus) ?>
-                                    <?php if ($record['status'] === 'A' && !empty($record['justification'])): ?>
-                                        <button class="btn btn-small view-justification"
-                                                data-att-id="<?= (int)$record['att_id'] ?>"
-                                                data-justification="<?= htmlspecialchars($record['justification']) ?>">
-                                            View
-                                        </button>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                                        
+                                        // Determine justification status and badge
+                                        $justificationStatus = '';
+                                        $justificationBadge = '';
+
+                                        if ($record['status'] === 'A') {
+                                            if (!empty($record['justification'])) {
+                                                if ($record['approved'] === null) {
+                                                    $justificationStatus = 'Pending review';
+                                                    $justificationBadge = 'badge badge-warning';
+                                                } elseif ($record['approved'] == 1) {
+                                                    $justificationStatus = 'Approved';
+                                                    $justificationBadge = 'badge badge-success';
+                                                } else {
+                                                    $justificationStatus = 'Rejected';
+                                                    $justificationBadge = 'badge badge-error';
+                                                }
+                                            } else {
+                                                $justificationStatus = 'Not justified';
+                                                $justificationBadge = 'badge badge-error';
+                                            }
+                                        } elseif ($record['status'] === 'P' || $record['status'] === 'L') {
+                                            $justificationStatus = 'N/A';
+                                            $justificationBadge = 'text-secondary';
+                                        }
+                                    ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($formattedDate) ?></td>
+                                        <td><?= htmlspecialchars($record['period_label']) ?></td>
+                                        <td><?= htmlspecialchars($record['subject_name'] . ' - ' . $record['class_title']) ?></td>
+                                        <td>
+                                            <span class="<?= $statusBadge ?>">
+                                                <?= htmlspecialchars(getAttendanceStatusLabel($record['status'])) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="<?= $justificationBadge ?>"><?= htmlspecialchars($justificationStatus) ?></span>
+                                            <?php if ($record['status'] === 'A' && !empty($record['justification'])): ?>
+                                                <button class="btn btn-secondary btn-sm view-justification"
+                                                        data-att-id="<?= (int)$record['att_id'] ?>"
+                                                        data-justification="<?= htmlspecialchars($record['justification']) ?>">
+                                                    View
+                                                </button>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         <?php endif; ?>
     <?php endif; ?>
 
     <!-- Justification View Modal -->
     <div id="view-justification-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h3>Absence Justification</h3>
-
-            <div class="justification-text" id="justification-text"></div>
-
-            <div class="form-actions">
-                <button type="button" class="btn close-modal">Close</button>
+        <div class="modal-content card">
+            <div class="card-header">
+                <h3 class="card-title">Absence Justification</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="card-body">
+                <div id="justification-text" class="justification-text"></div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary close-modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -369,171 +427,6 @@ include '../includes/header.php';
         setupModalClosing();
     });
 </script>
-
-<style>
-    /* Attendance page specific styles */
-    .attendance-container {
-        padding: 1rem 0;
-    }
-
-    .attendance-filter {
-        margin-bottom: 2rem;
-    }
-
-    .filter-form {
-        max-width: 600px;
-    }
-
-    .form-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    .form-group {
-        flex: 1;
-        min-width: 250px;
-    }
-
-    .student-info {
-        margin-bottom: 1.5rem;
-    }
-
-    .class-code {
-        font-weight: normal;
-        color: #666;
-    }
-
-    .attendance-summary {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-
-    .stat-card {
-        background-color: #f9f9f9;
-        padding: 1.5rem;
-        border-radius: 4px;
-        text-align: center;
-    }
-
-    .stat-value {
-        font-size: 2rem;
-        font-weight: bold;
-    }
-
-    .stat-label {
-        font-size: 1rem;
-        margin-top: 0.5rem;
-    }
-
-    .stat-count {
-        font-size: 0.85rem;
-        color: #666;
-        margin-top: 0.25rem;
-    }
-
-    .attendance-list {
-        margin: 2rem 0;
-    }
-
-    .attendance-list h3 {
-        margin-bottom: 1rem;
-    }
-
-    .attendance-list.empty {
-        padding: 2rem;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-        text-align: center;
-    }
-
-    .empty-message {
-        color: #666;
-        font-style: italic;
-    }
-
-    .status-p {
-        color: #28a745;
-    }
-
-    .status-a {
-        color: #dc3545;
-    }
-
-    .status-l {
-        color: #ffc107;
-    }
-
-    .justification-status.not-justified {
-        color: #dc3545;
-    }
-
-    .justification-status.pending-review {
-        color: #ffc107;
-    }
-
-    .justification-status.approved {
-        color: #28a745;
-    }
-
-    .justification-status.rejected {
-        color: #dc3545;
-    }
-
-    /* Modal styles */
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .modal-content {
-        background-color: #fff;
-        padding: 2rem;
-        border-radius: 4px;
-        width: 100%;
-        max-width: 600px;
-        max-height: 90vh;
-        overflow-y: auto;
-        position: relative;
-    }
-
-    .close-modal {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: #666;
-    }
-
-    .close-modal:hover {
-        color: #000;
-    }
-
-    .justification-text {
-        padding: 1.5rem;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-        margin: 1rem 0;
-        white-space: pre-wrap;
-    }
-
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        margin-top: 1rem;
-    }
-</style>
 
 <?php
 // Include page footer

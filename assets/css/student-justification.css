@@ -1,0 +1,176 @@
+/**
+ * Student justification page specific styles
+ */
+
+.justification-container {
+    padding: 1rem 0;
+}
+
+.justification-intro {
+    margin-bottom: 2rem;
+}
+
+.absence-list {
+    margin: 2rem 0;
+}
+
+.absence-list h2 {
+    margin-bottom: 1rem;
+}
+
+.absence-list.empty {
+    padding: 2rem;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.empty-message {
+    color: #666;
+    font-style: italic;
+}
+
+.justification-status {
+    font-weight: 500;
+}
+
+.justification-status.not-justified {
+    color: #dc3545;
+}
+
+.justification-status.pending-review {
+    color: #ffc107;
+}
+
+.justification-status.approved {
+    color: #28a745;
+}
+
+.justification-status.rejected {
+    color: #dc3545;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 2rem;
+    border-radius: 4px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.close-modal {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.close-modal:hover {
+    color: #000;
+}
+
+#absence-details,
+#view-absence-details {
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.justification-text {
+    padding: 1rem;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    white-space: pre-wrap;
+}
+
+.status-approved {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.status-rejected {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+.file-info {
+    padding: 0.5rem;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+/* Form styles */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 1rem;
+}
+
+.form-group small {
+    display: block;
+    color: #666;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+/* Alert styles */
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.alert-warning {
+    background-color: #fff3cd;
+    color: #856404;
+}

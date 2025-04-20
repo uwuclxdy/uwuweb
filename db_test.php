@@ -8,12 +8,12 @@
  */
 
 // Include the database connection file
-require_once 'includes/db.php';
+require_once '../includes/db.php';
 
 // Run PHP syntax check on the DB file
 echo "<h2>PHP Syntax Check:</h2>";
 $output = [];
-exec('php -l includes/db.php', $output, $return_var);
+exec('php -l /uwuweb/includes/db.php', $output, $return_var);
 echo "<pre>";
 foreach ($output as $line) {
     echo htmlspecialchars($line) . "<br>";

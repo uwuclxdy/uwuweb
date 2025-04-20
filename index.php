@@ -17,6 +17,8 @@ if (isLoggedIn()) {
     exit;
 }
 
+include 'includes/header.php';
+
 $error = '';
 $username = '';
 
@@ -67,107 +69,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - uwuweb Grade Management</title>
-    <link rel="stylesheet" href="/assets/css/style.css">
-    <style>
-        /* Login page specific styles */
-        body {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            background-color: var(--background-light);
-        }
-        .login-container {
-            width: 100%;
-            max-width: 400px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px var(--shadow-color);
-            padding: 2rem;
-        }
-        .login-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-        .form-control {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 1rem;
-        }
-        .login-btn {
-            width: 100%;
-            padding: 0.75rem;
-            background-color: var(--primary-color);
-            color: var(--text-light);
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        .login-btn:hover {
-            background-color: var(--secondary-color);
-        }
-        .error-message {
-            background-color: var(--error-color);
-            color: white;
-            padding: 0.75rem;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-        }
-        .info-message {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 0.75rem;
-            border-radius: 4px;
-            margin-bottom: 1rem;
-        }
-    </style>
+    <link rel="stylesheet" href="/uwuweb/assets/css/login.css">
 </head>
-<body>
-    <div class="login-container">
-        <div class="login-header">
-            <h1>uwuweb</h1>
+<body class="login-page">
+    <div class="login-container card">
+        <div class="card-header login-header">
+            <h1 class="card-title">uwuweb</h1>
             <p>Grade Management System</p>
         </div>
 
-        <?php if (!empty($error)): ?>
-            <div class="error-message">
-                <?= htmlspecialchars($error) ?>
+        <div class="card-body">
+            <?php if (!empty($error)): ?>
+                <div class="alert alert-error">
+                    <?= htmlspecialchars($error) ?>
+                </div>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['msg']) && $_GET['msg'] === 'logged_out'): ?>
+                <div class="alert alert-success">
+                    You have been successfully logged out.
+                </div>
+            <?php endif; ?>
+
+            <form method="post" action="/uwuweb/index.php">
+                <div class="form-group">
+                    <label for="username" class="form-label">Username:</label>
+                    <input type="text" id="username" name="username" class="form-input" value="<?= htmlspecialchars($username) ?>" required autofocus>
+                </div>
+
+                <div class="form-group">
+                    <label for="password" class="form-label">Password:</label>
+                    <input type="password" id="password" name="password" class="form-input" required>
             </div>
-        <?php endif; ?>
 
-        <?php if (isset($_GET['msg']) && $_GET['msg'] === 'logged_out'): ?>
-            <div class="info-message">
-                You have been successfully logged out.
-            </div>
-        <?php endif; ?>
+                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
 
-        <form method="post" action="">
-            <div class="form-group">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" class="form-control" value="<?= htmlspecialchars($username) ?>" required autofocus>
-            </div>
-
-            <div class="form-group">
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" class="form-control" required>
-            </div>
-
-            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
-
-            <button type="submit" class="login-btn">Log In</button>
-        </form>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Log In</button>
+                </div>
+            </form>
+        </div>
     </div>
 </body>
 </html>

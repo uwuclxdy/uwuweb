@@ -96,28 +96,55 @@ attendance(att_id INT AUTO_INCREMENT PK, enroll_id INT NOT NULL FK enrollments,
 
 ## 5 Directory & File Layout
 
-```
 uwuweb/
-├── index.php            # login / redirect
-├── dashboard.php        # single dynamic dashboard for all roles
+├── index.php                 # login / redirect
+├── dashboard.php             # single dynamic dashboard for all roles
+├── create_user.php           # utility for user creation
+├── db_test.php               # database connection test
 ├── /assets/
-│   ├── css/style.css
-│   └── js/main.js
+│   ├── css/
+│   │   ├── style.css         # main stylesheet
+│   │   ├── login.css
+│   │   ├── parent-attendance.css
+│   │   ├── parent-grades.css
+│   │   ├── student-attendance.css
+│   │   ├── student-grades.css
+│   │   ├── student-justification.css
+│   │   ├── teacher-attendance.css
+│   │   ├── teacher-gradebook.css
+│   │   └── teacher-justifications.css
+│   └── js/
+│       └── main.js
 ├── /includes/
-│   ├── db.php           # PDO connection
-│   ├── auth.php         # session + role helpers
-│   ├── header.php / footer.php
-│   └── functions.php    # common util functions
+│   ├── db.php                # PDO connection
+│   ├── auth.php              # session + role helpers
+│   ├── header.php
+│   ├── footer.php
+│   ├── functions.php         # common util functions
+│   └── logout.php            # session termination
 ├── /admin/
-│   ├── users.php        # add / edit users
-│   └── settings.php     # terms, subjects
+│   ├── users.php             # add / edit users
+│   └── settings.php          # terms, subjects
 ├── /teacher/
 │   ├── gradebook.php
-│   └── attendance.php
-└── /api/                # simple ajax endpoints (PHP returning JSON)
-    ├── grades.php
-    └── attendance.php
-```
+│   ├── attendance.php
+│   └── justifications.php    # handle absence justifications
+├── /student/
+│   ├── grades.php            # view own grades
+│   ├── attendance.php        # view own attendance
+│   └── justification.php     # submit absence justifications
+├── /parent/
+│   ├── grades.php            # view child's grades
+│   └── attendance.php        # view child's attendance
+├── /api/                     # simple ajax endpoints (PHP returning JSON)
+│   ├── grades.php
+│   ├── attendance.php
+│   └── justifications.php
+├── /db/
+│   ├── uwuweb.sql            # main schema
+│   └── seed_demo.sql         # demo data
+└── /tests/
+    └── session_timeout_test.php
 
 *`dashboard.php`*\* reads `` and loads widgets/links for that role.\*
 

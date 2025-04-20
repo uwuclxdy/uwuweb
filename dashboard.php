@@ -29,13 +29,13 @@ $userInfo = getUserInfo($_SESSION['user_id']);
 include 'includes/header.php';
 ?>
 
-<div class="dashboard">
+<div class="page-wrapper dashboard">
     <div class="sidebar">
-        <nav class="main-nav">
+        <nav class="navbar-menu">
             <ul>
                 <?php foreach ($navItems as $item): ?>
-                <li>
-                    <a href="<?= htmlspecialchars($item['url']) ?>" class="nav-item <?= $_SERVER['PHP_SELF'] == $item['url'] ? 'active' : '' ?>">
+                <li class="navbar-item">
+                    <a href="<?= htmlspecialchars($item['url']) ?>" class="navbar-link <?= $_SERVER['PHP_SELF'] == $item['url'] ? 'active' : '' ?>">
                         <span class="icon icon-<?= htmlspecialchars($item['icon']) ?>"></span>
                         <span class="title"><?= htmlspecialchars($item['title']) ?></span>
                     </a>
@@ -45,24 +45,30 @@ include 'includes/header.php';
         </nav>
     </div>
     
-    <div class="dashboard-content">
-        <h2>Welcome, <?= htmlspecialchars($_SESSION['username']) ?></h2>
-        <p>Role: <?= htmlspecialchars($userInfo['role_name'] ?? getRoleName($userRole)) ?></p>
-        
-        <div class="widget-grid">
-            <?php foreach ($widgets as $key => $widget): ?>
-            <div class="widget" id="<?= htmlspecialchars($key) ?>">
-                <h3 class="widget-title"><?= htmlspecialchars($widget['title']) ?></h3>
-                <?php 
-                // Call the widget's render function if it exists
-                if (function_exists($widget['function'])) {
-                    echo call_user_func($widget['function']);
-                } else {
-                    echo '<div class="widget-content">Widget content not available</div>';
-                }
-                ?>
+    <div class="main-content">
+        <div class="container">
+            <h2 class="page-title">Welcome, <?= htmlspecialchars($_SESSION['username']) ?></h2>
+            <p class="role-info"><span class="badge badge-primary"><?= htmlspecialchars($userInfo['role_name'] ?? getRoleName($userRole)) ?></span></p>
+            
+            <div class="dashboard-grid">
+                <?php foreach ($widgets as $key => $widget): ?>
+                <div class="card metric-card" id="<?= htmlspecialchars($key) ?>">
+                    <div class="card-header">
+                        <h3 class="card-title"><?= htmlspecialchars($widget['title']) ?></h3>
+                    </div>
+                    <div class="card-body">
+                        <?php 
+                        // Call the widget's render function if it exists
+                        if (function_exists($widget['function'])) {
+                            echo call_user_func($widget['function']);
+                        } else {
+                            echo '<div class="card-content">Widget content not available</div>';
+                        }
+                        ?>
+                    </div>
+                </div>
+                <?php endforeach; ?>
             </div>
-            <?php endforeach; ?>
         </div>
     </div>
 </div>

@@ -20,6 +20,9 @@ require_once '../includes/db.php';
 require_once '../includes/functions.php';
 require_once '../includes/header.php';
 
+// Add CSS link for this specific page
+echo '<link rel="stylesheet" href="/uwuweb/assets/css/teacher-attendance.css">';
+
 // Ensure only teachers can access this page
 requireRole(ROLE_TEACHER);
 
@@ -303,8 +306,8 @@ $csrfToken = generateCSRFToken();
 include '../includes/header.php';
 ?>
 
-<div class="attendance-container">
-    <h1>Teacher Attendance</h1>
+<div class="page-container">
+    <h1 class="page-title">Teacher Attendance</h1>
 
     <?php if (!$hasClasses): ?>
         <div class="alert alert-error">
@@ -312,166 +315,194 @@ include '../includes/header.php';
         </div>
     <?php else: ?>
         <!-- Class selector -->
-        <div class="class-selector">
-            <form method="get" action="">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                <label for="class_id">Select Class:</label>
-                <select name="class_id" id="class_id" onchange="this.form.submit()">
-                    <?php foreach ($classes as $class): ?>
-                        <option value="<?= htmlspecialchars($class['class_id']) ?>"
-                                <?= $selectedClassId == $class['class_id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars("{$class['subject_name']} - {$class['title']} ({$class['term_name']})") ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </form>
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Select Class</h3>
+            </div>
+            <div class="card-body">
+                <form method="get" action="/uwuweb/teacher/attendance.php">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                    <div class="form-group">
+                        <label for="class_id" class="form-label">Select Class:</label>
+                        <select name="class_id" id="class_id" class="form-input" onchange="this.form.submit()">
+                            <?php foreach ($classes as $class): ?>
+                                <option value="<?= htmlspecialchars($class['class_id']) ?>"
+                                        <?= $selectedClassId == $class['class_id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars("{$class['subject_name']} - {$class['title']} ({$class['term_name']})") ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </form>
+            </div>
         </div>
 
         <?php if ($selectedClassId): ?>
-            <div class="class-details">
-                <h2><?= htmlspecialchars($selectedClass['subject_name']) ?></h2>
-                <h3><?= htmlspecialchars($selectedClass['title']) ?> - <?= htmlspecialchars($selectedClass['term_name']) ?></h3>
-
-                <!-- Message display -->
-                <?php if (!empty($message)): ?>
-                    <div class="alert alert-<?= htmlspecialchars($messageType) ?>">
-                        <?= htmlspecialchars($message) ?>
-                    </div>
-                <?php elseif (isset($_GET['success'])): ?>
-                    <div class="alert alert-success">
-                        Period added successfully.
-                    </div>
-                <?php endif; ?>
-
-                <!-- Period management -->
-                <div class="period-management">
-                    <h3>Period Management</h3>
-
-                    <div class="period-actions">
-                        <button id="btn-add-period" class="btn">Add New Period</button>
-
-                        <?php if (!empty($periods)): ?>
-                            <form method="get" action="" class="period-selector">
-                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                                <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
-                                <label for="period_id">Select Period:</label>
-                                <select name="period_id" id="period_id" onchange="this.form.submit()">
-                                    <?php foreach ($periods as $period): ?>
-                                        <option value="<?= htmlspecialchars($period['period_id']) ?>"
-                                                <?= $selectedPeriodId == $period['period_id'] ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars(date('Y-m-d', strtotime($period['period_date'])) . " - " . $period['period_label']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </form>
-                        <?php endif; ?>
-                    </div>
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title"><?= htmlspecialchars($selectedClass['subject_name']) ?></h2>
+                    <h3 class="card-subtitle"><?= htmlspecialchars($selectedClass['title']) ?> - <?= htmlspecialchars($selectedClass['term_name']) ?></h3>
                 </div>
 
-                <!-- Attendance Form -->
-                <?php if ($selectedPeriodId && !empty($students)): ?>
-                    <div class="attendance-form-container">
-                        <h3>Attendance for <?= htmlspecialchars(date('Y-m-d', strtotime($selectedPeriod['period_date']))) ?> - <?= htmlspecialchars($selectedPeriod['period_label']) ?></h3>
+                <div class="card-body">
+                    <!-- Message display -->
+                    <?php if (!empty($message)): ?>
+                        <div class="alert alert-<?= htmlspecialchars($messageType) ?>">
+                            <?= htmlspecialchars($message) ?>
+                        </div>
+                    <?php elseif (isset($_GET['success'])): ?>
+                        <div class="alert alert-success">
+                            Period added successfully.
+                        </div>
+                    <?php endif; ?>
 
-                        <form method="post" action="" class="attendance-form">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                            <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
-                            <input type="hidden" name="period_id" value="<?= htmlspecialchars($selectedPeriodId) ?>">
+                    <!-- Period management -->
+                    <div class="card stat-card">
+                        <div class="card-header">
+                            <h3 class="card-title">Period Management</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="period-actions">
+                                <button id="btn-add-period" class="btn btn-primary">Add New Period</button>
 
-                            <table class="attendance-table">
-                                <thead>
-                                    <tr>
-                                        <th>Student</th>
-                                        <th>Status</th>
-                                        <th>Justification</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($students as $student): ?>
-                                        <?php
-                                            $enrollId = $student['enroll_id'];
-                                            $currentStatus = isset($attendance[$enrollId]) ? $attendance[$enrollId]['status'] : 'P';
-                                            $justification = isset($attendance[$enrollId]) ? $attendance[$enrollId]['justification'] : '';
-                                        ?>
-                                        <tr>
-                                            <td class="student-name">
-                                                <?= htmlspecialchars("{$student['last_name']}, {$student['first_name']}") ?>
-                                                <span class="class-code">[<?= htmlspecialchars($student['class_code']) ?>]</span>
-                                            </td>
-                                            <td class="attendance-status">
-                                                <div class="status-toggles">
-                                                    <label class="radio-label">
-                                                        <input type="radio" name="status_<?= htmlspecialchars($enrollId) ?>"
-                                                               value="P" <?= $currentStatus === 'P' ? 'checked' : '' ?>>
-                                                        <span class="status-text status-present">Present</span>
-                                                    </label>
-                                                    <label class="radio-label">
-                                                        <input type="radio" name="status_<?= htmlspecialchars($enrollId) ?>"
-                                                               value="A" <?= $currentStatus === 'A' ? 'checked' : '' ?>>
-                                                        <span class="status-text status-absent">Absent</span>
-                                                    </label>
-                                                    <label class="radio-label">
-                                                        <input type="radio" name="status_<?= htmlspecialchars($enrollId) ?>"
-                                                               value="L" <?= $currentStatus === 'L' ? 'checked' : '' ?>>
-                                                        <span class="status-text status-late">Late</span>
-                                                    </label>
-                                                </div>
-                                            </td>
-                                            <td class="justification">
-                                                <?php if (!empty($justification)): ?>
-                                                    <div class="justification-text">
-                                                        <?= htmlspecialchars($justification) ?>
-                                                    </div>
-                                                <?php else: ?>
-                                                    <div class="no-justification">No justification provided</div>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-
-                            <div class="form-actions">
-                                <button type="submit" name="save_attendance" class="btn">Save Attendance</button>
+                                <?php if (!empty($periods)): ?>
+                                    <form method="get" action="/uwuweb/teacher/attendance.php" class="period-selector">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                                        <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
+                                        <div class="form-group">
+                                            <label for="period_id" class="form-label">Select Period:</label>
+                                            <select name="period_id" id="period_id" class="form-input" onchange="this.form.submit()">
+                                                <?php foreach ($periods as $period): ?>
+                                                    <option value="<?= htmlspecialchars($period['period_id']) ?>"
+                                                            <?= $selectedPeriodId == $period['period_id'] ? 'selected' : '' ?>>
+                                                        <?= htmlspecialchars(date('Y-m-d', strtotime($period['period_date'])) . " - " . $period['period_label']) ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    </form>
+                                <?php endif; ?>
                             </div>
-                        </form>
+                        </div>
                     </div>
-                <?php elseif ($selectedClassId && empty($periods)): ?>
-                    <div class="alert alert-info">
-                        No periods have been created for this class yet. Use the "Add New Period" button to create one.
-                    </div>
-                <?php elseif ($selectedClassId && empty($students)): ?>
-                    <div class="alert alert-info">
-                        No students are enrolled in this class.
-                    </div>
-                <?php endif; ?>
+
+                    <!-- Attendance Form -->
+                    <?php if ($selectedClassId): ?>
+                        <!-- Attendance Form -->
+                        <?php if ($selectedPeriodId && !empty($students)): ?>
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">Attendance for <?= htmlspecialchars(date('Y-m-d', strtotime($selectedPeriod['period_date']))) ?> - <?= htmlspecialchars($selectedPeriod['period_label']) ?></h3>
+                                </div>
+                                <div class="card-body">
+                                    <form method="post" action="/uwuweb/teacher/attendance.php" class="attendance-form">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                                        <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
+                                        <input type="hidden" name="period_id" value="<?= htmlspecialchars($selectedPeriodId) ?>">
+
+                                        <div class="table-wrapper">
+                                            <table class="table">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Student</th>
+                                                        <th>Status</th>
+                                                        <th>Justification</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <?php foreach ($students as $student): ?>
+                                                        <?php
+                                                            $enrollId = $student['enroll_id'];
+                                                            $currentStatus = isset($attendance[$enrollId]) ? $attendance[$enrollId]['status'] : 'P';
+                                                            $justification = isset($attendance[$enrollId]) ? $attendance[$enrollId]['justification'] : '';
+                                                        ?>
+                                                        <tr>
+                                                            <td class="student-name">
+                                                                <?= htmlspecialchars("{$student['last_name']}, {$student['first_name']}") ?>
+                                                                <span class="badge"><?= htmlspecialchars($student['class_code']) ?></span>
+                                                            </td>
+                                                            <td class="attendance-status">
+                                                                <div class="status-toggles">
+                                                                    <label class="radio-label">
+                                                                        <input type="radio" name="status_<?= htmlspecialchars($enrollId) ?>"
+                                                                            value="P" <?= $currentStatus === 'P' ? 'checked' : '' ?>>
+                                                                        <span class="status-text status-present">Present</span>
+                                                                    </label>
+                                                                    <label class="radio-label">
+                                                                        <input type="radio" name="status_<?= htmlspecialchars($enrollId) ?>"
+                                                                            value="A" <?= $currentStatus === 'A' ? 'checked' : '' ?>>
+                                                                        <span class="status-text status-absent">Absent</span>
+                                                                    </label>
+                                                                    <label class="radio-label">
+                                                                        <input type="radio" name="status_<?= htmlspecialchars($enrollId) ?>"
+                                                                            value="L" <?= $currentStatus === 'L' ? 'checked' : '' ?>>
+                                                                        <span class="status-text status-late">Late</span>
+                                                                    </label>
+                                                                </div>
+                                                            </td>
+                                                            <td class="justification">
+                                                                <?php if (!empty($justification)): ?>
+                                                                    <div class="justification-text">
+                                                                        <?= htmlspecialchars($justification) ?>
+                                                                    </div>
+                                                                <?php else: ?>
+                                                                    <div class="no-justification text-secondary">No justification provided</div>
+                                                                <?php endif; ?>
+                                                            </td>
+                                                        </tr>
+                                                    <?php endforeach; ?>
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <div class="form-actions">
+                                            <button type="submit" name="save_attendance" class="btn btn-primary">Save Attendance</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        <?php elseif ($selectedClassId && empty($periods)): ?>
+                            <div class="alert alert-info">
+                                No periods have been created for this class yet. Use the "Add New Period" button to create one.
+                            </div>
+                        <?php elseif ($selectedClassId && empty($students)): ?>
+                            <div class="alert alert-info">
+                                No students are enrolled in this class.
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </div>
 
             <!-- Add Period Form Modal -->
             <div id="add-period-form-container" class="modal" style="display: none;">
-                <div class="modal-content">
-                    <h3>Add New Period</h3>
-                    <form method="post" action="">
-                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                        <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
+                <div class="modal-content card">
+                    <div class="card-header">
+                        <h3 class="card-title">Add New Period</h3>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="/uwuweb/teacher/attendance.php">
+                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                            <input type="hidden" name="class_id" value="<?= htmlspecialchars($selectedClassId) ?>">
 
-                        <div class="form-group">
-                            <label for="period_date">Date:</label>
-                            <input type="date" id="period_date" name="period_date" required
-                                   value="<?= date('Y-m-d') ?>">
-                        </div>
+                            <div class="form-group">
+                                <label for="period_date" class="form-label">Date:</label>
+                                <input type="date" id="period_date" name="period_date" class="form-input" required
+                                       value="<?= date('Y-m-d') ?>">
+                            </div>
 
-                        <div class="form-group">
-                            <label for="period_label">Label:</label>
-                            <input type="text" id="period_label" name="period_label" required
-                                   placeholder="e.g., Period 1, Morning Session, etc.">
-                        </div>
+                            <div class="form-group">
+                                <label for="period_label" class="form-label">Label:</label>
+                                <input type="text" id="period_label" name="period_label" class="form-input" required
+                                       placeholder="e.g., Period 1, Morning Session, etc.">
+                            </div>
 
-                        <div class="form-actions">
-                            <button type="button" class="btn btn-cancel" onclick="closePeriodForm()">Cancel</button>
-                            <button type="submit" name="add_period" class="btn">Add Period</button>
-                        </div>
-                    </form>
+                            <div class="form-actions">
+                                <button type="button" class="btn btn-secondary" onclick="closePeriodForm()">Cancel</button>
+                                <button type="submit" name="add_period" class="btn btn-primary">Add Period</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         <?php endif; ?>
@@ -492,128 +523,6 @@ include '../includes/header.php';
     // Event listener for the Add Period button
     document.getElementById('btn-add-period')?.addEventListener('click', showPeriodForm);
 </script>
-
-<style>
-    /* Attendance specific styles */
-    .attendance-container {
-        padding: 1rem 0;
-    }
-
-    .class-selector,
-    .period-selector {
-        margin: 1rem 0;
-    }
-
-    .class-selector select,
-    .period-selector select {
-        padding: 0.5rem;
-        width: 100%;
-        max-width: 400px;
-    }
-
-    .class-details {
-        margin-top: 2rem;
-    }
-
-    .period-management {
-        margin: 2rem 0;
-    }
-
-    .period-actions {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-top: 1rem;
-    }
-
-    .attendance-form-container {
-        margin-top: 2rem;
-    }
-
-    .attendance-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 1rem;
-    }
-
-    .attendance-table th,
-    .attendance-table td {
-        padding: 0.75rem;
-        border: 1px solid var(--border-color);
-        text-align: left;
-    }
-
-    .attendance-table th {
-        background-color: var(--primary-color);
-        color: var(--text-light);
-    }
-
-    .attendance-table .student-name {
-        white-space: nowrap;
-    }
-
-    .attendance-table .class-code {
-        font-size: 0.8rem;
-        color: #666;
-    }
-
-    .status-toggles {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .radio-label {
-        display: flex;
-        align-items: center;
-        cursor: pointer;
-    }
-
-    .radio-label input {
-        margin-right: 0.5rem;
-    }
-
-    .status-text {
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.9rem;
-    }
-
-    .status-present {
-        background-color: #dff0d8;
-        color: #3c763d;
-    }
-
-    .status-absent {
-        background-color: #f2dede;
-        color: #a94442;
-    }
-
-    .status-late {
-        background-color: #fcf8e3;
-        color: #8a6d3b;
-    }
-
-    .justification-text {
-        padding: 0.5rem;
-        background-color: #f8f9fa;
-        border-left: 3px solid var(--primary-color);
-        font-style: italic;
-    }
-
-    .no-justification {
-        color: #999;
-        font-style: italic;
-    }
-
-    .form-actions {
-        margin-top: 1rem;
-        text-align: right;
-    }
-
-    /* Modal styles already defined in gradebook.php */
-</style>
 
 <?php
 // Include page footer

@@ -1,0 +1,168 @@
+/**
+ * Teacher gradebook page specific styles
+ */
+
+.gradebook-container {
+    padding: 1rem 0;
+}
+
+.class-selector {
+    margin: 1rem 0;
+}
+
+.class-selector select {
+    padding: 0.5rem;
+    width: 100%;
+    max-width: 400px;
+}
+
+.class-details {
+    margin-top: 2rem;
+}
+
+.action-buttons {
+    margin: 1rem 0;
+}
+
+.gradebook-table-container {
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.gradebook-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border-color);
+}
+
+.gradebook-table th,
+.gradebook-table td {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.gradebook-table th {
+    background-color: var(--primary-color);
+    color: var(--text-light);
+}
+
+.gradebook-table .weight-row th {
+    font-size: 0.8rem;
+    background-color: var(--secondary-color);
+    font-weight: normal;
+}
+
+.gradebook-table .student-name {
+    text-align: left;
+    white-space: nowrap;
+}
+
+.gradebook-table .grade-item {
+    min-width: 80px;
+}
+
+.gradebook-table .max-points {
+    font-size: 0.8rem;
+    display: block;
+}
+
+.gradebook-table .class-code {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.gradebook-table .grade-cell {
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.gradebook-table .grade-cell:hover {
+    background-color: #f0f0f0;
+}
+
+.gradebook-table .grade-cell.updated,
+.gradebook-table .average.updated {
+    animation: highlightBackground 2s;
+}
+
+@keyframes highlightBackground {
+    0% { background-color: #ffeb3b; }
+    100% { background-color: transparent; }
+}
+
+/* Status message styles */
+.status-message {
+    padding: 0.75rem;
+    margin: 1rem 0;
+    border-radius: 4px;
+    display: none;
+}
+
+.status-message.success {
+    background-color: #dff0d8;
+    color: #3c763d;
+    border: 1px solid #d6e9c6;
+}
+
+.status-message.error {
+    background-color: #f2dede;
+    color: #a94442;
+    border: 1px solid #ebccd1;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.btn-cancel {
+    background-color: #ccc;
+}
+
+.btn-cancel:hover {
+    background-color: #999;
+}

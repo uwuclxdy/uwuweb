@@ -19,6 +19,9 @@ require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 require_once '../includes/header.php';
 
+// Add CSS link for this specific page
+echo '<link rel="stylesheet" href="/uwuweb/assets/css/teacher-justifications.css">';
+
 // Ensure only teachers can access this page
 requireRole(ROLE_TEACHER);
 
@@ -294,8 +297,8 @@ $csrfToken = generateCSRFToken();
 include '../includes/header.php';
 ?>
 
-<div class="justifications-container">
-    <h1>Student Absence Justifications</h1>
+<div class="page-container">
+    <h1 class="page-title">Student Absence Justifications</h1>
 
     <?php if (!empty($message)): ?>
         <div class="alert alert-<?= htmlspecialchars($messageType) ?>">
@@ -303,133 +306,153 @@ include '../includes/header.php';
         </div>
     <?php endif; ?>
 
-    <div class="justifications-intro">
-        <p>Review and approve or reject student absence justifications for your classes.</p>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Information</h3>
+        </div>
+        <div class="card-body">
+            <p>Review and approve or reject student absence justifications for your classes.</p>
+        </div>
     </div>
 
-    <div class="filters">
-        <form method="get" action="" class="filter-form">
-            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-            <div class="filter-group">
-                <label for="class-filter">Filter by Class:</label>
-                <select id="class-filter" name="class_id" onchange="this.form.submit()">
-                    <option value="">All Classes</option>
-                    <?php foreach ($classes as $class): ?>
-                        <option value="<?= (int)$class['class_id'] ?>" <?= ($classFilter == $class['class_id']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($class['subject_name'] . ' - ' . $class['title']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Filters</h3>
+        </div>
+        <div class="card-body">
+            <form method="get" action="/uwuweb/teacher/justifications.php" class="filter-form">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                <div class="form-group">
+                    <label for="class-filter" class="form-label">Filter by Class:</label>
+                    <select id="class-filter" name="class_id" class="form-input" onchange="this.form.submit()">
+                        <option value="">All Classes</option>
+                        <?php foreach ($classes as $class): ?>
+                            <option value="<?= (int)$class['class_id'] ?>" <?= ($classFilter == $class['class_id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($class['subject_name'] . ' - ' . $class['title']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
 
-            <div class="filter-group">
-                <label for="status-filter">Filter by Status:</label>
-                <select id="status-filter" name="status" onchange="this.form.submit()">
-                    <option value="">All Statuses</option>
-                    <option value="pending" <?= ($statusFilter === 'pending') ? 'selected' : '' ?>>Pending</option>
-                    <option value="approved" <?= ($statusFilter === 'approved') ? 'selected' : '' ?>>Approved</option>
-                    <option value="rejected" <?= ($statusFilter === 'rejected') ? 'selected' : '' ?>>Rejected</option>
-                </select>
-            </div>
-        </form>
+                <div class="form-group">
+                    <label for="status-filter" class="form-label">Filter by Status:</label>
+                    <select id="status-filter" name="status" class="form-input" onchange="this.form.submit()">
+                        <option value="">All Statuses</option>
+                        <option value="pending" <?= ($statusFilter === 'pending') ? 'selected' : '' ?>>Pending</option>
+                        <option value="approved" <?= ($statusFilter === 'approved') ? 'selected' : '' ?>>Approved</option>
+                        <option value="rejected" <?= ($statusFilter === 'rejected') ? 'selected' : '' ?>>Rejected</option>
+                    </select>
+                </div>
+            </form>
+        </div>
     </div>
 
     <?php if (empty($justifications)): ?>
-        <div class="justifications-list empty">
-            <p class="empty-message">No justifications found matching your criteria.</p>
+        <div class="card">
+            <div class="card-body">
+                <p class="text-secondary">No justifications found matching your criteria.</p>
+            </div>
         </div>
     <?php else: ?>
-        <div class="justifications-list">
-            <h2>
-                <?php
-                $title = 'Justifications';
-                if ($statusFilter === 'pending') {
-                    $title = 'Pending Justifications';
-                }
-                elseif ($statusFilter === 'approved') {
-                    $title = 'Approved Justifications';
-                }
-                elseif ($statusFilter === 'rejected') {
-                    $title = 'Rejected Justifications';
-                }
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <?php
+                    $title = 'Justifications';
+                    if ($statusFilter === 'pending') {
+                        $title = 'Pending Justifications';
+                    }
+                    elseif ($statusFilter === 'approved') {
+                        $title = 'Approved Justifications';
+                    }
+                    elseif ($statusFilter === 'rejected') {
+                        $title = 'Rejected Justifications';
+                    }
 
-                if ($classFilter) {
-                    foreach ($classes as $class) {
-                        if ($class['class_id'] == $classFilter) {
-                            $title .= ' - ' . $class['subject_name'] . ' - ' . $class['title'];
-                            break;
+                    if ($classFilter) {
+                        foreach ($classes as $class) {
+                            if ($class['class_id'] == $classFilter) {
+                                $title .= ' - ' . $class['subject_name'] . ' - ' . $class['title'];
+                                break;
+                            }
                         }
                     }
-                }
-                echo htmlspecialchars($title);
-                ?>
-            </h2>
+                    echo htmlspecialchars($title);
+                    ?>
+                </h2>
+            </div>
 
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Student</th>
-                        <th>Date</th>
-                        <th>Class</th>
-                        <th>Period</th>
-                        <th>Status</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($justifications as $justification): ?>
-                        <?php
-                            $formattedDate = date('d.m.Y', strtotime($justification['period_date']));
-                            $studentName = $justification['first_name'] . ' ' . $justification['last_name'];
-                            $className = $justification['subject_name'] . ' - ' . $justification['class_title'];
+            <div class="card-body">
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Student</th>
+                                <th>Date</th>
+                                <th>Class</th>
+                                <th>Period</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($justifications as $justification): ?>
+                                <?php
+                                    $formattedDate = date('d.m.Y', strtotime($justification['period_date']));
+                                    $studentName = $justification['first_name'] . ' ' . $justification['last_name'];
+                                    $className = $justification['subject_name'] . ' - ' . $justification['class_title'];
 
-                            $status = '';
-                            $statusClass = '';
+                                    $status = '';
+                                    $statusClass = '';
 
-                            if ($justification['approved'] === null) {
-                                $status = 'Pending';
-                                $statusClass = 'pending-review';
-                            } elseif ($justification['approved'] == 1) {
-                                $status = 'Approved';
-                                $statusClass = 'approved';
-                            } else {
-                                $status = 'Rejected';
-                                $statusClass = 'rejected';
-                            }
-                        ?>
-                        <tr>
-                            <td><?= htmlspecialchars($studentName) ?></td>
-                            <td><?= htmlspecialchars($formattedDate) ?></td>
-                            <td><?= htmlspecialchars($className) ?></td>
-                            <td><?= htmlspecialchars($justification['period_label']) ?></td>
-                            <td class="justification-status <?= $statusClass ?>">
-                                <?= htmlspecialchars($status) ?>
-                            </td>
-                            <td>
-                                <button class="btn btn-small view-justification"
-                                        data-absence-id="<?= (int)$justification['att_id'] ?>">
-                                    View Details
-                                </button>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                                    if ($justification['approved'] === null) {
+                                        $status = 'Pending';
+                                        $statusClass = 'badge badge-warning';
+                                    } elseif ($justification['approved'] == 1) {
+                                        $status = 'Approved';
+                                        $statusClass = 'badge badge-success';
+                                    } else {
+                                        $status = 'Rejected';
+                                        $statusClass = 'badge badge-error';
+                                    }
+                                ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($studentName) ?></td>
+                                    <td><?= htmlspecialchars($formattedDate) ?></td>
+                                    <td><?= htmlspecialchars($className) ?></td>
+                                    <td><?= htmlspecialchars($justification['period_label']) ?></td>
+                                    <td><span class="<?= $statusClass ?>"><?= htmlspecialchars($status) ?></span></td>
+                                    <td>
+                                        <button class="btn btn-secondary view-justification"
+                                                data-absence-id="<?= (int)$justification['att_id'] ?>">
+                                            View Details
+                                        </button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     <?php endif; ?>
 
     <!-- Justification Details Modal -->
     <div id="justification-details-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h3>Justification Details</h3>
-
-            <div id="justification-details-content" class="justification-details">
-                <!-- Content loaded dynamically -->
+        <div class="modal-content card">
+            <div class="card-header">
+                <h3 class="card-title">Justification Details</h3>
+                <span class="close-modal">&times;</span>
             </div>
+            
+            <div class="card-body">
+                <div id="justification-details-content" class="justification-details">
+                    <!-- Content loaded dynamically -->
+                </div>
 
-            <div class="form-actions">
-                <button type="button" class="btn close-modal">Close</button>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary close-modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -443,7 +466,7 @@ include '../includes/header.php';
                 const absenceId = this.getAttribute('data-absence-id');
 
                 // Fetch justification details via AJAX
-                fetch('../api/justifications.php?action=get&absence_id=' + absenceId)
+                fetch('/uwuweb/api/justifications.php?action=get&absence_id=' + absenceId)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('Network response was not ok');
@@ -500,55 +523,57 @@ include '../includes/header.php';
 
             if (justification.approved === null) {
                 statusText = 'Pending';
-                statusClass = 'pending-review';
+                statusClass = 'badge badge-warning';
 
                 // Add approve/reject buttons for pending justifications
                 actionButtons = `
-                    <div class="action-buttons">
-                        <form method="post" action="" class="approve-form">
+                    <div class="form-actions">
+                        <form method="post" action="/uwuweb/teacher/justifications.php" class="approve-form">
                             <input type="hidden" name="csrf_token" value="${document.querySelector('input[name="csrf_token"]').value}">
                             <input type="hidden" name="absence_id" value="${justification.att_id}">
                             <input type="hidden" name="action" value="approve">
-                            <button type="submit" class="btn btn-approve">Approve</button>
+                            <button type="submit" class="btn btn-primary">Approve</button>
                         </form>
 
-                        <button type="button" class="btn btn-reject show-reject-form">Reject</button>
+                        <button type="button" class="btn btn-error show-reject-form">Reject</button>
                     </div>
 
                     <div class="reject-form-container" style="display: none;">
-                        <form method="post" action="" class="reject-form">
+                        <form method="post" action="/uwuweb/teacher/justifications.php" class="reject-form">
                             <input type="hidden" name="csrf_token" value="${document.querySelector('input[name="csrf_token"]').value}">
                             <input type="hidden" name="absence_id" value="${justification.att_id}">
                             <input type="hidden" name="action" value="reject">
 
                             <div class="form-group">
-                                <label for="reject-reason">Reason for rejection:</label>
-                                <textarea name="reject_reason" id="reject-reason" rows="3" required></textarea>
+                                <label for="reject-reason" class="form-label">Reason for rejection:</label>
+                                <textarea name="reject_reason" id="reject-reason" class="form-input" rows="3" required></textarea>
                             </div>
 
                             <div class="form-actions">
-                                <button type="button" class="btn btn-cancel hide-reject-form">Cancel</button>
-                                <button type="submit" class="btn btn-confirm-reject">Confirm Rejection</button>
+                                <button type="button" class="btn btn-secondary hide-reject-form">Cancel</button>
+                                <button type="submit" class="btn btn-error">Confirm Rejection</button>
                             </div>
                         </form>
                     </div>
                 `;
             } else if (justification.approved === 1) {
                 statusText = 'Approved';
-                statusClass = 'approved';
+                statusClass = 'badge badge-success';
             } else {
                 statusText = 'Rejected';
-                statusClass = 'rejected';
+                statusClass = 'badge badge-error';
             }
 
             // Generate file link if there's a file
             let fileSection = '';
             if (justification.justification_file) {
                 fileSection = `
-                    <div class="file-section">
-                        <h4>Supporting Document:</h4>
-                        <div class="file-info">
-                            <a href="../uploads/justifications/${justification.justification_file}" target="_blank">
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="card-title">Supporting Document</h4>
+                        </div>
+                        <div class="card-body">
+                            <a href="/uwuweb/uploads/justifications/${justification.justification_file}" class="btn btn-secondary" target="_blank">
                                 View Document
                             </a>
                         </div>
@@ -560,10 +585,12 @@ include '../includes/header.php';
             let rejectReasonSection = '';
             if (justification.approved === 0 && justification.reject_reason) {
                 rejectReasonSection = `
-                    <div class="reject-reason-section">
-                        <h4>Reason for Rejection:</h4>
-                        <div class="reject-reason">
-                            ${justification.reject_reason}
+                    <div class="card">
+                        <div class="card-header">
+                            <h4 class="card-title">Reason for Rejection</h4>
+                        </div>
+                        <div class="card-body">
+                            <p>${justification.reject_reason}</p>
                         </div>
                     </div>
                 `;
@@ -571,305 +598,66 @@ include '../includes/header.php';
 
             // Set the modal content
             content.innerHTML = `
-                <div class="student-info">
-                    <h4>Student:</h4>
-                    <p>${justification.first_name} ${justification.last_name}</p>
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Student Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>${justification.first_name} ${justification.last_name}</p>
+                    </div>
                 </div>
 
-                <div class="absence-info">
-                    <h4>Absence Details:</h4>
-                    <p>
-                        <strong>Date:</strong> ${formattedDate}<br>
-                        <strong>Class:</strong> ${justification.subject_name} - ${justification.class_title}<br>
-                        <strong>Period:</strong> ${justification.period_label}
-                    </p>
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Absence Details</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>
+                            <strong>Date:</strong> ${formattedDate}<br>
+                            <strong>Class:</strong> ${justification.subject_name} - ${justification.class_title}<br>
+                            <strong>Period:</strong> ${justification.period_label}<br>
+                            <strong>Status:</strong> <span class="${statusClass}">${statusText}</span>
+                        </p>
+                    </div>
                 </div>
 
-                <div class="justification-text-section">
-                    <h4>Justification:</h4>
-                    <div class="justification-text">
-                        ${justification.justification}
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Justification</h4>
+                    </div>
+                    <div class="card-body">
+                        <p>${justification.justification}</p>
                     </div>
                 </div>
 
                 ${fileSection}
-
-                <div class="status-section">
-                    <h4>Status:</h4>
-                    <div class="status ${statusClass}">
-                        ${statusText}
-                    </div>
-                </div>
-
                 ${rejectReasonSection}
-
                 ${actionButtons}
             `;
 
-            // Show the modal
+            // Add event listeners for reject form
             modal.style.display = 'flex';
-
-            // Add event listeners to the newly created elements
-            if (justification.approved === null) {
-                // Show/hide reject form
-                document.querySelector('.show-reject-form').addEventListener('click', function() {
-                    document.querySelector('.action-buttons').style.display = 'none';
-                    document.querySelector('.reject-form-container').style.display = 'block';
+            
+            // Event listener for showing reject form
+            const showRejectBtn = modal.querySelector('.show-reject-form');
+            if (showRejectBtn) {
+                showRejectBtn.addEventListener('click', function() {
+                    modal.querySelector('.reject-form-container').style.display = 'block';
+                    this.parentElement.style.display = 'none';
                 });
+            }
 
-                document.querySelector('.hide-reject-form').addEventListener('click', function() {
-                    document.querySelector('.action-buttons').style.display = 'flex';
-                    document.querySelector('.reject-form-container').style.display = 'none';
+            // Event listener for hiding reject form
+            const hideRejectBtn = modal.querySelector('.hide-reject-form');
+            if (hideRejectBtn) {
+                hideRejectBtn.addEventListener('click', function() {
+                    modal.querySelector('.reject-form-container').style.display = 'none';
+                    modal.querySelector('.form-actions').style.display = 'flex';
                 });
             }
         }
     });
 </script>
-
-<style>
-    /* Justifications page specific styles */
-    .justifications-container {
-        padding: 1rem 0;
-    }
-
-    .justifications-intro {
-        margin-bottom: 2rem;
-    }
-
-    .filters {
-        margin: 1rem 0 2rem;
-        padding: 1rem;
-        background-color: #f5f5f5;
-        border-radius: 4px;
-    }
-
-    .filter-form {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-    }
-
-    .filter-group {
-        display: flex;
-        flex-direction: column;
-        min-width: 200px;
-    }
-
-    .filter-group label {
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-    }
-
-    .filter-group select {
-        padding: 0.5rem;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-    }
-
-    .justifications-list {
-        margin: 2rem 0;
-    }
-
-    .justifications-list h2 {
-        margin-bottom: 1rem;
-    }
-
-    .justifications-list.empty {
-        padding: 2rem;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-        text-align: center;
-    }
-
-    .empty-message {
-        color: #666;
-        font-style: italic;
-    }
-
-    .justification-status {
-        font-weight: 500;
-    }
-
-    .justification-status.pending-review {
-        color: #ffc107;
-    }
-
-    .justification-status.approved {
-        color: #28a745;
-    }
-
-    .justification-status.rejected {
-        color: #dc3545;
-    }
-
-    /* Modal styles */
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 1000;
-        justify-content: center;
-        align-items: center;
-    }
-
-    .modal-content {
-        background-color: #fff;
-        padding: 2rem;
-        border-radius: 4px;
-        width: 100%;
-        max-width: 600px;
-        max-height: 90vh;
-        overflow-y: auto;
-        position: relative;
-    }
-
-    .close-modal {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        font-size: 1.5rem;
-        cursor: pointer;
-        color: #666;
-    }
-
-    .close-modal:hover {
-        color: #000;
-    }
-
-    /* Justification details styles */
-    .justification-details h4 {
-        margin-top: 1.5rem;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-    }
-
-    .justification-details .student-info h4,
-    .justification-details .absence-info h4 {
-        margin-top: 0;
-    }
-
-    .justification-text {
-        padding: 1rem;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-        margin-bottom: 1rem;
-        white-space: pre-wrap;
-    }
-
-    .status {
-        font-weight: 500;
-    }
-
-    .status.pending-review {
-        color: #ffc107;
-    }
-
-    .status.approved {
-        color: #28a745;
-    }
-
-    .status.rejected {
-        color: #dc3545;
-    }
-
-    .file-info {
-        padding: 0.5rem;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-        margin-bottom: 1rem;
-    }
-
-    .reject-reason {
-        padding: 1rem;
-        background-color: #f9f9f9;
-        border-radius: 4px;
-        margin-bottom: 1rem;
-    }
-
-    /* Action buttons */
-    .action-buttons {
-        display: flex;
-        gap: 1rem;
-        margin-top: 1.5rem;
-    }
-
-    .btn-approve {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .btn-reject {
-        background-color: #dc3545;
-        color: white;
-    }
-
-    .btn-cancel {
-        background-color: #6c757d;
-        color: white;
-    }
-
-    .btn-confirm-reject {
-        background-color: #dc3545;
-        color: white;
-    }
-
-    .reject-form-container {
-        margin-top: 1.5rem;
-    }
-
-    /* Form styles */
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 500;
-    }
-
-    .form-group textarea {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        font-family: inherit;
-        font-size: 1rem;
-    }
-
-    .form-actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 1rem;
-        margin-top: 1.5rem;
-    }
-
-    /* Alert styles */
-    .alert {
-        padding: 1rem;
-        margin-bottom: 1rem;
-        border-radius: 4px;
-    }
-
-    .alert-success {
-        background-color: #d4edda;
-        color: #155724;
-    }
-
-    .alert-error {
-        background-color: #f8d7da;
-        color: #721c24;
-    }
-
-    .alert-warning {
-        background-color: #fff3cd;
-        color: #856404;
-    }
-</style>
 
 <?php
 // Include page footer

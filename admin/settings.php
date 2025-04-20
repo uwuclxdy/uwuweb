@@ -329,37 +329,39 @@ function displayTermsList() {
     $terms = $stmt->fetchAll();
 ?>
     <div class="terms-list">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Start Date</th>
-                    <th>End Date</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (count($terms) > 0): ?>
-                    <?php foreach ($terms as $term): ?>
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
                     <tr>
-                        <td><?= htmlspecialchars($term['term_id']) ?></td>
-                        <td><?= htmlspecialchars($term['name']) ?></td>
-                        <td><?= htmlspecialchars(date('Y-m-d', strtotime($term['start_date']))) ?></td>
-                        <td><?= htmlspecialchars(date('Y-m-d', strtotime($term['end_date']))) ?></td>
-                        <td class="actions">
-                            <a href="?tab=terms&edit_term=<?= $term['term_id'] ?>" class="btn btn-edit">Edit</a>
-                            <button class="btn btn-danger" onclick="confirmDeleteTerm(<?= $term['term_id'] ?>, '<?= htmlspecialchars($term['name']) ?>')">Delete</button>
-                        </td>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Actions</th>
                     </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <tr>
-                        <td colspan="5" class="text-center">No terms found.</td>
-                    </tr>
-                <?php endif; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <?php if (count($terms) > 0): ?>
+                        <?php foreach ($terms as $term): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($term['term_id']) ?></td>
+                            <td><?= htmlspecialchars($term['name']) ?></td>
+                            <td><?= htmlspecialchars(date('Y-m-d', strtotime($term['start_date']))) ?></td>
+                            <td><?= htmlspecialchars(date('Y-m-d', strtotime($term['end_date']))) ?></td>
+                            <td class="actions">
+                                <a href="?tab=terms&edit_term=<?= $term['term_id'] ?>" class="btn btn-secondary btn-icon">Edit</a>
+                                <button class="btn btn-error" onclick="confirmDeleteTerm(<?= $term['term_id'] ?>, '<?= htmlspecialchars($term['name']) ?>')">Delete</button>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="5" class="text-center">No terms found.</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 <?php
 }
@@ -382,23 +384,24 @@ function displaySubjectsList() {
     $subjects = $stmt->fetchAll();
 ?>
     <div class="subjects-list">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Name</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (count($subjects) > 0): ?>
-                    <?php foreach ($subjects as $subject): ?>
+        <div class="table-wrapper">
+            <table class="table">
+                <thead>
                     <tr>
-                        <td><?= htmlspecialchars($subject['subject_id']) ?></td>
-                        <td><?= htmlspecialchars($subject['name']) ?></td>
-                        <td class="actions">
-                            <a href="?tab=subjects&edit_subject=<?= $subject['subject_id'] ?>" class="btn btn-edit">Edit</a>
-                            <button class="btn btn-danger" onclick="confirmDeleteSubject(<?= $subject['subject_id'] ?>, '<?= htmlspecialchars($subject['name']) ?>')">Delete</button>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (count($subjects) > 0): ?>
+                        <?php foreach ($subjects as $subject): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($subject['subject_id']) ?></td>
+                            <td><?= htmlspecialchars($subject['name']) ?></td>
+                            <td class="actions">
+                                <a href="?tab=subjects&edit_subject=<?= $subject['subject_id'] ?>" class="btn btn-secondary btn-icon">Edit</a>
+                                <button class="btn btn-error" onclick="confirmDeleteSubject(<?= $subject['subject_id'] ?>, '<?= htmlspecialchars($subject['name']) ?>')">Delete</button>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -427,16 +430,12 @@ function displaySubjectsList() {
 
     <div class="card">
         <div class="card-header">
-            <ul class="nav nav-tabs card-header-tabs">
-                <li class="nav-item">
-                    <a class="nav-link <?= $activeTab === 'terms' ? 'active' : '' ?>" href="#"
-                       onclick="showTab('terms')">Academic Terms</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= $activeTab === 'subjects' ? 'active' : '' ?>" href="#"
-                       onclick="showTab('subjects')">Subjects</a>
-                </li>
-            </ul>
+            <div class="tab-header">
+                <button class="tab-button <?= $activeTab === 'terms' ? 'active' : '' ?>" 
+                       onclick="showTab('terms')">Academic Terms</button>
+                <button class="tab-button <?= $activeTab === 'subjects' ? 'active' : '' ?>" 
+                       onclick="showTab('subjects')">Subjects</button>
+            </div>
         </div>
 
         <div class="card-body">
@@ -451,7 +450,7 @@ function displaySubjectsList() {
 
                 <div id="term-form" class="form-section <?= !empty($termDetails) ? 'visible' : '' ?>">
                     <h3><?= empty($termDetails) ? 'Create New Term' : 'Edit Term' ?></h3>
-                    <form method="post" action="settings.php?tab=terms">
+                    <form method="post" action="/uwuweb/admin/settings.php?tab=terms">
                         <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
                         <input type="hidden" name="action" value="<?= empty($termDetails) ? 'create_term' : 'update_term' ?>">
 
@@ -460,28 +459,28 @@ function displaySubjectsList() {
                         <?php endif; ?>
 
                         <div class="form-group">
-                            <label for="term_name">Term Name</label>
-                            <input type="text" class="form-control" id="term_name" name="name"
+                            <label for="term_name" class="form-label">Term Name</label>
+                            <input type="text" class="form-input" id="term_name" name="name"
                                    value="<?= htmlspecialchars($termDetails['name'] ?? '') ?>" required>
                         </div>
 
                         <div class="form-group">
-                            <label for="start_date">Start Date</label>
-                            <input type="date" class="form-control" id="start_date" name="start_date"
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-input" id="start_date" name="start_date"
                                    value="<?= !empty($termDetails) ? date('Y-m-d', strtotime($termDetails['start_date'])) : '' ?>" required>
                         </div>
 
                         <div class="form-group">
-                            <label for="end_date">End Date</label>
-                            <input type="date" class="form-control" id="end_date" name="end_date"
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-input" id="end_date" name="end_date"
                                    value="<?= !empty($termDetails) ? date('Y-m-d', strtotime($termDetails['end_date'])) : '' ?>" required>
                         </div>
 
-                        <div class="form-actions">
+                        <div class="form-group">
                             <button type="submit" class="btn btn-primary">
                                 <?= empty($termDetails) ? 'Create Term' : 'Update Term' ?>
                             </button>
-                            <a href="settings.php?tab=terms" class="btn btn-secondary">Cancel</a>
+                            <a href="/uwuweb/admin/settings.php?tab=terms" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>
@@ -502,7 +501,7 @@ function displaySubjectsList() {
 
                 <div id="subject-form" class="form-section <?= !empty($subjectDetails) ? 'visible' : '' ?>">
                     <h3><?= empty($subjectDetails) ? 'Create New Subject' : 'Edit Subject' ?></h3>
-                    <form method="post" action="settings.php?tab=subjects">
+                    <form method="post" action="/uwuweb/admin/settings.php?tab=subjects">
                         <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
                         <input type="hidden" name="action" value="<?= empty($subjectDetails) ? 'create_subject' : 'update_subject' ?>">
 
@@ -511,16 +510,16 @@ function displaySubjectsList() {
                         <?php endif; ?>
 
                         <div class="form-group">
-                            <label for="subject_name">Subject Name</label>
-                            <input type="text" class="form-control" id="subject_name" name="name"
+                            <label for="subject_name" class="form-label">Subject Name</label>
+                            <input type="text" class="form-input" id="subject_name" name="name"
                                    value="<?= htmlspecialchars($subjectDetails['name'] ?? '') ?>" required>
                         </div>
 
-                        <div class="form-actions">
+                        <div class="form-group">
                             <button type="submit" class="btn btn-primary">
                                 <?= empty($subjectDetails) ? 'Create Subject' : 'Update Subject' ?>
                             </button>
-                            <a href="settings.php?tab=subjects" class="btn btn-secondary">Cancel</a>
+                            <a href="/uwuweb/admin/settings.php?tab=subjects" class="btn btn-secondary">Cancel</a>
                         </div>
                     </form>
                 </div>
@@ -535,43 +534,51 @@ function displaySubjectsList() {
 
 <!-- Delete Term Confirmation Modal -->
 <div id="delete-term-modal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal('delete-term-modal')">&times;</span>
-        <h2>Confirm Deletion</h2>
-        <form id="delete-term-form" method="post" action="settings.php?tab=terms">
-            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
-            <input type="hidden" name="action" value="delete_term">
-            <input type="hidden" name="term_id" id="delete-term-id">
-
-            <p>Are you sure you want to delete term: <span id="delete-term-name"></span>?</p>
-            <p class="text-danger">Warning: This action cannot be undone!</p>
-
-            <div class="form-actions">
-                <button type="submit" class="btn btn-danger">Delete Term</button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal('delete-term-modal')">Cancel</button>
-            </div>
-        </form>
+    <div class="modal-content card">
+        <div class="card-header">
+            <h2 class="card-title">Confirm Deletion</h2>
+            <span class="close" onclick="closeModal('delete-term-modal')">&times;</span>
+        </div>
+        <div class="card-body">
+            <form id="delete-term-form" method="post" action="/uwuweb/admin/settings.php?tab=terms">
+                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                <input type="hidden" name="action" value="delete_term">
+                <input type="hidden" name="term_id" id="delete-term-id">
+    
+                <p>Are you sure you want to delete term: <span id="delete-term-name" class="badge badge-primary"></span>?</p>
+                <p class="alert alert-error">Warning: This action cannot be undone!</p>
+    
+                <div class="form-group">
+                    <button type="submit" class="btn btn-error">Delete Term</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('delete-term-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
 <!-- Delete Subject Confirmation Modal -->
 <div id="delete-subject-modal" class="modal">
-    <div class="modal-content">
-        <span class="close" onclick="closeModal('delete-subject-modal')">&times;</span>
-        <h2>Confirm Deletion</h2>
-        <form id="delete-subject-form" method="post" action="settings.php?tab=subjects">
-            <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
-            <input type="hidden" name="action" value="delete_subject">
-            <input type="hidden" name="subject_id" id="delete-subject-id">
-
-            <p>Are you sure you want to delete subject: <span id="delete-subject-name"></span>?</p>
-            <p class="text-danger">Warning: This action cannot be undone!</p>
-
-            <div class="form-actions">
-                <button type="submit" class="btn btn-danger">Delete Subject</button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal('delete-subject-modal')">Cancel</button>
-            </div>
-        </form>
+    <div class="modal-content card">
+        <div class="card-header">
+            <h2 class="card-title">Confirm Deletion</h2>
+            <span class="close" onclick="closeModal('delete-subject-modal')">&times;</span>
+        </div>
+        <div class="card-body">
+            <form id="delete-subject-form" method="post" action="/uwuweb/admin/settings.php?tab=subjects">
+                <input type="hidden" name="csrf_token" value="<?= generateCSRFToken() ?>">
+                <input type="hidden" name="action" value="delete_subject">
+                <input type="hidden" name="subject_id" id="delete-subject-id">
+    
+                <p>Are you sure you want to delete subject: <span id="delete-subject-name" class="badge badge-primary"></span>?</p>
+                <p class="alert alert-error">Warning: This action cannot be undone!</p>
+    
+                <div class="form-group">
+                    <button type="submit" class="btn btn-error">Delete Subject</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('delete-subject-modal')">Cancel</button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
