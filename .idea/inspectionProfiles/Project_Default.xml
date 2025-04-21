@@ -70,6 +70,10 @@
       </option>
       <option name="migratedIntoUserSpace" value="true" />
     </inspection_tool>
+    <inspection_tool class="MissingOrEmptyGroupStatementInspection" enabled="true" level="GRAMMAR_ERROR" enabled_by_default="true" editorAttributes="GRAMMAR_ERROR" />
+    <inspection_tool class="PhpStatementHasEmptyBodyInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="myCommentsCountAsContent" value="true" />
+    </inspection_tool>
     <inspection_tool class="PhpUndefinedCallbackInspection" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="SecurityAdvisoriesInspection" enabled="true" level="WARNING" enabled_by_default="true">
       <option name="optionConfiguration">

@@ -1,8 +1,12 @@
 <?php
 /**
- * Justification API
+ * Justification API Endpoint
  *
- * Handle AJAX requests for justification details
+ * Handles AJAX requests for absence justification details.
+ * Returns JSON responses for client-side processing.
+ * Restricted to teacher role access.
+ *
+ * File path: /api/justifications.php
  *
  * Functions:
  * - getJustificationById($absenceId) - Gets detailed information about a specific justification
@@ -16,126 +20,44 @@ require_once '../includes/auth.php';
 require_once '../includes/db.php';
 require_once '../includes/functions.php';
 
-// Require teacher role to access this API
-requireRole(ROLE_TEACHER);
+// Main request handling code to be implemented...
 
-// Get teacher ID based on user ID
-$teacherId = getTeacherId();
-
-if (!$teacherId) {
-    sendJsonResponse(['message' => 'Invalid teacher account.'], false);
-    exit;
+/**
+ * Get detailed information about a specific justification
+ *
+ * Retrieves complete details about an absence justification including
+ * student, class, and period information
+ *
+ * @param int $absenceId The attendance record ID to retrieve
+ * @return array|false Justification details or false on error
+ */
+function getJustificationById(int $absenceId) {
+    // Implementation to be added
 }
 
-// Get detailed information about a specific justification
-function getJustificationById($absenceId) {
-    try {
-        $pdo = getDBConnection();
-        if (!$pdo) {
-            throw new PDOException("Failed to connect to database");
-        }
-
-        $stmt = $pdo->prepare(
-            "SELECT 
-                a.att_id, 
-                a.status, 
-                a.justification,
-                a.justification_file,
-                a.approved,
-                a.reject_reason, 
-                p.period_id,
-                p.period_date, 
-                p.period_label, 
-                c.class_id,
-                c.title as class_title, 
-                s.subject_id,
-                s.name as subject_name,
-                e.enroll_id,
-                st.student_id,
-                st.first_name,
-                st.last_name
-             FROM attendance a
-             JOIN enrollments e ON a.enroll_id = e.enroll_id
-             JOIN periods p ON a.period_id = p.period_id
-             JOIN classes c ON p.class_id = c.class_id
-             JOIN subjects s ON c.subject_id = s.subject_id
-             JOIN students st ON e.student_id = st.student_id
-             WHERE a.att_id = :att_id"
-        );
-
-        $stmt->execute(['att_id' => $absenceId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        error_log("Database error in getJustificationById: " . $e->getMessage());
-        return false;
-    }
+/**
+ * Validate if a teacher has access to a justification
+ *
+ * Checks if the specified teacher is authorized to view or modify the justification
+ *
+ * @param int $teacherId The teacher ID to check
+ * @param array $justification The justification data to validate access for
+ * @return bool True if teacher has access, false otherwise
+ */
+function validateTeacherAccess(int $teacherId, array $justification) {
+    // Implementation to be added
 }
 
-// Validate if a teacher has access to a justification
-function validateTeacherAccess($teacherId, $justification) {
-    try {
-        $pdo = getDBConnection();
-        if (!$pdo) {
-            throw new PDOException("Failed to connect to database");
-        }
-
-        $stmt = $pdo->prepare(
-            "SELECT c.class_id
-             FROM classes c
-             WHERE c.teacher_id = :teacher_id
-             AND c.class_id = :class_id"
-        );
-
-        $stmt->execute([
-            'teacher_id' => $teacherId,
-            'class_id' => $justification['class_id']
-        ]);
-
-        return $stmt->fetch() !== false;
-    } catch (PDOException $e) {
-        error_log("Database error in validateTeacherAccess: " . $e->getMessage());
-        return false;
-    }
-}
-
-// Send JSON response
-#[NoReturn] function sendJsonResponse($data, $success = true): void
-{
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => $success,
-        'data' => $data
-    ], JSON_THROW_ON_ERROR);
-    exit;
-}
-
-// Process the request
-$action = $_GET['action'] ?? '';
-
-if ($action === 'get') {
-    $absenceId = isset($_GET['absence_id']) ? (int)$_GET['absence_id'] : 0;
-
-    if ($absenceId <= 0) {
-        sendJsonResponse(['message' => 'Invalid absence ID.'], false);
-        exit;
-    }
-
-    $justification = getJustificationById($absenceId);
-
-    if (!$justification) {
-        sendJsonResponse(['message' => 'Justification not found.'], false);
-        exit;
-    }
-
-    // Check if this teacher has access to the justification
-    if (!validateTeacherAccess($teacherId, $justification)) {
-        sendJsonResponse(['message' => 'You do not have permission to view this justification.'], false);
-        exit;
-    }
-
-    // Return the justification data
-    sendJsonResponse(['justification' => $justification]);
-} else {
-    sendJsonResponse(['message' => 'Invalid action.'], false);
+/**
+ * Send JSON response
+ *
+ * Formats and outputs a standardized JSON response, then exits the script
+ *
+ * @param mixed $data The data to include in the response
+ * @param bool $success Whether the request was successful
+ * @return never Script execution ends after response is sent
+ */
+#[NoReturn] function sendJsonResponse(mixed $data, bool $success = true): void {
+    // Implementation to be added
 }
 ?>

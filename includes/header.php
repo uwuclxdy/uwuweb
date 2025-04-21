@@ -23,12 +23,12 @@ $roleName = $currentRole ? getRoleName($currentRole) : 'Guest';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>uwuweb - Grade Management System</title>
-    <link rel="stylesheet" href="/uwuweb/assets/css/style.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
     <header class="navbar">
-        <a href="/uwuweb/dashboard.php" class="navbar-logo">uwuweb</a>
-        
+        <a href="../dashboard.php" class="navbar-logo">uwuweb</a>
+
         <?php if (isLoggedIn()): ?>
             <button class="navbar-toggle btn" id="navToggle" aria-label="Toggle navigation">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -37,42 +37,42 @@ $roleName = $currentRole ? getRoleName($currentRole) : 'Guest';
                     <line x1="3" y1="18" x2="21" y2="18"></line>
                 </svg>
             </button>
-            
+
             <nav class="navbar-menu" id="navMenu">
-                <a href="/uwuweb/dashboard.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'dashboard.php' ? 'active' : '' ?>">Dashboard</a>
-                
+                <a href="../dashboard.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'dashboard.php' ? 'active' : '' ?>">Dashboard</a>
+
                 <?php if ($currentRole === ROLE_ADMIN): ?>
-                    <a href="/uwuweb/admin/users.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'users.php' ? 'active' : '' ?>">Users</a>
-                    <a href="/uwuweb/admin/settings.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'settings.php' ? 'active' : '' ?>">Settings</a>
+                    <a href="../admin/users.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'users.php' ? 'active' : '' ?>">Users</a>
+                    <a href="../admin/settings.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'settings.php' ? 'active' : '' ?>">Settings</a>
                 <?php elseif ($currentRole === ROLE_TEACHER): ?>
-                    <a href="/uwuweb/teacher/gradebook.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'gradebook.php' ? 'active' : '' ?>">Gradebook</a>
-                    <a href="/uwuweb/teacher/attendance.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'attendance.php' ? 'active' : '' ?>">Attendance</a>
-                    <a href="/uwuweb/teacher/justifications.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'justifications.php' ? 'active' : '' ?>">Justifications</a>
+                    <a href="../teacher/gradebook.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'gradebook.php' ? 'active' : '' ?>">Gradebook</a>
+                    <a href="../teacher/attendance.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'attendance.php' ? 'active' : '' ?>">Attendance</a>
+                    <a href="../teacher/justifications.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'justifications.php' ? 'active' : '' ?>">Justifications</a>
                 <?php elseif ($currentRole === ROLE_STUDENT): ?>
-                    <a href="/uwuweb/student/grades.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'grades.php' ? 'active' : '' ?>">Grades</a>
-                    <a href="/uwuweb/student/attendance.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'attendance.php' ? 'active' : '' ?>">Attendance</a>
-                    <a href="/uwuweb/student/justification.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'justification.php' ? 'active' : '' ?>">Justifications</a>
+                    <a href="../student/grades.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'grades.php' ? 'active' : '' ?>">Grades</a>
+                    <a href="../student/attendance.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'attendance.php' ? 'active' : '' ?>">Attendance</a>
+                    <a href="../student/justification.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'justification.php' ? 'active' : '' ?>">Justifications</a>
                 <?php elseif ($currentRole === ROLE_PARENT): ?>
-                    <a href="/uwuweb/parent/grades.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'grades.php' ? 'active' : '' ?>">Grades</a>
-                    <a href="/uwuweb/parent/attendance.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'attendance.php' ? 'active' : '' ?>">Attendance</a>
+                    <a href="../parent/grades.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'grades.php' ? 'active' : '' ?>">Grades</a>
+                    <a href="../parent/attendance.php" class="navbar-link <?= basename($_SERVER['PHP_SELF']) === 'attendance.php' ? 'active' : '' ?>">Attendance</a>
                 <?php endif; ?>
             </nav>
-            
+
             <div class="d-flex items-center gap-md">
                 <div class="d-flex flex-column">
                     <span class="text-primary"><?= htmlspecialchars($_SESSION['username']) ?></span>
                     <span class="text-secondary"><?= htmlspecialchars($roleName) ?></span>
                 </div>
                 <div class="profile-<?= strtolower($roleName) ?>" style="width: 32px; height: 32px; border-radius: 50%; border: 2px solid; display: flex; align-items: center; justify-content: center;">
-                    <?= strtoupper(substr($_SESSION['username'], 0, 1)) ?>
+                    <?= strtoupper($_SESSION['username'][0]) ?>
                 </div>
-                <a href="/uwuweb/includes/logout.php" class="btn btn-secondary">Logout</a>
+                <a href="../includes/logout.php" class="btn btn-secondary">Logout</a>
             </div>
         <?php endif; ?>
     </header>
 
     <div class="container page-transition">
-        <?php if (isset($_GET['error'])): 
+        <?php if (isset($_GET['error'])):
             $errorMsg = match($_GET['error']) {
                 'unauthorized' => 'You are not authorized to access that resource.',
                 'invalid_csrf' => 'Security token mismatch. Please try again.',
@@ -83,7 +83,7 @@ $roleName = $currentRole ? getRoleName($currentRole) : 'Guest';
                 <?= htmlspecialchars($errorMsg) ?>
             </div>
         <?php endif; ?>
-        
+
         <?php if (isset($_GET['success'])): ?>
             <div class="alert status-success mt-lg">
                 <?= htmlspecialchars($_GET['success']) ?>

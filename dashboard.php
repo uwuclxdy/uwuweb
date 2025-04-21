@@ -12,6 +12,7 @@
 require_once 'includes/auth.php';
 require_once 'includes/functions.php';
 require_once 'includes/db.php';
+require_once 'includes/header.php';
 
 // Require user to be logged in
 if (!isLoggedIn()) {
@@ -25,10 +26,7 @@ $navItems = getNavItemsByRole($userRole);
 $widgets = getWidgetsByRole($userRole);
 $userInfo = getUserInfo($_SESSION['user_id']);
 
-// Include page header
-include 'includes/header.php';
 ?>
-
 <div class="d-flex flex-column flex-row@md gap-md mt-lg">
     <!-- Main Content -->
     <main style="flex: 1;">

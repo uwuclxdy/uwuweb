@@ -27,8 +27,7 @@ features:
   attendance_per_period:   {admin: write, teacher: write, student: read, parent: read}
   absence_justification:   {admin: none, teacher: approve, student: submit, parent: read}
   class_average_dashboard: {admin: view_all, teacher: view_own, student: view_own, parent: view_own}
-  user_management:         {admin: full, teacher: none, student: none, parent: none}
-  system_settings_terms:   {admin: full, teacher: none, student: none, parent: none}
+  school_management:       {admin: full, teacher: none, student: none, parent: none}
 ```
 
 ---
@@ -51,6 +50,12 @@ uwuweb/
 │   │   ├── style.css         # main stylesheet
 │   └── js/
 │       └── main.js
+├── /docs/                    # project documentation
+│   ├── project-outline.md    # system architecture overview
+│   ├── backend-checklist.md  # backend implementation guidelines
+│   ├── frontend-checklist.md  # frontend implementation guidelines
+│   ├── css-readme.md         # CSS documentation and guidelines
+│   └── local-setup.md        # local development setup instructions
 ├── /includes/
 │   ├── db.php                # PDO connection
 │   ├── auth.php              # session + role helpers
@@ -61,7 +66,7 @@ uwuweb/
 ├── /admin/
 │   ├── admin_functions.php   # centralized admin functions library
 │   ├── users.php             # user management
-│   ├── settings.php          # terms, subjects
+│   ├── settings.php          # subjects, classes, periods, etc. management
 │   └── class_subjects.php    # class-subject management
 ├── /teacher/
 │   ├── teacher_functions.php # centralized teacher functions library
@@ -124,7 +129,11 @@ uwuweb/
 
 - NO inline comments.
 - Short description of each function in the function header (max 1-2 lines).
-- Functions consolidated in `[subfolder]_functions.php`. (example: `admin_functions.php` if the subfolder is called `admin`).
+- Functions consolidated in role-specific `[subfolder]_functions.php` files (e.g., `admin_functions.php` for admin subfolder).
+- Each page file includes the appropriate centralized functions file and contains only processing logic with function calls.
 - Every source file starts with header block containing: purpose explanation, relative path to that file.
-- If a source file contains functions (this applies to `[subfolder]_functions.php` files described above) describe functions that are in that file - function + its parameters + a few words on what it does (all in one line for each function).
-- Separation of concerns: logic (functions) in a separated functions php file (which cannot be accessed via browser), UI code (html) in dedicated page files (which the user goes to in the browser).
+- Role-based function files include parameter descriptions and return values for each function.
+- Separation of concerns:
+  - Logic (functions) in centralized functions files that cannot be accessed via browser
+  - Processing in page files (data retrieval, calculations, UI code - HTML)
+- The `[subfolder]_functions.php` file serves as a complete API for that role's functionality.

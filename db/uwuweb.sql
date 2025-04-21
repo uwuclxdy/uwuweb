@@ -144,6 +144,6 @@ INSERT INTO roles (name) VALUES
     ('Student'),
     ('Parent');
 
--- Create default admin user (username: admin, password: Admin123!)
+-- Create default admin user (username: admin, password: admin)
 INSERT INTO users (username, pass_hash, role_id)
-VALUES ('admin', '$2y$10$uG5Pb7.QDoU7tusgia4MveBSSu9jPVBj0HV.i7I/92alff0bwUJ.2', 1);
+VALUES ('admin', '$2y$10$oDaW.izk.8ZDF74wKHJ7ZueMsp68jFMPzZ1WUyeMLrQpwBCC7Pe2i', 1);

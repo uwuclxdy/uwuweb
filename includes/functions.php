@@ -1,8 +1,12 @@
-<?php /** @noinspection ForgottenDebugOutputInspection */
+<?php
 /**
- * Common Utility Functions
+ * Common Utility Functions Library
  *
- * Provides reusable functions used throughout the application
+ * This file contains utility functions used throughout the uwuweb application.
+ * It serves as a central repository for common functionality that can be reused
+ * across different parts of the application.
+ *
+ * File path: /includes/functions.php
  *
  * Functions:
  * - getUserInfo($userId) - Retrieves user information by ID
@@ -32,393 +36,369 @@
  * - renderTeacherClassAveragesWidget() - Renders class averages for teacher's classes
  * - renderStudentClassAveragesWidget() - Renders class averages for student's classes
  * - renderParentChildClassAveragesWidget() - Renders class averages for parent's children
- * - getTeacherClassesWidget() - Renders teacher classes widget
- * - getAttendanceSummaryWidget() - Renders attendance summary widget
- * - getPendingJustificationsWidget() - Renders pending justifications widget
- * - getStudentGradesWidget() - Renders student grades widget
- * - getStudentAttendanceWidget() - Renders student attendance widget
- * - getChildGradesWidget() - Renders parent view of child grades
- * - getChildAttendanceWidget() - Renders parent view of child attendance
- * - sanitizeString($input) - Sanitizes string input
- * - sanitizeHTML($input) - Sanitizes HTML input, allowing safe tags
- * - sanitizeInt($input) - Sanitizes integer input
- * - validateInt($input, $min, $max) - Validates integer input with optional range
- * - validateEmail($email) - Validates email address
- * - validateDate($date) - Validates date in Y-m-d format
- * - sanitizeDbIdentifier($name) - Sanitizes database table/column names
- * - sanitizeArray($inputArray, $type) - Sanitizes an array of inputs
- * - sanitizeFilename($filename) - Sanitizes uploaded filenames
- * - sanitizeRequest($request, $exceptions) - Sanitizes $_GET or $_POST data
- * - sanitizeRedirectUrl($url, $default) - Validates a URL for safe redirection
+ * - renderUpcomingClassesWidget() - Renders upcoming classes widget for students
+ * - renderStudentGradesWidget() - Renders student grades widget
+ * - getAttendanceStatusLabel($status) - Convert attendance status code to readable label
+ * - calculateAttendanceStats($attendance) - Calculate attendance statistics for a set of records
  */
 
-// Get user information by ID
+use Random\RandomException;
+
+/**
+ * Get user information by ID
+ *
+ * Retrieves user profile information including username, role, and role name
+ *
+ * @param int $userId The user ID to look up
+ * @return array|null User information array or null if not found
+ */
 function getUserInfo($userId) {
-    require_once __DIR__ . '/db.php';
-
-    $pdo = getDBConnection();
-    if (!$pdo) {
-        error_log("Database connection failed in getUserInfo()");
-        return null;
-    }
-
-    $stmt = $pdo->prepare("SELECT u.user_id, u.username, u.role_id, r.name as role_name 
-                          FROM users u 
-                          JOIN roles r ON u.role_id = r.role_id 
-                          WHERE u.user_id = :user_id");
-    $stmt->execute(['user_id' => $userId]);
-
-    return $stmt->fetch();
+    // Implementation to be added
 }
 
 /**
  * Generate a CSRF token for form security
- * @return string CSRF token
+ *
+ * Creates or retrieves a token stored in the session to prevent CSRF attacks
+ *
+ * @return string The generated CSRF token
+ * @throws RandomException When secure random bytes cannot be generated
  */
 if (!function_exists('generateCSRFToken')) {
     function generateCSRFToken() {
-        if (!isset($_SESSION['csrf_token'])) {
-            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        }
-        return $_SESSION['csrf_token'];
+        // Implementation to be added
     }
 }
 
 /**
  * Verify a provided CSRF token against the stored one
+ *
+ * Compares the provided token with the one stored in the session using constant-time comparison
+ *
  * @param string $token The token to verify
- * @return bool True if token is valid
+ * @return bool True if token is valid, false otherwise
  */
 if (!function_exists('verifyCSRFToken')) {
-    function verifyCSRFToken($token) {
-        return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
+    function verifyCSRFToken($token): bool {
+        // Implementation to be added
     }
 }
 
 /**
  * Get navigation items based on the user's role
+ *
+ * Returns an array of navigation menu items customized for the user's role
+ *
  * @param int $role The user's role ID
- * @return array Array of navigation items
+ * @return array Array of navigation items with title, URL and icon
  */
-function getNavItemsByRole($role) {
-    $navItems = [];
-
-    // Items for all authenticated users
-    $navItems[] = [
-        'title' => 'Dashboard',
-        'url' => 'dashboard.php',
-        'icon' => 'dashboard'
-    ];
-
-    // Role-specific items
-    switch ($role) {
-        case ROLE_ADMIN:
-            $navItems[] = [
-                'title' => 'Users',
-                'url' => 'admin/users.php',
-                'icon' => 'users'
-            ];
-            $navItems[] = [
-                'title' => 'Settings',
-                'url' => 'admin/settings.php',
-                'icon' => 'settings'
-            ];
-            // Admin also sees the teacher views
-            $navItems[] = [
-                'title' => 'Grade Book',
-                'url' => 'teacher/gradebook.php',
-                'icon' => 'grade'
-            ];
-            $navItems[] = [
-                'title' => 'Attendance',
-                'url' => 'teacher/attendance.php',
-                'icon' => 'attendance'
-            ];
-            break;
-
-        case ROLE_TEACHER:
-            $navItems[] = [
-                'title' => 'Grade Book',
-                'url' => 'teacher/gradebook.php',
-                'icon' => 'grade'
-            ];
-            $navItems[] = [
-                'title' => 'Attendance',
-                'url' => 'teacher/attendance.php',
-                'icon' => 'attendance'
-            ];
-            break;
-
-        case ROLE_STUDENT:
-            $navItems[] = [
-                'title' => 'My Grades',
-                'url' => 'student/grades.php',
-                'icon' => 'grade'
-            ];
-            $navItems[] = [
-                'title' => 'My Attendance',
-                'url' => 'student/attendance.php',
-                'icon' => 'attendance'
-            ];
-            $navItems[] = [
-                'title' => 'Justifications',
-                'url' => 'student/justification.php',
-                'icon' => 'justification'
-            ];
-            break;
-
-        case ROLE_PARENT:
-            $navItems[] = [
-                'title' => 'Child Grades',
-                'url' => 'parent/grades.php',
-                'icon' => 'grade'
-            ];
-            $navItems[] = [
-                'title' => 'Child Attendance',
-                'url' => 'parent/attendance.php',
-                'icon' => 'attendance'
-            ];
-            break;
-    }
-
-    $navItems[] = [
-        'title' => 'Logout',
-        'url' => 'includes/logout.php',
-        'icon' => 'logout'
-    ];
-
-    return $navItems;
+function getNavItemsByRole(int $role): array {
+    // Implementation to be added
 }
 
 /**
  * Get widgets to display based on the user's role
+ *
+ * Returns an array of dashboard widgets appropriate for the user's role
+ *
  * @param int $role The user's role ID
- * @return array Array of widgets with their functions to render
+ * @return array Array of widgets with title and rendering function
  */
-function getWidgetsByRole($role) {
-    $widgets = [];
-
-    // Common widgets for all roles
-    $widgets['recent_activity'] = [
-        'title' => 'Recent Activity',
-        'function' => 'renderRecentActivityWidget'
-    ];
-
-    // Role-specific widgets
-    switch ($role) {
-        case ROLE_ADMIN:
-            $widgets['user_stats'] = [
-                'title' => 'User Statistics',
-                'function' => 'renderAdminUserStatsWidget'
-            ];
-            $widgets['system_status'] = [
-                'title' => 'System Status',
-                'function' => 'renderAdminSystemStatusWidget'
-            ];
-            $widgets['attendance_overview'] = [
-                'title' => 'School Attendance Overview',
-                'function' => 'renderAdminAttendanceWidget'
-            ];
-            $widgets['class_averages'] = [
-                'title' => 'School-wide Class Averages',
-                'function' => 'renderAdminClassAveragesWidget'
-            ];
-            break;
-
-        case ROLE_TEACHER:
-            $widgets['class_overview'] = [
-                'title' => 'Class Overview',
-                'function' => 'renderTeacherClassOverviewWidget'
-            ];
-            $widgets['attendance_today'] = [
-                'title' => 'Today\'s Attendance',
-                'function' => 'renderTeacherAttendanceWidget'
-            ];
-            $widgets['pending_justifications'] = [
-                'title' => 'Pending Justifications',
-                'function' => 'renderTeacherPendingJustificationsWidget'
-            ];
-            $widgets['class_averages'] = [
-                'title' => 'My Class Averages',
-                'function' => 'renderTeacherClassAveragesWidget'
-            ];
-            break;
-
-        case ROLE_STUDENT:
-            $widgets['my_grades'] = [
-                'title' => 'My Recent Grades',
-                'function' => 'renderStudentGradesWidget'
-            ];
-            $widgets['my_attendance'] = [
-                'title' => 'My Attendance Summary',
-                'function' => 'renderStudentAttendanceWidget'
-            ];
-            $widgets['upcoming_classes'] = [
-                'title' => 'Upcoming Classes',
-                'function' => 'renderUpcomingClassesWidget'
-            ];
-            $widgets['class_averages'] = [
-                'title' => 'My Class Averages',
-                'function' => 'renderStudentClassAveragesWidget'
-            ];
-            break;
-
-        case ROLE_PARENT:
-            $widgets['child_grades'] = [
-                'title' => 'Child\'s Recent Grades',
-                'function' => 'renderStudentGradesWidget' // This will be implemented later
-            ];
-            $widgets['child_attendance'] = [
-                'title' => 'Child\'s Attendance Summary',
-                'function' => 'renderParentAttendanceWidget'
-            ];
-            $widgets['child_class_averages'] = [
-                'title' => 'Child\'s Class Averages',
-                'function' => 'renderParentChildClassAveragesWidget'
-            ];
-            break;
-    }
-
-    return $widgets;
+function getWidgetsByRole(int $role): array {
+    // Implementation to be added
 }
 
 /**
  * Get the name of a role by ID
+ *
+ * Translates a role ID to a human-readable role name
+ *
  * @param int $roleId Role ID
- * @return string Role name
+ * @return string Role name or "Unknown Role" if not found
  */
 if (!function_exists('getRoleName')) {
-    function getRoleName($roleId) {
-        $roleNames = [
-            ROLE_ADMIN => 'Administrator',
-            ROLE_TEACHER => 'Teacher',
-            ROLE_STUDENT => 'Student',
-            ROLE_PARENT => 'Parent/Guardian'
-        ];
-
-        return $roleNames[$roleId] ?? 'Unknown Role';
+    function getRoleName($roleId): string {
+        // Implementation to be added
     }
+}
+
+/**
+ * Render recent activity widget
+ *
+ * Creates the HTML for the recent activity dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderRecentActivityWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render admin user statistics widget
+ *
+ * Creates the HTML for the admin user statistics dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderAdminUserStatsWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render system status widget for admins
+ *
+ * Creates the HTML for the system status dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderAdminSystemStatusWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render school-wide attendance widget
+ *
+ * Creates the HTML for the school attendance overview dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderAdminAttendanceWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render class overview widget for teachers
+ *
+ * Creates the HTML for the teacher's class overview dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderTeacherClassOverviewWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render today's attendance widget for teachers
+ *
+ * Creates the HTML for the teacher's daily attendance dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderTeacherAttendanceWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render pending justifications widget for teachers
+ *
+ * Creates the HTML for the teacher's pending justifications dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderTeacherPendingJustificationsWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render student attendance summary widget
+ *
+ * Creates the HTML for the student's attendance summary dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderStudentAttendanceWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render parent view of child attendance widget
+ *
+ * Creates the HTML for the parent's view of their child's attendance
+ *
+ * @return string HTML content for the widget
+ */
+function renderParentAttendanceWidget() {
+    // Implementation to be added
 }
 
 /**
  * Get the teacher ID for the currently logged-in user
- * @return int|null Teacher ID or null if not found
+ *
+ * Retrieves the teacher ID based on the user ID in the session
+ *
+ * @return int|null Teacher ID or null if not found or not a teacher
  */
-function getTeacherId() {
-    $userId = getUserId();
-
-    if (!$userId) {
-        return null;
-    }
-
-    try {
-        $pdo = getDBConnection();
-        if (!$pdo) {
-            error_log("Database connection failed in getTeacherId()");
-            return null;
-        }
-        $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = :user_id");
-        $stmt->execute(['user_id' => $userId]);
-        $result = $stmt->fetch();
-
-        return $result ? (int)$result['teacher_id'] : null;
-    } catch (PDOException $e) {
-        error_log("Database error in getTeacherId(): " . $e->getMessage());
-        return null;
-    }
+function getTeacherId(): ?int {
+    // Implementation to be added
 }
 
 /**
  * Get the student ID for the currently logged-in user
- * @return int|null Student ID or null if not found
+ *
+ * Retrieves the student ID based on the user ID in the session
+ *
+ * @return int|null Student ID or null if not found or not a student
  */
-function getStudentId() {
-    $userId = getUserId();
-
-    if (!$userId) {
-        return null;
-    }
-
-    try {
-        $pdo = getDBConnection();
-        if (!$pdo) {
-            error_log("Database connection failed in getStudentId()");
-            return null; // Return null if database connection fails
-        }
-
-        $stmt = $pdo->prepare("SELECT student_id FROM students WHERE user_id = :user_id");
-        $stmt->execute(['user_id' => $userId]);
-        $result = $stmt->fetch();
-
-        return $result ? $result['student_id'] : null;
-    } catch (PDOException $e) {
-        error_log("Database error in getStudentId(): " . $e->getMessage());
-        return null;
-    }
+function getStudentId(): ?int {
+    // Implementation to be added
 }
 
+/**
+ * Get current user ID from session
+ *
+ * Retrieves the user ID stored in the session
+ *
+ * @return int|null User ID or null if not logged in
+ */
+function getUserId(): ?int {
+    // Implementation to be added
+}
+
+/**
+ * Get user's role from session
+ *
+ * Retrieves the role ID stored in the session
+ *
+ * @return int|null User's role ID or null if not found
+ */
 if (!function_exists('getUserRole')) {
-    /**
-     * Get user's role from session
-     * @return int|null User's role ID or null if not found
-     */
-    function getUserRole() {
-        return $_SESSION['role_id'] ?? null;
+    function getUserRole(): ?int {
+        // Implementation to be added
     }
 }
 
-// Input Sanitization Helper Functions
+/**
+ * Render school-wide class averages widget for admin
+ *
+ * Creates the HTML for the admin's view of all class averages
+ *
+ * @return string HTML content for the widget
+ */
+function renderAdminClassAveragesWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render class averages widget for teacher's classes
+ *
+ * Creates the HTML for the teacher's class averages dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderTeacherClassAveragesWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render class averages widget for student's classes
+ *
+ * Creates the HTML for the student's class averages dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderStudentClassAveragesWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render class averages widget for parent's children
+ *
+ * Creates the HTML for the parent's view of their child's class averages
+ *
+ * @return string HTML content for the widget
+ */
+function renderParentChildClassAveragesWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render upcoming classes widget for students
+ *
+ * Creates the HTML for the student's upcoming classes dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderUpcomingClassesWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Render placeholder widget
+ *
+ * Creates a generic placeholder widget for development purposes
+ *
+ * @return string HTML content for the placeholder widget
+ */
+function renderPlaceholderWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Get school statistics widget
+ *
+ * Renders a widget with overall school statistics
+ *
+ * @return string HTML content for the school statistics widget
+ */
+function getSchoolStatisticsWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Get recent activity widget
+ *
+ * Renders a widget showing recent system activity
+ *
+ * @return string HTML content for the recent activity widget
+ */
+function getRecentActivityWidget() {
+    // Implementation to be added
+}
+
+/**
+ * Get class averages widget
+ *
+ * Renders a widget showing class averages based on user role
+ *
+ * @param int $role The user's role ID
+ * @return string HTML content for the class averages widget
+ */
+function getClassAveragesWidget(int $role): string {
+    // Implementation to be added
+}
+
+/**
+ * Render student grades widget
+ *
+ * Creates the HTML for the student's grades dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderStudentGradesWidget() {
+    // Implementation to be added
+}
 
 /**
  * Convert attendance status code to readable label
  *
+ * Translates attendance status codes (P, A, L) to human-readable labels
+ *
  * @param string $status Attendance status code ('P', 'A', 'L')
- * @return string Readable status label
+ * @return string Readable status label ('Present', 'Absent', 'Late')
  */
-function getAttendanceStatusLabel($status) {
-    $labels = [
-        'P' => 'Present',
-        'A' => 'Absent',
-        'L' => 'Late'
-    ];
-    return $labels[$status] ?? 'Unknown';
+function getAttendanceStatusLabel(string $status): string {
+    // Implementation to be added
 }
 
 /**
  * Calculate attendance statistics for a set of attendance records
  *
+ * Computes statistics including totals, percentages for present, absent, late, and justified
+ *
  * @param array $attendance Array of attendance records
  * @return array Statistics including total, present, absent, late, justified, and percentages
  */
-function calculateAttendanceStats($attendance) {
-    $total = count($attendance);
-    $present = 0;
-    $absent = 0;
-    $late = 0;
-    $justified = 0;
-
-    foreach ($attendance as $record) {
-        if ($record['status'] === 'P') {
-            $present++;
-        } elseif ($record['status'] === 'A') {
-            $absent++;
-            if (!empty($record['justification']) && $record['approved'] == 1) {
-                $justified++;
-            }
-        } elseif ($record['status'] === 'L') {
-            $late++;
-        }
-    }
-
-    return [
-        'total' => $total,
-        'present' => $present,
-        'absent' => $absent,
-        'late' => $late,
-        'justified' => $justified,
-        'present_percent' => $total > 0 ? round(($present / $total) * 100, 1) : 0,
-        'absent_percent' => $total > 0 ? round(($absent / $total) * 100, 1) : 0,
-        'late_percent' => $total > 0 ? round(($late / $total) * 100, 1) : 0,
-        'justified_percent' => $absent > 0 ? round(($justified / $absent) * 100, 1) : 0,
-    ];
+function calculateAttendanceStats(array $attendance): array {
+    // Implementation to be added
 }
+?>

@@ -38,7 +38,8 @@ $pdo_options = [
  * @param string $error Error message to log
  * @return void
  */
-function logDBError($error) {
+function logDBError(string $error): void
+{
     // Log to a file or use PHP's error logging system
     error_log('Database error: ' . $error);
 }
@@ -48,7 +49,8 @@ function logDBError($error) {
  *
  * @return PDO|null Returns a PDO object or null on failure
  */
-function getDBConnection() {
+function getDBConnection(): ?PDO
+{
     global $db_config, $pdo_options;
 
     try {
@@ -71,9 +73,10 @@ function getDBConnection() {
  *
  * @param string $context Context information for error logging
  * @param bool $terminate Whether to terminate execution if connection fails
- * @return PDO Return a valid PDO object or terminates the script
+ * @return PDO|null Return a valid PDO object or terminates the script
  */
-function safeGetDBConnection($context = '', $terminate = true) {
+function safeGetDBConnection(string $context = '', bool $terminate = true): ?PDO
+{
     $pdo = getDBConnection();
 
     if (!$pdo) {
@@ -94,7 +97,8 @@ function safeGetDBConnection($context = '', $terminate = true) {
  *
  * @return string Connection status message
  */
-function testDBConnection() {
+function testDBConnection(): string
+{
     try {
         $pdo = getDBConnection();
         if (!$pdo) {
