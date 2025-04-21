@@ -17,7 +17,8 @@ if (isLoggedIn()) {
     exit;
 }
 
-include 'includes/header.php';
+// Comment out standard header inclusion for custom login page
+// include 'includes/header.php';
 
 $error = '';
 $username = '';
@@ -63,33 +64,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-<?php /* 
-    [LOGIN PAGE PLACEHOLDER]
-    Components:
-    - Custom HTML head with:
-      - Title "Login - uwuweb Grade Management"
-      - Login specific CSS stylesheet reference
-    
-    - Login container card with:
-      - Header section with:
-        - System name as title (uwuweb)
-        - Subtitle "Grade Management System"
-      
-      - Card body containing:
-        - Error alert (when $error is not empty)
-        - Success message (when logged_out parameter is present)
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Login - uwuweb Grade Management</title>
+    <link rel="stylesheet" href="/uwuweb/assets/css/style.css">
+</head>
+<body class="bg-primary">
+
+<div class="d-flex justify-center items-center" style="min-height: 100vh;">
+    <div class="card card-entrance" style="width: 100%; max-width: 400px;">
+        <div class="text-center mb-lg">
+            <h1 class="mb-sm">uwuweb</h1>
+            <p class="text-secondary">Grade Management System</p>
+        </div>
         
-        - Login form with:
-          - Username field (with value preservation)
-          - Password field
-          - CSRF token (hidden)
-          - Submit button "Log In"
-*/ ?>
+        <?php if (!empty($error)): ?>
+            <div class="alert status-error mb-md">
+                <?= htmlspecialchars($error) ?>
+            </div>
+        <?php endif; ?>
+        
+        <?php if (isset($_GET['msg']) && $_GET['msg'] === 'logged_out'): ?>
+            <div class="alert status-success mb-md">
+                You have been successfully logged out.
+            </div>
+        <?php endif; ?>
+        
+        <form method="POST" action="index.php">
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" id="username" name="username" class="form-input" 
+                    value="<?= htmlspecialchars($username) ?>" required autocomplete="username">
+            </div>
+            
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" name="password" class="form-input" 
+                    required autocomplete="current-password">
+            </div>
+            
+            <div class="form-group mt-lg">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Log In</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-<?php if (!empty($error)): ?>
-    <?php /* [ERROR ALERT PLACEHOLDER] - Displays login error message */ ?>
-<?php endif; ?>
-
-<?php if (isset($_GET['msg']) && $_GET['msg'] === 'logged_out'): ?>
-    <?php /* [SUCCESS ALERT PLACEHOLDER] - Displays logout success message */ ?>
-<?php endif; ?>
+<script src="/uwuweb/assets/js/main.js"></script>
+</body>
+</html>

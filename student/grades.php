@@ -15,9 +15,6 @@ require_once '../includes/auth.php';
 require_once '../includes/functions.php';
 require_once '../includes/header.php';
 
-// Add CSS link for this specific page
-echo '<link rel="stylesheet" href="/uwuweb/assets/css/student-grades.css">';
-
 // Ensure only students can access this page
 requireRole(ROLE_STUDENT);
 
@@ -199,69 +196,151 @@ if (isset($_GET['term_id']) && is_numeric($_GET['term_id'])) {
 $grades = getStudentGrades($studentId, $selectedTermId);
 $gradeStats = calculateGradeStatistics($grades);
 $availableTerms = getAvailableTerms();
+
+// Include header
+include '../includes/header.php';
 ?>
 
-<?php /* 
-    [STUDENT GRADES PAGE PLACEHOLDER]
-    Components:
-    - Page title "My Grades"
-    
-    - Term filter card:
-      - Term selection dropdown with:
-        - Term name and date range for each option
-        - Auto-submit on change
-    
-    - Grades display:
-      - Empty state message when no grades available
-      
-      - When grades exist:
-        - Organized by subject (outer cards)
-        - Each subject contains class cards
-        - Each class card includes:
-          - Class title and overall average percentage
-          - Table of assessments with:
-            - Assessment name
-            - Weight column
-            - Score (points achieved/total)
-            - Percentage with color-coded badge based on score
-            - Class average comparison
-*/ ?>
+    <div class="card mb-lg">
+        <h1 class="mt-0 mb-md">My Grades</h1>
+        <p class="text-secondary mt-0 mb-0">View your academic performance across all subjects</p>
+    </div>
 
+    <!-- Term Filter Card -->
+    <div class="card mb-lg">
+        <h2 class="mt-0 mb-md">Select Term</h2>
+
+        <form method="GET" action="grades.php" class="mb-0">
+            <div class="form-group mb-0">
+                <select name="term_id" id="term_id" class="form-input" onchange="this.form.submit()">
+                    <?php foreach ($availableTerms as $term): ?>
+                        <option value="<?= $term['term_id'] ?>" <?= $selectedTermId == $term['term_id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($term['name']) ?>
+                            (<?= date('d.m.Y', strtotime($term['start_date'])) ?> -
+                            <?= date('d.m.Y', strtotime($term['end_date'])) ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </form>
+    </div>
+
+    <!-- Grades Display -->
 <?php if (empty($gradeStats)): ?>
-    <?php /* [EMPTY GRADES PLACEHOLDER] - "No grades found for the selected term." */ ?>
+    <div class="card">
+        <div class="bg-tertiary p-lg text-center rounded">
+            <p class="mb-sm">No grades found for the selected term.</p>
+            <p class="text-secondary mb-0">Grades will appear here once they are entered by your teachers.</p>
+        </div>
+    </div>
 <?php else: ?>
     <?php foreach ($gradeStats as $subjectId => $subject): ?>
-        <?php /* [SUBJECT CARD PLACEHOLDER: <?= $subject['subject_name'] ?>] */ ?>
-        
-        <?php foreach ($subject['classes'] as $classId => $class): ?>
-            <?php /* [CLASS CARD PLACEHOLDER: <?= $class['class_title'] ?> - Average: <?= $class['average'] ?>%] */ ?>
-            
-            <?php
-            // Process class average data
-            $classAverage = getClassAverage($classId);
-            $averagesByItemId = [];
-            foreach ($classAverage as $avg) {
-                $averagesByItemId[$avg['item_id']] = $avg;
-            }
-            ?>
-            
-            <?php foreach ($class['grades'] as $grade): ?>
-                <?php
-                // Calculate percentages
-                $percentage = round(($grade['points'] / $grade['max_points']) * 100, 1);
-                $classAvgPercentage = 0;
-                
-                if (isset($averagesByItemId[$grade['item_id']])) {
-                    $avg = $averagesByItemId[$grade['item_id']];
-                    $classAvgPercentage = round(($avg['avg_points'] / $grade['max_points']) * 100, 1);
-                }
-                ?>
-                
-                <?php /* [GRADE ITEM PLACEHOLDER] - <?= $grade['item_name'] ?> - <?= $grade['points'] ?>/<?= $grade['max_points'] ?> - <?= $percentage ?>% - Class Avg: <?= $classAvgPercentage ?>% */ ?>
-            <?php endforeach; ?>
-        <?php endforeach; ?>
+        <div class="card mb-lg">
+            <h2 class="mt-0 mb-lg"><?= htmlspecialchars($subject['subject_name']) ?></h2>
+
+            <div class="d-grid gap-md" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+                <?php foreach ($subject['classes'] as $classId => $class): ?>
+                    <div class="card">
+                        <div class="d-flex justify-between items-center mb-md">
+                            <h3 class="mt-0 mb-0"><?= htmlspecialchars($class['class_title']) ?></h3>
+                            <div class="grade <?=
+                            $class['average'] >= 90 ? 'grade-high' :
+                                ($class['average'] >= 70 ? 'grade-medium' : 'grade-low')
+                            ?>">
+                                <?= number_format($class['average'], 1) ?>%
+                            </div>
+                        </div>
+
+                        <?php
+                        // Process class average data
+                        $classAverage = getClassAverage($classId);
+                        $averagesByItemId = [];
+                        foreach ($classAverage as $avg) {
+                            $averagesByItemId[$avg['item_id']] = $avg;
+                        }
+                        ?>
+
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                <tr>
+                                    <th>Assessment</th>
+                                    <th>Weight</th>
+                                    <th>Score</th>
+                                    <th>Class Avg</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($class['grades'] as $grade): ?>
+                                    <?php
+                                    // Calculate percentages
+                                    $percentage = round(($grade['points'] / $grade['max_points']) * 100, 1);
+                                    $classAvgPercentage = 0;
+
+                                    if (isset($averagesByItemId[$grade['item_id']])) {
+                                        $avg = $averagesByItemId[$grade['item_id']];
+                                        $classAvgPercentage = round(($avg['avg_points'] / $grade['max_points']) * 100, 1);
+                                    }
+
+                                    $gradeClass = '';
+                                    if ($percentage >= 90) $gradeClass = 'grade-high';
+                                    else if ($percentage >= 70) $gradeClass = 'grade-medium';
+                                    else $gradeClass = 'grade-low';
+                                    ?>
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex flex-column">
+                                                <span><?= htmlspecialchars($grade['item_name']) ?></span>
+                                                <?php if (!empty($grade['comment'])): ?>
+                                                    <span class="text-secondary" style="font-size: var(--font-size-xs);">
+                                                            <?= htmlspecialchars($grade['comment']) ?>
+                                                        </span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <?= $grade['weight'] > 0 ? ($grade['weight'] . 'x') : '1x' ?>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex flex-column">
+                                                <span><?= number_format($grade['points'], 2) ?>/<?= number_format($grade['max_points'], 2) ?></span>
+                                                <span class="grade <?= $gradeClass ?>" style="font-size: var(--font-size-xs);">
+                                                        <?= number_format($percentage, 1) ?>%
+                                                    </span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="text-secondary">
+                                                <?= number_format($classAvgPercentage, 1) ?>%
+                                                <?php if ($percentage > $classAvgPercentage): ?>
+                                                    <span class="text-success">↑</span>
+                                                <?php elseif ($percentage < $classAvgPercentage): ?>
+                                                    <span class="text-error">↓</span>
+                                                <?php else: ?>
+                                                    <span>=</span>
+                                                <?php endif; ?>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
     <?php endforeach; ?>
 <?php endif; ?>
+
+    <style>
+        .text-success {
+            color: #00c853;
+        }
+        .text-error {
+            color: #f44336;
+        }
+    </style>
 
 <?php
 // Include page footer

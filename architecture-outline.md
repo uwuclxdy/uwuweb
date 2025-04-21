@@ -35,62 +35,8 @@ features:
 
 ## 4 Database Schema
 
-```
--- users & roles
-roles(role_id INT AUTO_INCREMENT PK, name VARCHAR(50) NOT NULL)
+look at the file `db/uwuweb.sql` for that.
 
-users(user_id INT AUTO_INCREMENT PK, username VARCHAR(50) NOT NULL UNIQUE, 
-      pass_hash VARCHAR(255) NOT NULL, role_id INT NOT NULL FK roles, 
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
-
--- core entities
-students(student_id INT AUTO_INCREMENT PK, user_id INT NOT NULL UNIQUE FK users, 
-         first_name VARCHAR(100) NOT NULL, last_name VARCHAR(100) NOT NULL, 
-         dob DATE NOT NULL, class_code VARCHAR(10) NOT NULL)
-
-parents(parent_id INT AUTO_INCREMENT PK, user_id INT NOT NULL UNIQUE FK users)
-
-student_parent(student_id INT NOT NULL FK students, parent_id INT NOT NULL FK parents, 
-               PRIMARY KEY(student_id, parent_id))
-
-teachers(teacher_id INT AUTO_INCREMENT PK, user_id INT NOT NULL UNIQUE FK users)
-
-subjects(subject_id INT AUTO_INCREMENT PK, name VARCHAR(100) NOT NULL)
-
-terms(term_id INT AUTO_INCREMENT PK, name VARCHAR(100) NOT NULL, 
-      start_date DATE NOT NULL, end_date DATE NOT NULL)
-
-classes(class_id INT AUTO_INCREMENT PK, subject_id INT NOT NULL FK subjects, 
-        teacher_id INT NOT NULL FK teachers, term_id INT NOT NULL FK terms, 
-        title VARCHAR(100) NOT NULL)
-
--- enrollment & period structure
-enrollments(enroll_id INT AUTO_INCREMENT PK, student_id INT NOT NULL FK students, 
-            class_id INT NOT NULL FK classes, UNIQUE(student_id, class_id))
-
-periods(period_id INT AUTO_INCREMENT PK, class_id INT NOT NULL FK classes, 
-        period_date DATE NOT NULL, period_label VARCHAR(50) NOT NULL)
-
--- grades & attendance
-grade_items(item_id INT AUTO_INCREMENT PK, class_id INT NOT NULL FK classes, 
-            name VARCHAR(100) NOT NULL, max_points DECIMAL(5,2) NOT NULL, 
-            weight DECIMAL(3,2) DEFAULT 1.00)
-
-grades(grade_id INT AUTO_INCREMENT PK, enroll_id INT NOT NULL FK enrollments, 
-       item_id INT NOT NULL FK grade_items, points DECIMAL(5,2) NOT NULL, 
-       comment TEXT)
-
-attendance(att_id INT AUTO_INCREMENT PK, enroll_id INT NOT NULL FK enrollments, 
-           period_id INT NOT NULL FK periods, status ENUM('P','A','L') NOT NULL, 
-           justification TEXT, approved BOOLEAN DEFAULT NULL, reject_reason TEXT, 
-           justification_file VARCHAR(255) DEFAULT NULL, UNIQUE(enroll_id, period_id))
-```
-
-*P = Present, A = Absent, L = Late*
-
-*All tables use InnoDB engine with utf8mb4 character set and utf8mb4_unicode_ci collation*
-
-*All foreign keys use **``** for simplicity.*
 
 ---
 

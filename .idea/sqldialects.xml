@@ -4,4 +4,7 @@
     <file url="file://$PROJECT_DIR$/db/seed_demo.sql" dialect="MySQL" />
     <file url="file://$PROJECT_DIR$/db/uwuweb.sql" dialect="MySQL" />
   </component>
+  <component name="SqlResolveMappings">
+    <file url="file://$PROJECT_DIR$" scope="{&quot;node&quot;:{  &quot;@negative&quot;:&quot;1&quot;,  &quot;group&quot;:{   &quot;@kind&quot;:&quot;root&quot;,   &quot;node&quot;:{    &quot;name&quot;:{     &quot;@qname&quot;:&quot;a79c5948-f716-4edb-ba8d-1ab0002eca4d&quot;    },    &quot;group&quot;:{     &quot;@kind&quot;:&quot;schema&quot;,     &quot;node&quot;:{      &quot;name&quot;:{       &quot;@qname&quot;:&quot;uwuweb&quot;      }     }    }   }  } }}" />
+  </component>
 </project>

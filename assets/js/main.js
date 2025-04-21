@@ -2,124 +2,360 @@
  * uwuweb - Grade Management System
  * Main JavaScript file
  *
- * Contains client-side functionality for enhanced user experience
- * Uses vanilla JavaScript without external dependencies
+ * Provides common functionality across all pages
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Add active class to current navigation item
-    highlightCurrentNavItem();
+    // Mobile navigation toggle
+    initMobileNavigation();
 
-    // Initialize mobile menu toggle
-    initMobileMenuToggle();
+    // Initialize modals
+    initModals();
 
-    // Initialize responsive tables
-    initResponsiveTables();
+    // Initialize alerts auto-hide
+    initAlerts();
+
+    // Initialize tab navigation
+    initTabs();
+
+    // Form validation
+    initFormValidation();
 });
 
 /**
- * Highlights the current navigation item based on URL path
+ * Initialize mobile navigation toggle functionality
  */
-function highlightCurrentNavItem() {
-    const currentPath = window.location.pathname;
-    const navItems = document.querySelectorAll('.nav-item');
+function initMobileNavigation() {
+    const navToggle = document.getElementById('navToggle');
+    const navMenu = document.getElementById('navMenu');
 
-    navItems.forEach(item => {
-        const href = item.getAttribute('href');
-        if (href === currentPath) {
-            item.classList.add('active');
-        }
-    });
-}
+    if (navToggle && navMenu) {
+        navToggle.addEventListener('click', function() {
+            navMenu.classList.toggle('open');
+        });
 
-/**
- * Shows a notification message
- * @param {string} message - The message to display
- * @param {string} type - The message type (success, error)
- */
-function showNotification(message, type = 'success') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-
-    document.body.appendChild(notification);
-
-    // Remove notification after 5 seconds
-    setTimeout(() => {
-        notification.classList.add('fade-out');
-        setTimeout(() => {
-            notification.remove();
-        }, 500);
-    }, 5000);
-}
-
-/**
- * Initializes the mobile menu toggle functionality
- */
-function initMobileMenuToggle() {
-    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-    const mainNav = document.querySelector('.main-nav');
-
-    if (mobileMenuToggle && mainNav) {
-        mobileMenuToggle.addEventListener('click', function() {
-            mainNav.classList.toggle('active');
-
-            // Toggle aria-expanded attribute for accessibility
-            const expanded = mainNav.classList.contains('active');
-            mobileMenuToggle.setAttribute('aria-expanded', expanded);
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!navToggle.contains(event.target) && !navMenu.contains(event.target)) {
+                navMenu.classList.remove('open');
+            }
         });
     }
 }
 
 /**
- * Initializes responsive tables with data-label attributes for mobile view
+ * Initialize modals - this handles generic modal behavior
+ * Specific modal actions are handled in their respective page scripts
  */
-function initResponsiveTables() {
-    const tables = document.querySelectorAll('.responsive-table');
-
-    tables.forEach(table => {
-        const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
-        const cells = table.querySelectorAll('tbody td');
-
-        cells.forEach((cell, index) => {
-            // Add data-label attribute with corresponding header text
-            const headerIndex = index % headers.length;
-            cell.setAttribute('data-label', headers[headerIndex]);
+function initModals() {
+    // Generic modal functionality
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', function() {
+            // Find the parent modal
+            const modal = this.closest('.modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
         });
+    });
 
-        // Add card-view class to the parent element for mobile layout
-        if (table.parentElement) {
-            table.parentElement.classList.add('card-view');
+    // Close buttons
+    document.querySelectorAll('.btn-close').forEach(button => {
+        button.addEventListener('click', function() {
+            // Find the parent modal
+            const modal = this.closest('.modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+
+    // Cancel buttons
+    document.querySelectorAll('.modal .btn').forEach(button => {
+        if (button.textContent.trim() === 'Cancel') {
+            button.addEventListener('click', function() {
+                // Find the parent modal
+                const modal = this.closest('.modal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        }
+    });
+
+    // Escape key closes modal
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            document.querySelectorAll('.modal').forEach(modal => {
+                if (modal.style.display === 'flex') {
+                    modal.style.display = 'none';
+                }
+            });
         }
     });
 }
 
 /**
- * Ensures forms are responsive and accessible
- * Adds required attributes and validation feedback
- * @param {HTMLFormElement} form - The form to enhance
+ * Initialize alerts to auto-hide after a delay
  */
-function enhanceForm(form) {
-    const inputs = form.querySelectorAll('input, select, textarea');
+function initAlerts() {
+    const alerts = document.querySelectorAll('.alert');
 
-    inputs.forEach(input => {
-        const formGroup = input.closest('.form-group');
-        if (formGroup) {
-            const label = formGroup.querySelector('label');
+    alerts.forEach(alert => {
+        // Auto-hide success alerts after 5 seconds
+        if (alert.classList.contains('status-success')) {
+            setTimeout(() => {
+                alert.style.opacity = '0';
+                setTimeout(() => {
+                    alert.style.display = 'none';
+                }, 300);
+            }, 5000);
+        }
 
-            // Connect label and input with matching id/for attributes
-            if (label && !label.getAttribute('for') && input.id) {
-                label.setAttribute('for', input.id);
+        // Add close button to alerts
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'btn-close';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.style.position = 'absolute';
+        closeBtn.style.right = '10px';
+        closeBtn.style.top = '10px';
+        closeBtn.style.background = 'none';
+        closeBtn.style.border = 'none';
+        closeBtn.style.fontSize = '1.25rem';
+        closeBtn.style.cursor = 'pointer';
+        closeBtn.style.color = 'inherit';
+
+        // Ensure alert has relative positioning for the close button
+        alert.style.position = 'relative';
+
+        closeBtn.addEventListener('click', () => {
+            alert.style.opacity = '0';
+            setTimeout(() => {
+                alert.style.display = 'none';
+            }, 300);
+        });
+
+        alert.appendChild(closeBtn);
+    });
+}
+
+/**
+ * Initialize tab navigation
+ */
+function initTabs() {
+    const tabLinks = document.querySelectorAll('.tab-link');
+
+    tabLinks.forEach(tabLink => {
+        tabLink.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const tabId = this.getAttribute('data-tab');
+            if (!tabId) return;
+
+            // Remove active class from all tab links
+            tabLinks.forEach(link => {
+                link.classList.remove('active');
+            });
+
+            // Add active class to clicked tab link
+            this.classList.add('active');
+
+            // Hide all tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.style.display = 'none';
+            });
+
+            // Show selected tab content
+            const tabContent = document.getElementById(tabId);
+            if (tabContent) {
+                tabContent.style.display = 'block';
             }
+        });
+    });
+}
 
-            // Add validation feedback
-            input.addEventListener('invalid', function() {
-                formGroup.classList.add('has-error');
+/**
+ * Initialize form validation
+ */
+function initFormValidation() {
+    const forms = document.querySelectorAll('form');
+
+    forms.forEach(form => {
+        const requiredInputs = form.querySelectorAll('input[required], select[required], textarea[required]');
+
+        form.addEventListener('submit', function(event) {
+            let isValid = true;
+
+            requiredInputs.forEach(input => {
+                if (!input.value.trim()) {
+                    isValid = false;
+                    input.classList.add('is-invalid');
+
+                    // Add feedback message if it doesn't exist
+                    let feedbackElement = input.nextElementSibling;
+                    if (!feedbackElement || !feedbackElement.classList.contains('feedback-text')) {
+                        feedbackElement = document.createElement('div');
+                        feedbackElement.className = 'feedback-text feedback-invalid';
+                        feedbackElement.textContent = 'This field is required';
+                        input.parentNode.insertBefore(feedbackElement, input.nextSibling);
+                    }
+                } else {
+                    input.classList.remove('is-invalid');
+
+                    // Remove feedback message if it exists
+                    const feedbackElement = input.nextElementSibling;
+                    if (feedbackElement && feedbackElement.classList.contains('feedback-invalid')) {
+                        feedbackElement.remove();
+                    }
+                }
             });
 
+            if (!isValid) {
+                event.preventDefault();
+            }
+        });
+
+        // Remove validation styling when user starts typing
+        requiredInputs.forEach(input => {
             input.addEventListener('input', function() {
-                formGroup.classList.remove('has-error');
+                if (this.value.trim()) {
+                    this.classList.remove('is-invalid');
+
+                    // Remove feedback message if it exists
+                    const feedbackElement = this.nextElementSibling;
+                    if (feedbackElement && feedbackElement.classList.contains('feedback-invalid')) {
+                        feedbackElement.remove();
+                    }
+                }
             });
+        });
+    });
+
+    // Password confirmation validation
+    const passwordInputs = document.querySelectorAll('input[type="password"]');
+    passwordInputs.forEach(input => {
+        if (input.id.includes('confirm')) {
+            const passwordField = document.getElementById(input.id.replace('confirm_', ''));
+
+            if (passwordField) {
+                input.addEventListener('input', function() {
+                    if (this.value && this.value !== passwordField.value) {
+                        this.classList.add('is-invalid');
+
+                        // Add feedback message if it doesn't exist
+                        let feedbackElement = this.nextElementSibling;
+                        if (!feedbackElement || !feedbackElement.classList.contains('feedback-text')) {
+                            feedbackElement = document.createElement('div');
+                            feedbackElement.className = 'feedback-text feedback-invalid';
+                            feedbackElement.textContent = 'Passwords do not match';
+                            this.parentNode.insertBefore(feedbackElement, this.nextSibling);
+                        }
+                    } else {
+                        this.classList.remove('is-invalid');
+
+                        // Remove feedback message if it exists
+                        const feedbackElement = this.nextElementSibling;
+                        if (feedbackElement && feedbackElement.classList.contains('feedback-invalid')) {
+                            feedbackElement.remove();
+                        }
+                    }
+                });
+            }
         }
     });
+}
+
+/**
+ * Helper function to format dates consistently across the application
+ * @param {string|Date} date - The date to format
+ * @param {string} format - The format to use (default: 'dd.mm.yyyy')
+ * @returns {string} - The formatted date string
+ */
+function formatDate(date, format = 'dd.mm.yyyy') {
+    if (!date) return '';
+
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+
+    switch (format) {
+        case 'dd.mm.yyyy':
+            return `${day}.${month}.${year}`;
+        case 'yyyy-mm-dd':
+            return `${year}-${month}-${day}`;
+        case 'mm/dd/yyyy':
+            return `${month}/${day}/${year}`;
+        default:
+            return `${day}.${month}.${year}`;
+    }
+}
+
+/**
+ * Helper function to show a modal
+ * @param {string} modalId - The ID of the modal to show
+ */
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+/**
+ * Helper function to hide a modal
+ * @param {string} modalId - The ID of the modal to hide
+ */
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Helper function to create a notification
+ * @param {string} message - The message to display
+ * @param {string} type - The type of notification (success, error, warning, info)
+ * @param {number} duration - How long to show the notification in milliseconds
+ */
+function showNotification(message, type = 'info', duration = 3000) {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification status-${type}`;
+    notification.textContent = message;
+
+    // Style the notification
+    notification.style.position = 'fixed';
+    notification.style.bottom = '20px';
+    notification.style.right = '20px';
+    notification.style.padding = '15px 20px';
+    notification.style.borderRadius = 'var(--button-radius)';
+    notification.style.boxShadow = 'var(--card-shadow)';
+    notification.style.zIndex = '9999';
+    notification.style.opacity = '0';
+    notification.style.transform = 'translateY(20px)';
+    notification.style.transition = 'opacity 0.3s, transform 0.3s';
+
+    // Add to DOM
+    document.body.appendChild(notification);
+
+    // Trigger animation
+    setTimeout(() => {
+        notification.style.opacity = '1';
+        notification.style.transform = 'translateY(0)';
+    }, 10);
+
+    // Remove after duration
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(20px)';
+
+        // Remove from DOM after animation
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, duration);
 }

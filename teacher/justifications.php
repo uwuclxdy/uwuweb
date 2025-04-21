@@ -30,26 +30,13 @@ if (!$teacherId) {
     die('Error: Teacher account not found.');
 }
 
-// Get teacher ID based on user ID
-function getTeacherId($userId) {
-    $pdo = safeGetDBConnection('getTeacherId()', false);
-    if (!$pdo) {
-        return null;
-    }
-    
-    $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = :user_id");
-    $stmt->execute(['user_id' => $userId]);
-    $result = $stmt->fetch();
-    return $result ? $result['teacher_id'] : null;
-}
-
 // Get pending justifications for a teacher's classes
 function getPendingJustifications($teacherId) {
     $pdo = safeGetDBConnection('getPendingJustifications()', false);
     if (!$pdo) {
         return [];
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT 
             a.att_id, 
@@ -86,7 +73,7 @@ function getJustificationById($absenceId) {
     if (!$pdo) {
         return null;
     }
-    
+
     $stmt = $pdo->prepare(
         "SELECT 
             a.att_id, 
@@ -120,7 +107,7 @@ function approveJustification($absenceId) {
     if (!$pdo) {
         return false;
     }
-    
+
     try {
         $stmt = $pdo->prepare(
             "UPDATE attendance 
@@ -140,7 +127,7 @@ function rejectJustification($absenceId, $reason) {
     if (!$pdo) {
         return false;
     }
-    
+
     try {
         $stmt = $pdo->prepare(
             "UPDATE attendance 
@@ -196,7 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         if (isset($_POST['approve_justification'])) {
             $absenceId = isset($_POST['absence_id']) ? (int)$_POST['absence_id'] : 0;
-            
+
             if ($absenceId <= 0) {
                 $message = 'Invalid absence selected.';
                 $messageType = 'error';
@@ -210,7 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else if (isset($_POST['reject_justification'])) {
             $absenceId = isset($_POST['absence_id']) ? (int)$_POST['absence_id'] : 0;
             $reason = isset($_POST['reject_reason']) ? trim($_POST['reject_reason']) : '';
-            
+
             if ($absenceId <= 0) {
                 $message = 'Invalid absence selected.';
                 $messageType = 'error';
@@ -238,46 +225,152 @@ $selectedJustification = $selectedJustificationId ? getJustificationById($select
 // Generate CSRF token
 $csrfToken = generateCSRFToken();
 
-// Include header
-include '../includes/header.php';
 ?>
 
-<?php /* 
-    [TEACHER JUSTIFICATIONS PAGE PLACEHOLDER]
-    Components:
-    - Page container with justification review layout
-    
-    - Page title "Absence Justifications"
-    
-    - Alert message display (when $message is not empty)
-      - Different styling based on $messageType (success, error, warning)
-    
-    - Main content with two possible views:
-    
-    1. LIST VIEW (when no justification is selected):
-      - Info card explaining the purpose of the page
-      - Card with table of pending justifications:
-        - Headers: Student, Class, Date, Period, Action
-        - For each justification:
-          - Student name and class code
-          - Subject and class title
-          - Absence date
-          - Period label
-          - "Review" button to open detailed view
-      - Empty state message when no pending justifications
-    
-    2. DETAIL VIEW (when justification is selected):
-      - Card with justification details:
-        - Student information (name and class)
-        - Absence details (date, class, period)
-        - Justification text
-        - File attachment link (if available)
-        
-      - Approval form with:
-        - Approve button
-        - Reject button with reason text field
-        - Cancel button to return to list view
-*/ ?>
+    <div class="card card-entrance mt-xl">
+        <h1 class="mt-0 mb-md">Absence Justifications</h1>
+        <p class="text-secondary mt-0 mb-lg">Review and approve student absence justifications</p>
+
+        <?php if (!empty($message)): ?>
+            <div class="alert <?= strpos($message, 'successfully') !== false ? 'status-success' : ($messageType === 'warning' ? 'status-warning' : 'status-error') ?> mb-lg">
+                <?= htmlspecialchars($message) ?>
+            </div>
+        <?php endif; ?>
+    </div>
+
+<?php if ($selectedJustification): ?>
+    <!-- Detailed Justification View -->
+    <div class="card card-entrance mt-xl">
+        <div class="d-flex justify-between items-center mb-lg">
+            <h2 class="mt-0 mb-0">Justification Details</h2>
+            <a href="justifications.php" class="btn btn-secondary">Back to List</a>
+        </div>
+
+        <div class="bg-tertiary p-lg rounded mb-lg">
+            <div class="d-flex flex-column flex-row@md gap-md justify-between">
+                <div>
+                    <h3 class="mt-0 mb-xs">Student Information</h3>
+                    <p class="mb-xs"><strong>Name:</strong> <?= htmlspecialchars($selectedJustification['first_name'] . ' ' . $selectedJustification['last_name']) ?></p>
+                    <p class="mb-0"><strong>Class:</strong> <?= htmlspecialchars($selectedJustification['class_code']) ?></p>
+                </div>
+
+                <div>
+                    <h3 class="mt-0 mb-xs">Absence Details</h3>
+                    <p class="mb-xs"><strong>Date:</strong> <?= date('d.m.Y', strtotime($selectedJustification['period_date'])) ?></p>
+                    <p class="mb-xs"><strong>Period:</strong> <?= htmlspecialchars($selectedJustification['period_label']) ?></p>
+                    <p class="mb-0"><strong>Class:</strong> <?= htmlspecialchars($selectedJustification['subject_name'] . ' - ' . $selectedJustification['class_title']) ?></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-lg">
+            <h3 class="mt-0 mb-sm">Justification</h3>
+            <div class="bg-tertiary p-md rounded mb-lg">
+                <p class="mb-0"><?= nl2br(htmlspecialchars($selectedJustification['justification'])) ?></p>
+            </div>
+
+            <?php if (!empty($selectedJustification['justification_file'])): ?>
+                <h3 class="mt-0 mb-sm">Supporting Document</h3>
+                <div class="bg-tertiary p-md rounded mb-lg">
+                    <a href="/uwuweb/uploads/justifications/<?= htmlspecialchars($selectedJustification['justification_file']) ?>" target="_blank" class="btn btn-secondary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-xs">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        View Document
+                    </a>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <div class="d-flex flex-column flex-row@md gap-md mb-lg">
+            <!-- Approve Form -->
+            <form method="POST" action="justifications.php" style="flex: 1;">
+                <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
+                <input type="hidden" name="absence_id" value="<?= $selectedJustification['att_id'] ?>">
+
+                <div class="card" style="background-color: rgba(0, 200, 83, 0.05);">
+                    <h3 class="mt-0 mb-md">Approve Justification</h3>
+                    <p class="mb-md">Approving this justification will mark the absence as justified.</p>
+                    <button type="submit" name="approve_justification" class="btn btn-primary">Approve Justification</button>
+                </div>
+            </form>
+
+            <!-- Reject Form -->
+            <form method="POST" action="justifications.php" style="flex: 1;">
+                <input type="hidden" name="csrf_token" value="<?= $csrfToken ?>">
+                <input type="hidden" name="absence_id" value="<?= $selectedJustification['att_id'] ?>">
+
+                <div class="card" style="background-color: rgba(244, 67, 54, 0.05);">
+                    <h3 class="mt-0 mb-sm">Reject Justification</h3>
+
+                    <div class="form-group">
+                        <label for="reject_reason" class="form-label">Reason for Rejection</label>
+                        <textarea id="reject_reason" name="reject_reason" class="form-input" rows="3" required></textarea>
+                    </div>
+
+                    <button type="submit" name="reject_justification" class="btn btn-primary">Reject Justification</button>
+                </div>
+            </form>
+        </div>
+    </div>
+<?php else: ?>
+    <!-- Justifications List View -->
+    <div class="card card-entrance mt-xl">
+        <div class="d-flex justify-between items-center mb-lg">
+            <h2 class="mt-0 mb-0">Pending Justifications</h2>
+        </div>
+
+        <?php if (empty($justifications)): ?>
+            <div class="bg-tertiary p-lg text-center rounded">
+                <p class="mb-sm">No pending justifications found.</p>
+                <p class="text-secondary mb-0">All absence justifications have been processed.</p>
+            </div>
+        <?php else: ?>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Class</th>
+                        <th>Date</th>
+                        <th>Period</th>
+                        <th>Has File</th>
+                        <th>Action</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($justifications as $justification): ?>
+                        <tr>
+                            <td>
+                                <?= htmlspecialchars($justification['last_name'] . ', ' . $justification['first_name']) ?>
+                            </td>
+                            <td>
+                                <?= htmlspecialchars($justification['class_code']) ?>
+                            </td>
+                            <td>
+                                <?= date('d.m.Y', strtotime($justification['period_date'])) ?>
+                            </td>
+                            <td>
+                                <?= htmlspecialchars($justification['period_label']) ?>
+                            </td>
+                            <td>
+                                <?= !empty($justification['justification_file']) ?
+                                    '<span class="badge status-info">Yes</span>' :
+                                    '<span class="badge">No</span>' ?>
+                            </td>
+                            <td>
+                                <a href="justifications.php?id=<?= $justification['att_id'] ?>" class="btn btn-primary btn-sm">Review</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+<?php endif; ?>
 
 <?php
 // Include page footer

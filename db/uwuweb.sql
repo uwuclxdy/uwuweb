@@ -1,7 +1,5 @@
 # noinspection SpellCheckingInspectionForFile
 
-# noinspection SpellCheckingInspectionForFile
-
 -- uwuweb Database Schema
 DROP DATABASE IF EXISTS uwuweb;
 CREATE DATABASE uwuweb CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -63,24 +61,25 @@ CREATE TABLE subjects (
     name VARCHAR(100) NOT NULL
 );
 
--- Terms (semesters/periods)
-CREATE TABLE terms (
-    term_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL
-);
-
--- Classes
+-- Classes (now represents homeroom classes)
 CREATE TABLE classes (
     class_id INT AUTO_INCREMENT PRIMARY KEY,
+    class_code VARCHAR(10) NOT NULL UNIQUE,
+    title VARCHAR(100) NOT NULL,
+    homeroom_teacher_id INT NOT NULL,
+    FOREIGN KEY (homeroom_teacher_id) REFERENCES teachers(teacher_id)
+);
+
+-- Class-Subject-Teacher relationship
+CREATE TABLE class_subjects (
+    class_subject_id INT AUTO_INCREMENT PRIMARY KEY,
+    class_id INT NOT NULL,
     subject_id INT NOT NULL,
     teacher_id INT NOT NULL,
-    term_id INT NOT NULL,
-    title VARCHAR(100) NOT NULL,
+    FOREIGN KEY (class_id) REFERENCES classes(class_id),
     FOREIGN KEY (subject_id) REFERENCES subjects(subject_id),
     FOREIGN KEY (teacher_id) REFERENCES teachers(teacher_id),
-    FOREIGN KEY (term_id) REFERENCES terms(term_id)
+    UNIQUE KEY (class_id, subject_id)
 );
 
 -- Enrollments
@@ -96,20 +95,20 @@ CREATE TABLE enrollments (
 -- Periods (individual class sessions)
 CREATE TABLE periods (
     period_id INT AUTO_INCREMENT PRIMARY KEY,
-    class_id INT NOT NULL,
+    class_subject_id INT NOT NULL,
     period_date DATE NOT NULL,
     period_label VARCHAR(50) NOT NULL,
-    FOREIGN KEY (class_id) REFERENCES classes(class_id)
+    FOREIGN KEY (class_subject_id) REFERENCES class_subjects(class_subject_id)
 );
 
 -- Grade Items
 CREATE TABLE grade_items (
     item_id INT AUTO_INCREMENT PRIMARY KEY,
-    class_id INT NOT NULL,
+    class_subject_id INT NOT NULL,
     name VARCHAR(100) NOT NULL,
     max_points DECIMAL(5,2) NOT NULL,
     weight DECIMAL(3,2) DEFAULT 1.00,
-    FOREIGN KEY (class_id) REFERENCES classes(class_id)
+    FOREIGN KEY (class_subject_id) REFERENCES class_subjects(class_subject_id)
 );
 
 -- Grades

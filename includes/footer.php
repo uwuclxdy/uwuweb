@@ -9,13 +9,14 @@
  * - None (template file)
  */
 ?>
-<?php /* 
-    [FOOTER HTML PLACEHOLDER]
-    Components:
-    - Main content container closing tag
-    - Footer section with:
-      - Container for footer content
-      - Copyright text with dynamic year: "© [CURRENT_YEAR] uwuweb - Grade Management System"
-    - JavaScript file inclusion
-    - Closing body and html tags
-*/ ?>
+    </div><!-- End .container -->
+    
+    <footer class="mt-xl">
+        <div class="container">
+            <p class="text-center text-secondary">© <?= date('Y') ?> uwuweb - Grade Management System</p>
+        </div>
+    </footer>
+    
+    <script src="/uwuweb/assets/js/main.js"></script>
+</body>
+</html>

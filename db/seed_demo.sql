@@ -11,9 +11,9 @@ DELETE FROM grades;
 DELETE FROM grade_items;
 DELETE FROM periods;
 DELETE FROM enrollments;
+DELETE FROM class_subjects;
 DELETE FROM classes;
 DELETE FROM subjects;
-DELETE FROM terms;
 DELETE FROM student_parent;
 DELETE FROM parents;
 DELETE FROM students;
@@ -31,6 +31,11 @@ INSERT INTO teachers (user_id) VALUES
     ((SELECT user_id FROM users WHERE username = 'janez.novak')),
     ((SELECT user_id FROM users WHERE username = 'maja.kovac')),
     ((SELECT user_id FROM users WHERE username = 'andrej.zupan'));
+
+-- Create classes with homeroom teachers
+INSERT INTO classes (class_code, title, homeroom_teacher_id) VALUES
+    ('R3A', 'Class R3A', (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'janez.novak')),
+    ('R3B', 'Class R3B', (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'maja.kovac'));
 
 -- Demo Students (20 students)
 INSERT INTO users (username, pass_hash, role_id) VALUES
@@ -55,28 +60,28 @@ INSERT INTO users (username, pass_hash, role_id) VALUES
     ('klara.zupan', '$2y$10$TzKo0xVVyQ81hJvTxL9c1efimpgLxj2Pc.cQv9r1XcL4Qu3yZ2wp2', 3),
     ('nejc.kobal', '$2y$10$TzKo0xVVyQ81hJvTxL9c1efimpgLxj2Pc.cQv9r1XcL4Qu3yZ2wp2', 3);
 
--- Insert student records (split into two class codes: 4.A and 4.B)
+-- Insert student records (split into two class codes: R3A and R3B)
 INSERT INTO students (user_id, first_name, last_name, dob, class_code) VALUES
-    ((SELECT user_id FROM users WHERE username = 'ana.horvat'), 'Ana', 'Horvat', '2007-05-12', '4.A'),
-    ((SELECT user_id FROM users WHERE username = 'miha.petek'), 'Miha', 'Petek', '2007-03-25', '4.A'),
-    ((SELECT user_id FROM users WHERE username = 'nina.kovac'), 'Nina', 'Kovač', '2007-08-17', '4.A'),
-    ((SELECT user_id FROM users WHERE username = 'luka.zajc'), 'Luka', 'Zajc', '2007-01-30', '4.A'),
-    ((SELECT user_id FROM users WHERE username = 'sara.kastelic'), 'Sara', 'Kastelic', '2007-09-03', '4.A'),
-    ((SELECT user_id FROM users WHERE username = 'nik.logar'), 'Nik', 'Logar', '2007-06-22', '4.A'),
-    ((SELECT user_id FROM users WHERE username = 'zala.novak'), 'Zala', 'Novak', '2007-11-14', '4.A'),
-    ((SELECT user_id FROM users WHERE username = 'jan.penca'), 'Jan', 'Penca', '2007-04-09', '4.A'),
-    ((SELECT user_id FROM users WHERE username = 'eva.kranjc'), 'Eva', 'Kranjc', '2007-07-28', '4.A'),
-    ((SELECT user_id FROM users WHERE username = 'tim.bizjak'), 'Tim', 'Bizjak', '2007-02-17', '4.A'),
-    ((SELECT user_id FROM users WHERE username = 'maja.zupancic'), 'Maja', 'Zupančič', '2007-12-05', '4.B'),
-    ((SELECT user_id FROM users WHERE username = 'jure.kralj'), 'Jure', 'Kralj', '2007-10-19', '4.B'),
-    ((SELECT user_id FROM users WHERE username = 'lea.vidic'), 'Lea', 'Vidic', '2007-01-23', '4.B'),
-    ((SELECT user_id FROM users WHERE username = 'mark.rozman'), 'Mark', 'Rozman', '2007-06-30', '4.B'),
-    ((SELECT user_id FROM users WHERE username = 'pia.kos'), 'Pia', 'Kos', '2007-09-15', '4.B'),
-    ((SELECT user_id FROM users WHERE username = 'alex.zagar'), 'Alex', 'Žagar', '2007-04-02', '4.B'),
-    ((SELECT user_id FROM users WHERE username = 'tina.bogataj'), 'Tina', 'Bogataj', '2007-08-27', '4.B'),
-    ((SELECT user_id FROM users WHERE username = 'david.mlakar'), 'David', 'Mlakar', '2007-03-11', '4.B'),
-    ((SELECT user_id FROM users WHERE username = 'klara.zupan'), 'Klara', 'Zupan', '2007-11-29', '4.B'),
-    ((SELECT user_id FROM users WHERE username = 'nejc.kobal'), 'Nejc', 'Kobal', '2007-05-18', '4.B');
+    ((SELECT user_id FROM users WHERE username = 'ana.horvat'), 'Ana', 'Horvat', '2007-05-12', 'R3A'),
+    ((SELECT user_id FROM users WHERE username = 'miha.petek'), 'Miha', 'Petek', '2007-03-25', 'R3A'),
+    ((SELECT user_id FROM users WHERE username = 'nina.kovac'), 'Nina', 'Kovač', '2007-08-17', 'R3A'),
+    ((SELECT user_id FROM users WHERE username = 'luka.zajc'), 'Luka', 'Zajc', '2007-01-30', 'R3A'),
+    ((SELECT user_id FROM users WHERE username = 'sara.kastelic'), 'Sara', 'Kastelic', '2007-09-03', 'R3A'),
+    ((SELECT user_id FROM users WHERE username = 'nik.logar'), 'Nik', 'Logar', '2007-06-22', 'R3A'),
+    ((SELECT user_id FROM users WHERE username = 'zala.novak'), 'Zala', 'Novak', '2007-11-14', 'R3A'),
+    ((SELECT user_id FROM users WHERE username = 'jan.penca'), 'Jan', 'Penca', '2007-04-09', 'R3A'),
+    ((SELECT user_id FROM users WHERE username = 'eva.kranjc'), 'Eva', 'Kranjc', '2007-07-28', 'R3A'),
+    ((SELECT user_id FROM users WHERE username = 'tim.bizjak'), 'Tim', 'Bizjak', '2007-02-17', 'R3A'),
+    ((SELECT user_id FROM users WHERE username = 'maja.zupancic'), 'Maja', 'Zupančič', '2007-12-05', 'R3B'),
+    ((SELECT user_id FROM users WHERE username = 'jure.kralj'), 'Jure', 'Kralj', '2007-10-19', 'R3B'),
+    ((SELECT user_id FROM users WHERE username = 'lea.vidic'), 'Lea', 'Vidic', '2007-01-23', 'R3B'),
+    ((SELECT user_id FROM users WHERE username = 'mark.rozman'), 'Mark', 'Rozman', '2007-06-30', 'R3B'),
+    ((SELECT user_id FROM users WHERE username = 'pia.kos'), 'Pia', 'Kos', '2007-09-15', 'R3B'),
+    ((SELECT user_id FROM users WHERE username = 'alex.zagar'), 'Alex', 'Žagar', '2007-04-02', 'R3B'),
+    ((SELECT user_id FROM users WHERE username = 'tina.bogataj'), 'Tina', 'Bogataj', '2007-08-27', 'R3B'),
+    ((SELECT user_id FROM users WHERE username = 'david.mlakar'), 'David', 'Mlakar', '2007-03-11', 'R3B'),
+    ((SELECT user_id FROM users WHERE username = 'klara.zupan'), 'Klara', 'Zupan', '2007-11-29', 'R3B'),
+    ((SELECT user_id FROM users WHERE username = 'nejc.kobal'), 'Nejc', 'Kobal', '2007-05-18', 'R3B');
 
 -- Demo Parents
 INSERT INTO users (username, pass_hash, role_id) VALUES
@@ -108,59 +113,73 @@ INSERT INTO student_parent (student_id, parent_id) VALUES
 
 -- Subjects
 INSERT INTO subjects (name) VALUES
-    ('Mathematics'),
-    ('Slovenian Language'),
-    ('English Language'),
-    ('Physics'),
-    ('Chemistry'),
-    ('Biology'),
-    ('History'),
-    ('Computer Science');
+    ('Matka'),
+    ('Slovka'),
+    ('Ang'),
+    ('Fiska'),
+    ('Kemija'),
+    ('Zgodovina'),
+    ('Comp sci 1'),
+    ('Comp sci 2');
 
--- Terms
-INSERT INTO terms (name, start_date, end_date) VALUES
-    ('2024/2025 - First Semester', '2024-09-01', '2025-01-15'),
-    ('2024/2025 - Second Semester', '2025-01-16', '2025-06-15');
+-- Define class-subject-teacher relationships
+INSERT INTO class_subjects (class_id, subject_id, teacher_id) VALUES
+    -- Class R3A subjects
+    ((SELECT class_id FROM classes WHERE class_code = 'R3A'),
+     (SELECT subject_id FROM subjects WHERE name = 'Matka'),
+     (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'janez.novak')),
+    
+    ((SELECT class_id FROM classes WHERE class_code = 'R3A'),
+     (SELECT subject_id FROM subjects WHERE name = 'Slovka'),
+     (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'maja.kovac')),
+     
+    ((SELECT class_id FROM classes WHERE class_code = 'R3A'),
+     (SELECT subject_id FROM subjects WHERE name = 'Ang'),
+     (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'andrej.zupan')),
+     
+    ((SELECT class_id FROM classes WHERE class_code = 'R3A'),
+     (SELECT subject_id FROM subjects WHERE name = 'Fiska'),
+     (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'janez.novak')),
 
--- Classes (assign teachers to subjects and terms)
-INSERT INTO classes (subject_id, teacher_id, term_id, title) VALUES
-    (1, (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'janez.novak'),
-        1, 'Mathematics 4.A - First Semester'),
-    (1, (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'janez.novak'),
-        1, 'Mathematics 4.B - First Semester'),
-    (2, (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'maja.kovac'),
-        1, 'Slovenian Language 4.A - First Semester'),
-    (2, (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'maja.kovac'),
-        1, 'Slovenian Language 4.B - First Semester'),
-    (3, (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'andrej.zupan'),
-        1, 'English Language 4.A - First Semester'),
-    (3, (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'andrej.zupan'),
-        1, 'English Language 4.B - First Semester'),
-    (4, (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'janez.novak'),
-        1, 'Physics 4.A - First Semester'),
-    (4, (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'janez.novak'),
-        1, 'Physics 4.B - First Semester');
+    ((SELECT class_id FROM classes WHERE class_code = 'R3A'),
+     (SELECT subject_id FROM subjects WHERE name = 'Comp sci 1'),
+     (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'andrej.zupan')),
+     
+    -- Class R3B subjects
+    ((SELECT class_id FROM classes WHERE class_code = 'R3B'),
+     (SELECT subject_id FROM subjects WHERE name = 'Matka'),
+     (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'janez.novak')),
+     
+    ((SELECT class_id FROM classes WHERE class_code = 'R3B'),
+     (SELECT subject_id FROM subjects WHERE name = 'Slovka'),
+     (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'maja.kovac')),
+     
+    ((SELECT class_id FROM classes WHERE class_code = 'R3B'),
+     (SELECT subject_id FROM subjects WHERE name = 'Ang'),
+     (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'andrej.zupan')),
+     
+    ((SELECT class_id FROM classes WHERE class_code = 'R3B'),
+     (SELECT subject_id FROM subjects WHERE name = 'Fiska'),
+     (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'janez.novak')),
+     
+    ((SELECT class_id FROM classes WHERE class_code = 'R3B'),
+     (SELECT subject_id FROM subjects WHERE name = 'Comp sci 1'),
+     (SELECT teacher_id FROM teachers JOIN users ON teachers.user_id = users.user_id WHERE username = 'andrej.zupan'));
 
--- Enroll class 4.A students in 4.A classes
+-- Enroll students in their respective classes
 INSERT INTO enrollments (student_id, class_id)
 SELECT s.student_id, c.class_id
-FROM students s, classes c
-WHERE s.class_code = '4.A' AND c.title LIKE '%4.A%';
+FROM students s
+JOIN classes c ON s.class_code = c.class_code;
 
--- Enroll class 4.B students in 4.B classes
-INSERT INTO enrollments (student_id, class_id)
-SELECT s.student_id, c.class_id
-FROM students s, classes c
-WHERE s.class_code = '4.B' AND c.title LIKE '%4.B%';
-
--- Create periods (class sessions)
--- For Math 4.A (2 periods per week for 4 weeks)
-INSERT INTO periods (class_id, period_date, period_label)
-SELECT
-    (SELECT class_id FROM classes WHERE title = 'Mathematics 4.A - First Semester'),
+-- Create periods (class sessions) for Math R3A
+INSERT INTO periods (class_subject_id, period_date, period_label)
+SELECT 
+    cs.class_subject_id,
     date,
     CONCAT('Period ', (ROW_NUMBER() OVER (ORDER BY date)))
-FROM (
+FROM 
+    (
     -- Monday sessions for 4 weeks
     SELECT '2024-09-02' as date UNION ALL
     SELECT '2024-09-09' UNION ALL
@@ -171,15 +190,20 @@ FROM (
     SELECT '2024-09-12' UNION ALL
     SELECT '2024-09-19' UNION ALL
     SELECT '2024-09-26'
-) AS dates;
+    ) AS dates,
+    class_subjects cs
+WHERE 
+    cs.class_id = (SELECT class_id FROM classes WHERE class_code = 'R3A')
+    AND cs.subject_id = (SELECT subject_id FROM subjects WHERE name = 'Matka');
 
--- For Math 4.B (2 periods per week for 4 weeks)
-INSERT INTO periods (class_id, period_date, period_label)
-SELECT
-    (SELECT class_id FROM classes WHERE title = 'Mathematics 4.B - First Semester'),
+-- Create periods (class sessions) for Math R3B
+INSERT INTO periods (class_subject_id, period_date, period_label)
+SELECT 
+    cs.class_subject_id,
     date,
     CONCAT('Period ', (ROW_NUMBER() OVER (ORDER BY date)))
-FROM (
+FROM 
+    (
     -- Tuesday sessions for 4 weeks
     SELECT '2024-09-03' as date UNION ALL
     SELECT '2024-09-10' UNION ALL
@@ -190,26 +214,51 @@ FROM (
     SELECT '2024-09-13' UNION ALL
     SELECT '2024-09-20' UNION ALL
     SELECT '2024-09-27'
-) AS dates;
+    ) AS dates,
+    class_subjects cs
+WHERE 
+    cs.class_id = (SELECT class_id FROM classes WHERE class_code = 'R3B')
+    AND cs.subject_id = (SELECT subject_id FROM subjects WHERE name = 'Matka');
 
--- Grade items for Mathematics 4.A
-INSERT INTO grade_items (class_id, name, max_points, weight)
-VALUES
-    ((SELECT class_id FROM classes WHERE title = 'Mathematics 4.A - First Semester'), 'Quiz 1', 20.00, 1.00),
-    ((SELECT class_id FROM classes WHERE title = 'Mathematics 4.A - First Semester'), 'Homework 1', 10.00, 0.50),
-    ((SELECT class_id FROM classes WHERE title = 'Mathematics 4.A - First Semester'), 'Midterm Exam', 50.00, 2.00);
+-- Grade items for Mathematics R3A
+INSERT INTO grade_items (class_subject_id, name, max_points, weight)
+SELECT 
+    cs.class_subject_id,
+    item_name,
+    max_points,
+    weight
+FROM 
+    (
+        SELECT 'Quiz 1' AS item_name, 20.00 AS max_points, 1.00 AS weight UNION ALL
+        SELECT 'Homework 1', 10.00, 0.50 UNION ALL
+        SELECT 'Midterm Exam', 50.00, 2.00
+    ) AS items,
+    class_subjects cs
+WHERE 
+    cs.class_id = (SELECT class_id FROM classes WHERE class_code = 'R3A')
+    AND cs.subject_id = (SELECT subject_id FROM subjects WHERE name = 'Matka');
 
--- Grade items for Mathematics 4.B
-INSERT INTO grade_items (class_id, name, max_points, weight)
-VALUES
-    ((SELECT class_id FROM classes WHERE title = 'Mathematics 4.B - First Semester'), 'Quiz 1', 20.00, 1.00),
-    ((SELECT class_id FROM classes WHERE title = 'Mathematics 4.B - First Semester'), 'Homework 1', 10.00, 0.50),
-    ((SELECT class_id FROM classes WHERE title = 'Mathematics 4.B - First Semester'), 'Midterm Exam', 50.00, 2.00);
+-- Grade items for Mathematics R3B
+INSERT INTO grade_items (class_subject_id, name, max_points, weight)
+SELECT 
+    cs.class_subject_id,
+    item_name,
+    max_points,
+    weight
+FROM 
+    (
+        SELECT 'Quiz 1' AS item_name, 20.00 AS max_points, 1.00 AS weight UNION ALL
+        SELECT 'Homework 1', 10.00, 0.50 UNION ALL
+        SELECT 'Midterm Exam', 50.00, 2.00
+    ) AS items,
+    class_subjects cs
+WHERE 
+    cs.class_id = (SELECT class_id FROM classes WHERE class_code = 'R3B')
+    AND cs.subject_id = (SELECT subject_id FROM subjects WHERE name = 'Matka');
 
--- Add grades for Mathematics 4.A students
--- Quiz 1 grades
+-- Add grades for Mathematics R3A students - Quiz 1
 INSERT INTO grades (enroll_id, item_id, points, comment)
-SELECT
+SELECT 
     e.enroll_id,
     gi.item_id,
     FLOOR(10 + RAND() * 10), -- Random grade between 10-20
@@ -218,15 +267,20 @@ SELECT
         WHEN RAND() > 0.4 THEN 'Could improve on formula applications'
         ELSE NULL
     END
-FROM enrollments e
-JOIN students s ON e.student_id = s.student_id
-JOIN classes c ON e.class_id = c.class_id
-JOIN grade_items gi ON c.class_id = gi.class_id
-WHERE c.title = 'Mathematics 4.A - First Semester' AND gi.name = 'Quiz 1';
+FROM 
+    enrollments e
+    JOIN students s ON e.student_id = s.student_id
+    JOIN classes c ON e.class_id = c.class_id
+    JOIN class_subjects cs ON c.class_id = cs.class_id
+    JOIN grade_items gi ON cs.class_subject_id = gi.class_subject_id
+WHERE 
+    c.class_code = 'R3A'
+    AND cs.subject_id = (SELECT subject_id FROM subjects WHERE name = 'Matka')
+    AND gi.name = 'Quiz 1';
 
--- Homework 1 grades
+-- Add grades for Mathematics R3A students - Homework 1
 INSERT INTO grades (enroll_id, item_id, points, comment)
-SELECT
+SELECT 
     e.enroll_id,
     gi.item_id,
     FLOOR(5 + RAND() * 5), -- Random grade between 5-10
@@ -235,16 +289,20 @@ SELECT
         WHEN RAND() > 0.4 THEN 'Missing some parts'
         ELSE NULL
     END
-FROM enrollments e
-JOIN students s ON e.student_id = s.student_id
-JOIN classes c ON e.class_id = c.class_id
-JOIN grade_items gi ON c.class_id = gi.class_id
-WHERE c.title = 'Mathematics 4.A - First Semester' AND gi.name = 'Homework 1';
+FROM 
+    enrollments e
+    JOIN students s ON e.student_id = s.student_id
+    JOIN classes c ON e.class_id = c.class_id
+    JOIN class_subjects cs ON c.class_id = cs.class_id
+    JOIN grade_items gi ON cs.class_subject_id = gi.class_subject_id
+WHERE 
+    c.class_code = 'R3A'
+    AND cs.subject_id = (SELECT subject_id FROM subjects WHERE name = 'Matka')
+    AND gi.name = 'Homework 1';
 
--- Add grades for Mathematics 4.B students
--- Quiz 1 grades
+-- Add grades for Mathematics R3B students - Quiz 1
 INSERT INTO grades (enroll_id, item_id, points, comment)
-SELECT
+SELECT 
     e.enroll_id,
     gi.item_id,
     FLOOR(10 + RAND() * 10), -- Random grade between 10-20
@@ -253,15 +311,20 @@ SELECT
         WHEN RAND() > 0.4 THEN 'Could improve on formula applications'
         ELSE NULL
     END
-FROM enrollments e
-JOIN students s ON e.student_id = s.student_id
-JOIN classes c ON e.class_id = c.class_id
-JOIN grade_items gi ON c.class_id = gi.class_id
-WHERE c.title = 'Mathematics 4.B - First Semester' AND gi.name = 'Quiz 1';
+FROM 
+    enrollments e
+    JOIN students s ON e.student_id = s.student_id
+    JOIN classes c ON e.class_id = c.class_id
+    JOIN class_subjects cs ON c.class_id = cs.class_id
+    JOIN grade_items gi ON cs.class_subject_id = gi.class_subject_id
+WHERE 
+    c.class_code = 'R3B'
+    AND cs.subject_id = (SELECT subject_id FROM subjects WHERE name = 'Matka')
+    AND gi.name = 'Quiz 1';
 
--- Homework 1 grades
+-- Add grades for Mathematics R3B students - Homework 1
 INSERT INTO grades (enroll_id, item_id, points, comment)
-SELECT
+SELECT 
     e.enroll_id,
     gi.item_id,
     FLOOR(5 + RAND() * 5), -- Random grade between 5-10
@@ -270,13 +333,18 @@ SELECT
         WHEN RAND() > 0.4 THEN 'Missing some parts'
         ELSE NULL
     END
-FROM enrollments e
-JOIN students s ON e.student_id = s.student_id
-JOIN classes c ON e.class_id = c.class_id
-JOIN grade_items gi ON c.class_id = gi.class_id
-WHERE c.title = 'Mathematics 4.B - First Semester' AND gi.name = 'Homework 1';
+FROM 
+    enrollments e
+    JOIN students s ON e.student_id = s.student_id
+    JOIN classes c ON e.class_id = c.class_id
+    JOIN class_subjects cs ON c.class_id = cs.class_id
+    JOIN grade_items gi ON cs.class_subject_id = gi.class_subject_id
+WHERE 
+    c.class_code = 'R3B'
+    AND cs.subject_id = (SELECT subject_id FROM subjects WHERE name = 'Matka')
+    AND gi.name = 'Homework 1';
 
--- Add attendance records for 4.A Math periods
+-- Add attendance records for R3A Math periods
 INSERT INTO attendance (enroll_id, period_id, status, justification, approved)
 SELECT
     e.enroll_id,
@@ -296,12 +364,16 @@ SELECT
         WHEN RAND() > 0.4 THEN 0  -- 30% rejected
         ELSE NULL                 -- rest pending
     END
-FROM enrollments e
-JOIN periods p ON e.class_id = p.class_id
-JOIN classes c ON e.class_id = c.class_id
-WHERE c.title = 'Mathematics 4.A - First Semester';
+FROM 
+    enrollments e
+    JOIN classes c ON e.class_id = c.class_id
+    JOIN class_subjects cs ON c.class_id = cs.class_id
+    JOIN periods p ON cs.class_subject_id = p.class_subject_id
+WHERE 
+    c.class_code = 'R3A'
+    AND cs.subject_id = (SELECT subject_id FROM subjects WHERE name = 'Matka');
 
--- Add attendance records for 4.B Math periods
+-- Add attendance records for R3B Math periods
 INSERT INTO attendance (enroll_id, period_id, status, justification, approved)
 SELECT
     e.enroll_id,
@@ -321,10 +393,14 @@ SELECT
         WHEN RAND() > 0.4 THEN 0  -- 30% rejected
         ELSE NULL                 -- rest pending
     END
-FROM enrollments e
-JOIN periods p ON e.class_id = p.class_id
-JOIN classes c ON e.class_id = c.class_id
-WHERE c.title = 'Mathematics 4.B - First Semester';
+FROM 
+    enrollments e
+    JOIN classes c ON e.class_id = c.class_id
+    JOIN class_subjects cs ON c.class_id = cs.class_id
+    JOIN periods p ON cs.class_subject_id = p.class_subject_id
+WHERE 
+    c.class_code = 'R3B'
+    AND cs.subject_id = (SELECT subject_id FROM subjects WHERE name = 'Matka');
 
 -- Add some pending absence justifications (without text for some absences)
 UPDATE attendance
