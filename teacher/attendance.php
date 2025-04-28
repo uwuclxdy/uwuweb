@@ -5,15 +5,9 @@
  * Provides interface for teachers to manage student attendance
  * Supports tracking attendance for class periods
  *
- * Functions:
- * - getTeacherId($userId) - Retrieves teacher ID from user ID
- * - getTeacherClasses($teacherId) - Gets classes taught by a teacher
- * - getClassStudents($classId) - Gets students enrolled in a class
- * - getClassPeriods($classId) - Gets periods for a specific class
- * - getPeriodAttendance($periodId) - Gets attendance records for a period
- * - addPeriod($classId, $periodDate, $periodLabel) - Adds a new period to a class
- * - saveAttendance($enroll_id, $period_id, $status) - Saves attendance status for a student
  */
+
+use Random\RandomException;
 
 require_once '../includes/auth.php';
 require_once '../includes/db.php';
@@ -51,18 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($classId <= 0 || empty($periodDate) || empty($periodLabel)) {
             $message = 'Please fill out all period details.';
             $messageType = 'error';
+        } else if (addPeriod($classId, $periodDate, $periodLabel)) {
+            $message = 'New period added successfully.';
+            $messageType = 'success';
         } else {
-            try {
-                if (addPeriod($classId, $periodDate, $periodLabel)) {
-                    $message = 'New period added successfully.';
-                    $messageType = 'success';
-                } else {
-                    $message = 'Error adding period. Please try again.';
-                    $messageType = 'error';
-                }
-            } catch (JsonException $e) {
-
-            }
+            $message = 'Error adding period. Please try again.';
+            $messageType = 'error';
         }
     } else if (isset($_POST['save_attendance'])) {
         $periodId = isset($_POST['period_id']) ? (int)$_POST['period_id'] : 0;
@@ -74,12 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $success = true;
             foreach ($attendance as $enrollId => $status) {
-                try {
-                    if (!saveAttendance($enrollId, $periodId, $status)) {
-                        $success = false;
-                    }
-                } catch (JsonException $e) {
-
+                if (!saveAttendance($enrollId, $periodId, $status)) {
+                    $success = false;
                 }
             }
 
@@ -107,7 +91,11 @@ $students = $selectedClassId ? getClassStudents($selectedClassId) : [];
 $attendanceData = $selectedPeriodId ? getPeriodAttendance($selectedPeriodId) : [];
 
 // Generate CSRF token
-$csrfToken = generateCSRFToken();
+try {
+    $csrfToken = generateCSRFToken();
+} catch (RandomException $e) {
+    die('Error generating CSRF token: ' . $e->getMessage());
+}
 
 ?>
 <!-- HTML comment: Main card with page title and description -->

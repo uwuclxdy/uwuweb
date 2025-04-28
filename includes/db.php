@@ -21,8 +21,8 @@ $db_config = [
     'host' => 'localhost',
     'dbname' => 'uwuweb',
     'charset' => 'utf8mb4',
-    'username' => 'root', // Default XAMPP username
-    'password' => ''      // Default XAMPP password (blank)
+    'username' => 'root',
+    'password' => ''
 ];
 
 // PDO connection options
@@ -40,7 +40,6 @@ $pdo_options = [
  */
 function logDBError(string $error): void
 {
-    // Log to a file or use PHP's error logging system
     error_log('Database error: ' . $error);
 }
 
@@ -57,17 +56,13 @@ function getDBConnection(): ?PDO
         $dsn = "mysql:host={$db_config['host']};dbname={$db_config['dbname']};charset={$db_config['charset']}";
         return new PDO($dsn, $db_config['username'], $db_config['password'], $pdo_options);
     } catch (PDOException $e) {
-        // Log the error
         logDBError($e->getMessage());
 
-        // Return null instead of killing the script
         return null;
     }
 }
 
 /**
- * Gets a database connection or terminates with an error message
- *
  * This function should be used when a database connection is required
  * and the script cannot continue without it.
  *
@@ -102,11 +97,17 @@ function testDBConnection(): string
     try {
         $pdo = getDBConnection();
         if (!$pdo) {
-            return "Connection failed: Unable to connect to database";
+            return "Connection failed. Check database settings.";
         }
-        $stmt = $pdo->query("SELECT 'Connection successful' AS message");
-        return $stmt->fetch()['message'];
+
+        $stmt = $pdo->query("SELECT VERSION() as version, DATABASE() as db_name");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return "Connection successful! MySQL Version: " .
+               ($result['version'] ?? 'Unknown') .
+               ", Database: " . ($result['db_name'] ?? 'Unknown');
     } catch (PDOException $e) {
-        return "Connection failed: " . $e->getMessage();
+        logDBError($e->getMessage());
+        return "Connection test failed: " . $e->getMessage();
     }
 }

@@ -4,10 +4,6 @@
  *
  * Allows students to view their own attendance records in read-only mode
  *
- * Functions:
- * - getStudentAttendance($studentId) - Gets attendance records for a student
- * - getStudentId() - Gets the student ID for the current user
- * - getAttendanceStatusLabel($status) - Converts attendance status code to readable label
  */
 
 require_once '../includes/db.php';

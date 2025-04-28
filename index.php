@@ -4,8 +4,6 @@
  *
  * Handles user authentication and redirects to the dashboard
  *
- * Functions:
- * - None (main script file)
  */
 
 require_once 'includes/auth.php';
@@ -71,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Login - uwuweb Grade Management</title>
-    <link rel="stylesheet" href="/uwuweb/assets/css/style.css">
+    <link rel="stylesheet" href="../uwuweb/assets/css/style.css">
 </head>
 <body class="bg-primary">
 
@@ -81,32 +79,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h1 class="mb-sm">uwuweb</h1>
             <p class="text-secondary">Grade Management System</p>
         </div>
-        
+
         <?php if (!empty($error)): ?>
             <div class="alert status-error mb-md">
                 <?= htmlspecialchars($error) ?>
             </div>
         <?php endif; ?>
-        
+
         <?php if (isset($_GET['msg']) && $_GET['msg'] === 'logged_out'): ?>
             <div class="alert status-success mb-md">
                 You have been successfully logged out.
             </div>
         <?php endif; ?>
-        
+
         <form method="POST" action="index.php">
             <div class="form-group">
                 <label for="username" class="form-label">Username</label>
-                <input type="text" id="username" name="username" class="form-input" 
+                <input type="text" id="username" name="username" class="form-input"
                     value="<?= htmlspecialchars($username) ?>" required autocomplete="username">
             </div>
-            
+
             <div class="form-group">
                 <label for="password" class="form-label">Password</label>
-                <input type="password" id="password" name="password" class="form-input" 
+                <input type="password" id="password" name="password" class="form-input"
                     required autocomplete="current-password">
             </div>
-            
+
             <div class="form-group mt-lg">
                 <button type="submit" class="btn btn-primary" style="width: 100%;">Log In</button>
             </div>
@@ -114,6 +112,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
-<script src="/uwuweb/assets/js/main.js"></script>
+<script src="../uwuweb/assets/js/main.js"></script>
 </body>
 </html>

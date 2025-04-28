@@ -1,18 +1,111 @@
-<?php
+<?php /** @noinspection ALL */
 /**
  * Admin Functions Library
  *
  * Provides centralized functions for administrative operations
  * including user management, system settings, and class-subject assignments.
+ *
+ * User Management Functions:
+ * - getAllUsers(): array - Retrieves all users with their role information
+ * - displayUserList(): void - Displays a table of all users with management actions
+ * - getUserDetails(int $userId): ?array - Fetches detailed information about a specific user
+ * - createNewUser(array $userData): bool|int - Creates a new user with specified role
+ * - updateUser(int $userId, array $userData): bool - Updates an existing user's information
+ * - resetUserPassword(int $userId, string $newPassword): bool - Resets a user's password
+ * - deleteUser(int $userId): bool - Deletes a user if they have no dependencies
+ *
+ * Subject Management Functions:
+ * - getAllSubjects(): array - Retrieves all subjects
+ * - displaySubjectsList(): void - Displays a table of all subjects with management actions
+ * - getSubjectDetails(int $subjectId): ?array - Fetches detailed information about a specific subject
+ * - createSubject(array $subjectData): bool|int - Creates a new subject
+ * - updateSubject(int $subjectId, array $subjectData): bool - Updates an existing subject
+ * - deleteSubject(int $subjectId): bool - Deletes a subject if it's not in use
+ *
+ * Class Management Functions:
+ * - getAllClasses(): array - Retrieves all classes
+ * - displayClassesList(): void - Displays a table of all classes with management actions
+ * - getClassDetails(int $classId): ?array - Fetches detailed information about a specific class
+ *
+ * Class-Subject Assignment Functions:
+ * - getAllClassSubjectAssignments(): array - Gets all class-subject assignments
+ * - getAllTeachers(): array - Gets all available teachers
  */
+
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/functions.php';
 
 // ===== User Management Functions =====
 
 /**
- * Displays a table of all users with management actions
+ * Retrieves all users with their role information
+ *
+ * @return array Array of user records
  */
-function displayUserList() {
-    // Implementation would display user listing with sort/filter options
+function getAllUsers(): array {
+    try {
+        $pdo = safeGetDBConnection('getAllUsers');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in getAllUsers", 500, "admin_functions.php");
+        }
+
+        $query = "SELECT u.*, r.name as role_name 
+                FROM users u 
+                JOIN roles r ON u.role_id = r.role_id
+                ORDER BY u.username";
+
+        return $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error retrieving users: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Displays a table of all users with management actions
+ *
+ * @return void
+ */
+function displayUserList(): void {
+    $users = getAllUsers();
+
+    echo '<div class="user-management-table">';
+    echo '<table>';
+    echo '<thead>';
+    echo '<tr>';
+    echo '<th>ID</th>';
+    echo '<th>Username</th>';
+    echo '<th>Role</th>';
+    echo '<th>Created</th>';
+    echo '<th>Actions</th>';
+    echo '</tr>';
+    echo '</thead>';
+    echo '<tbody>';
+
+    foreach ($users as $user) {
+        echo '<tr>';
+        echo '<td>' . htmlspecialchars($user['user_id']) . '</td>';
+        echo '<td>' . htmlspecialchars($user['username']) . '</td>';
+        echo '<td>' . htmlspecialchars($user['role_name']) . '</td>';
+        echo '<td>' . htmlspecialchars($user['created_at']) . '</td>';
+        echo '<td class="actions">';
+        echo '<a href="?action=edit&user_id=' . $user['user_id'] . '" class="button edit">Uredi</a>';
+        echo '<a href="?action=reset&user_id=' . $user['user_id'] . '" class="button reset">Ponastavi geslo</a>';
+
+        if ($user['user_id'] != getUserId() && !($user['role_id'] == ROLE_ADMIN && $user['user_id'] == 1)) {
+            echo '<a href="?action=delete&user_id=' . $user['user_id'] . '" class="button delete" 
+                    onclick="return confirm(\'Ali ste prepričani, da želite izbrisati tega uporabnika?\');">Izbriši</a>';
+        }
+
+        echo '</td>';
+        echo '</tr>';
+    }
+
+    echo '</tbody>';
+    echo '</table>';
+    echo '</div>';
 }
 
 /**
@@ -21,8 +114,68 @@ function displayUserList() {
  * @param int $userId User ID to fetch details for
  * @return array|null User details or null if not found
  */
-function getUserDetails(int $userId) {
-    // Implementation would retrieve user information from database
+function getUserDetails(int $userId): ?array {
+    try {
+        $pdo = safeGetDBConnection('getUserDetails');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in getUserDetails", 500, "admin_functions.php");
+        }
+
+        $query = "SELECT u.*, r.name as role_name 
+                FROM users u 
+                JOIN roles r ON u.role_id = r.role_id
+                WHERE u.user_id = ?";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$userId]);
+
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            return null;
+        }
+
+        switch ($user['role_id']) {
+            case ROLE_STUDENT:
+                $stmt = $pdo->prepare("SELECT * FROM students WHERE user_id = ?");
+                $stmt->execute([$userId]);
+                $roleData = $stmt->fetch(PDO::FETCH_ASSOC);
+                $user['student_data'] = $roleData;
+                break;
+
+            case ROLE_TEACHER:
+                $stmt = $pdo->prepare("SELECT * FROM teachers WHERE user_id = ?");
+                $stmt->execute([$userId]);
+                $roleData = $stmt->fetch(PDO::FETCH_ASSOC);
+                $user['teacher_data'] = $roleData;
+                break;
+
+            case ROLE_PARENT:
+                $stmt = $pdo->prepare("SELECT * FROM parents WHERE user_id = ?");
+                $stmt->execute([$userId]);
+                $roleData = $stmt->fetch(PDO::FETCH_ASSOC);
+                $user['parent_data'] = $roleData;
+
+                if ($roleData) {
+                    $stmt = $pdo->prepare("
+                        SELECT s.*, u.username 
+                        FROM students s
+                        JOIN users u ON s.user_id = u.user_id
+                        JOIN student_parent sp ON s.student_id = sp.student_id
+                        WHERE sp.parent_id = ?
+                    ");
+                    $stmt->execute([$roleData['parent_id']]);
+                    $user['linked_students'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                }
+                break;
+        }
+
+        return $user;
+    } catch (PDOException $e) {
+        logDBError("Error retrieving user details: " . $e->getMessage());
+        return null;
+    }
 }
 
 /**
@@ -31,8 +184,85 @@ function getUserDetails(int $userId) {
  * @param array $userData User data including username, password, role, etc.
  * @return bool|int False on failure, user ID on success
  */
-function createNewUser(array $userData) {
-    // Implementation would validate and insert user data
+function createNewUser(array $userData): bool|int {
+    if (empty($userData['username']) || empty($userData['password']) || empty($userData['role_id'])) {
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('createNewUser');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in createNewUser", 500, "admin_functions.php");
+        }
+
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("
+            INSERT INTO users (username, pass_hash, role_id) 
+            VALUES (?, ?, ?)
+        ");
+
+        $passHash = password_hash($userData['password'], PASSWORD_DEFAULT);
+        $stmt->execute([$userData['username'], $passHash, $userData['role_id']]);
+
+        $userId = $pdo->lastInsertId();
+
+        switch ($userData['role_id']) {
+            case ROLE_STUDENT:
+                if (empty($userData['first_name']) || empty($userData['last_name']) ||
+                    empty($userData['dob']) || empty($userData['class_code'])) {
+                    $pdo->rollBack();
+                    return false;
+                }
+
+                $stmt = $pdo->prepare("
+                    INSERT INTO students (user_id, first_name, last_name, dob, class_code)
+                    VALUES (?, ?, ?, ?, ?)
+                ");
+
+                $stmt->execute([
+                    $userId,
+                    $userData['first_name'],
+                    $userData['last_name'],
+                    $userData['dob'],
+                    $userData['class_code']
+                ]);
+                break;
+
+            case ROLE_TEACHER:
+                $stmt = $pdo->prepare("INSERT INTO teachers (user_id) VALUES (?)");
+                $stmt->execute([$userId]);
+                break;
+
+            case ROLE_PARENT:
+                $stmt = $pdo->prepare("INSERT INTO parents (user_id) VALUES (?)");
+                $stmt->execute([$userId]);
+
+                if (!empty($userData['student_ids']) && is_array($userData['student_ids'])) {
+                    $parentId = $pdo->lastInsertId();
+
+                    $stmt = $pdo->prepare("
+                        INSERT INTO student_parent (student_id, parent_id)
+                        VALUES (?, ?)
+                    ");
+
+                    foreach ($userData['student_ids'] as $studentId) {
+                        $stmt->execute([$studentId, $parentId]);
+                    }
+                }
+                break;
+        }
+
+        $pdo->commit();
+        return $userId;
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        logDBError("Error creating new user: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
@@ -42,8 +272,114 @@ function createNewUser(array $userData) {
  * @param array $userData Updated user data
  * @return bool Success or failure
  */
-function updateUser(int $userId, array $userData) {
-    // Implementation would validate and update user data
+function updateUser(int $userId, array $userData): bool {
+    if (empty($userId) || empty($userData)) {
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('updateUser');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in updateUser", 500, "admin_functions.php");
+        }
+
+        $pdo->beginTransaction();
+
+        if (!empty($userData['username']) || isset($userData['role_id'])) {
+            $updates = [];
+            $params = [];
+
+            if (!empty($userData['username'])) {
+                $updates[] = "username = ?";
+                $params[] = $userData['username'];
+            }
+
+            if (isset($userData['role_id'])) {
+                $updates[] = "role_id = ?";
+                $params[] = $userData['role_id'];
+            }
+
+            if (!empty($updates)) {
+                $query = "UPDATE users SET " . implode(", ", $updates) . " WHERE user_id = ?";
+                $params[] = $userId;
+
+                $stmt = $pdo->prepare($query);
+                $stmt->execute($params);
+            }
+        }
+
+        $stmt = $pdo->prepare("SELECT role_id FROM users WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        switch ($user['role_id']) {
+            case ROLE_STUDENT:
+                $updates = [];
+                $params = [];
+
+                if (!empty($userData['first_name'])) {
+                    $updates[] = "first_name = ?";
+                    $params[] = $userData['first_name'];
+                }
+
+                if (!empty($userData['last_name'])) {
+                    $updates[] = "last_name = ?";
+                    $params[] = $userData['last_name'];
+                }
+
+                if (!empty($userData['dob'])) {
+                    $updates[] = "dob = ?";
+                    $params[] = $userData['dob'];
+                }
+
+                if (!empty($userData['class_code'])) {
+                    $updates[] = "class_code = ?";
+                    $params[] = $userData['class_code'];
+                }
+
+                if (!empty($updates)) {
+                    $query = "UPDATE students SET " . implode(", ", $updates) . " WHERE user_id = ?";
+                    $params[] = $userId;
+
+                    $stmt = $pdo->prepare($query);
+                    $stmt->execute($params);
+                }
+                break;
+
+            case ROLE_PARENT:
+                if (!empty($userData['student_ids']) && is_array($userData['student_ids'])) {
+                    $stmt = $pdo->prepare("SELECT parent_id FROM parents WHERE user_id = ?");
+                    $stmt->execute([$userId]);
+                    $parent = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($parent) {
+                        $stmt = $pdo->prepare("DELETE FROM student_parent WHERE parent_id = ?");
+                        $stmt->execute([$parent['parent_id']]);
+
+                        $stmt = $pdo->prepare("INSERT INTO student_parent (student_id, parent_id) VALUES (?, ?)");
+                        foreach ($userData['student_ids'] as $studentId) {
+                            $stmt->execute([$studentId, $parent['parent_id']]);
+                        }
+                    }
+                }
+                break;
+        }
+
+        $pdo->commit();
+        return true;
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        logDBError("Error updating user: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
@@ -53,8 +389,28 @@ function updateUser(int $userId, array $userData) {
  * @param string $newPassword New password (will be hashed)
  * @return bool Success or failure
  */
-function resetUserPassword(int $userId, string $newPassword) {
-    // Implementation would hash and update password
+function resetUserPassword(int $userId, string $newPassword): bool {
+    if (empty($userId) || empty($newPassword)) {
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('resetUserPassword');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in resetUserPassword", 500, "admin_functions.php");
+        }
+
+        $passHash = password_hash($newPassword, PASSWORD_DEFAULT);
+
+        $stmt = $pdo->prepare("UPDATE users SET pass_hash = ? WHERE user_id = ?");
+        $stmt->execute([$passHash, $userId]);
+
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        logDBError("Error resetting user password: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
@@ -63,17 +419,178 @@ function resetUserPassword(int $userId, string $newPassword) {
  * @param int $userId User ID to delete
  * @return bool Success or failure
  */
-function deleteUser(int $userId) {
-    // Implementation would check dependencies and delete if possible
+function deleteUser(int $userId): bool {
+    try {
+        $pdo = safeGetDBConnection('deleteUser');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in deleteUser", 500, "admin_functions.php");
+        }
+
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("SELECT role_id FROM users WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        switch ($user['role_id']) {
+            case ROLE_STUDENT:
+                $stmt = $pdo->prepare("
+                    SELECT COUNT(*) AS count FROM enrollments e
+                    LEFT JOIN grades g ON e.enroll_id = g.enroll_id
+                    LEFT JOIN attendance a ON e.enroll_id = a.enroll_id
+                    JOIN students s ON e.student_id = s.student_id
+                    WHERE s.user_id = ? AND (g.grade_id IS NOT NULL OR a.att_id IS NOT NULL)
+                ");
+                $stmt->execute([$userId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($result['count'] > 0) {
+                    $pdo->rollBack();
+                    return false;
+                }
+
+                $stmt = $pdo->prepare("
+                    DELETE sp FROM student_parent sp
+                    JOIN students s ON sp.student_id = s.student_id
+                    WHERE s.user_id = ?
+                ");
+                $stmt->execute([$userId]);
+
+                $stmt = $pdo->prepare("
+                    DELETE e FROM enrollments e
+                    JOIN students s ON e.student_id = s.student_id
+                    WHERE s.user_id = ?
+                ");
+                $stmt->execute([$userId]);
+
+                $stmt = $pdo->prepare("DELETE FROM students WHERE user_id = ?");
+                $stmt->execute([$userId]);
+                break;
+
+            case ROLE_TEACHER:
+                $stmt = $pdo->prepare("
+                    SELECT COUNT(*) AS count 
+                    FROM class_subjects cs
+                    JOIN teachers t ON cs.teacher_id = t.teacher_id
+                    WHERE t.user_id = ?
+                ");
+                $stmt->execute([$userId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($result['count'] > 0) {
+                    $pdo->rollBack();
+                    return false;
+                }
+
+                $stmt = $pdo->prepare("
+                    SELECT COUNT(*) AS count 
+                    FROM classes c
+                    JOIN teachers t ON c.homeroom_teacher_id = t.teacher_id
+                    WHERE t.user_id = ?
+                ");
+                $stmt->execute([$userId]);
+                $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($result['count'] > 0) {
+                    $pdo->rollBack();
+                    return false;
+                }
+
+                $stmt = $pdo->prepare("DELETE FROM teachers WHERE user_id = ?");
+                $stmt->execute([$userId]);
+                break;
+
+            case ROLE_PARENT:
+                $stmt = $pdo->prepare("
+                    DELETE sp FROM student_parent sp
+                    JOIN parents p ON sp.parent_id = p.parent_id
+                    WHERE p.user_id = ?
+                ");
+                $stmt->execute([$userId]);
+
+                $stmt = $pdo->prepare("DELETE FROM parents WHERE user_id = ?");
+                $stmt->execute([$userId]);
+                break;
+        }
+
+        $stmt = $pdo->prepare("DELETE FROM users WHERE user_id = ?");
+        $stmt->execute([$userId]);
+
+        $pdo->commit();
+        return true;
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        logDBError("Error deleting user: " . $e->getMessage());
+        return false;
+    }
 }
 
 // ===== Subject Management Functions =====
 
 /**
- * Displays a table of all subjects with management actions
+ * Retrieves all subjects
+ *
+ * @return array Array of subject records
  */
-function displaySubjectsList() {
-    // Implementation would list all subjects with actions
+function getAllSubjects(): array {
+    try {
+        $pdo = safeGetDBConnection('getAllSubjects');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in getAllSubjects", 500, "admin_functions.php");
+        }
+
+        $query = "SELECT * FROM subjects ORDER BY name";
+
+        return $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error retrieving subjects: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Displays a table of all subjects with management actions
+ *
+ * @return void
+ */
+function displaySubjectsList(): void {
+    $subjects = getAllSubjects();
+
+    echo '<div class="subject-management-table">';
+    echo '<table>';
+    echo '<thead>';
+    echo '<tr>';
+    echo '<th>ID</th>';
+    echo '<th>Name</th>';
+    echo '<th>Actions</th>';
+    echo '</tr>';
+    echo '</thead>';
+    echo '<tbody>';
+
+    foreach ($subjects as $subject) {
+        echo '<tr>';
+        echo '<td>' . htmlspecialchars($subject['subject_id']) . '</td>';
+        echo '<td>' . htmlspecialchars($subject['name']) . '</td>';
+        echo '<td class="actions">';
+        echo '<a href="?action=edit_subject&subject_id=' . $subject['subject_id'] . '" class="button edit">Uredi</a>';
+        echo '<a href="?action=delete_subject&subject_id=' . $subject['subject_id'] . '" class="button delete" 
+                onclick="return confirm(\'Ali ste prepričani, da želite izbrisati ta predmet?\');">Izbriši</a>';
+        echo '</td>';
+        echo '</tr>';
+    }
+
+    echo '</tbody>';
+    echo '</table>';
+    echo '</div>';
 }
 
 /**
@@ -82,8 +599,42 @@ function displaySubjectsList() {
  * @param int $subjectId Subject ID to fetch details for
  * @return array|null Subject details or null if not found
  */
-function getSubjectDetails(int $subjectId) {
-    // Implementation would retrieve subject from database
+function getSubjectDetails(int $subjectId): ?array {
+    try {
+        $pdo = safeGetDBConnection('getSubjectDetails');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in getSubjectDetails", 500, "admin_functions.php");
+        }
+
+        $query = "SELECT * FROM subjects WHERE subject_id = ?";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$subjectId]);
+
+        $subject = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$subject) {
+            return null;
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT cs.class_subject_id, c.class_code, c.title, t.teacher_id,
+                   u.username as teacher_username
+            FROM class_subjects cs
+            JOIN classes c ON cs.class_id = c.class_id
+            JOIN teachers t ON cs.teacher_id = t.teacher_id
+            JOIN users u ON t.user_id = u.user_id
+            WHERE cs.subject_id = ?
+        ");
+        $stmt->execute([$subjectId]);
+        $subject['classes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $subject;
+    } catch (PDOException $e) {
+        logDBError("Error retrieving subject details: " . $e->getMessage());
+        return null;
+    }
 }
 
 /**
@@ -92,38 +643,177 @@ function getSubjectDetails(int $subjectId) {
  * @param array $subjectData Subject data
  * @return bool|int False on failure, subject ID on success
  */
-function createSubject(array $subjectData) {
-    // Implementation would validate and create subject
+function createSubject(array $subjectData): bool|int {
+    if (empty($subjectData['name'])) {
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('createSubject');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in createSubject", 500, "admin_functions.php");
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO subjects (name) VALUES (?)");
+        $stmt->execute([$subjectData['name']]);
+
+        return $pdo->lastInsertId();
+    } catch (PDOException $e) {
+        logDBError("Error creating subject: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
- * Updates an existing subject's information
+ * Updates an existing subject
  *
  * @param int $subjectId Subject ID to update
  * @param array $subjectData Updated subject data
  * @return bool Success or failure
  */
-function updateSubject(int $subjectId, array $subjectData) {
-    // Implementation would validate and update subject
+function updateSubject(int $subjectId, array $subjectData): bool {
+    if (empty($subjectId) || empty($subjectData) || empty($subjectData['name'])) {
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('updateSubject');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in updateSubject", 500, "admin_functions.php");
+        }
+
+        $stmt = $pdo->prepare("UPDATE subjects SET name = ? WHERE subject_id = ?");
+        $stmt->execute([$subjectData['name'], $subjectId]);
+
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        logDBError("Error updating subject: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
- * Deletes a subject if no classes use it
+ * Deletes a subject if it's not in use
  *
  * @param int $subjectId Subject ID to delete
  * @return bool Success or failure
  */
-function deleteSubject(int $subjectId) {
-    // Implementation would check dependencies and delete if possible
+function deleteSubject(int $subjectId): bool {
+    try {
+        $pdo = safeGetDBConnection('deleteSubject');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in deleteSubject", 500, "admin_functions.php");
+        }
+
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM class_subjects WHERE subject_id = ?");
+        $stmt->execute([$subjectId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['count'] > 0) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as count FROM grade_items gi
+            JOIN class_subjects cs ON gi.class_subject_id = cs.class_subject_id
+            WHERE cs.subject_id = ?
+        ");
+        $stmt->execute([$subjectId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['count'] > 0) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        $stmt = $pdo->prepare("DELETE FROM subjects WHERE subject_id = ?");
+        $stmt->execute([$subjectId]);
+
+        $pdo->commit();
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        logDBError("Error deleting subject: " . $e->getMessage());
+        return false;
+    }
 }
 
 // ===== Class Management Functions =====
 
 /**
- * Displays a table of all homeroom classes
+ * Retrieves all classes
+ *
+ * @return array Array of class records
  */
-function displayClassesList() {
-    // Implementation would list all classes with actions
+function getAllClasses(): array {
+    try {
+        $pdo = safeGetDBConnection('getAllClasses');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in getAllClasses", 500, "admin_functions.php");
+        }
+
+        $query = "
+            SELECT c.*, t.teacher_id, u.username as homeroom_teacher_name
+            FROM classes c
+            JOIN teachers t ON c.homeroom_teacher_id = t.teacher_id
+            JOIN users u ON t.user_id = u.user_id
+            ORDER BY c.class_code
+        ";
+
+        return $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error retrieving classes: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Displays a table of all classes with management actions
+ *
+ * @return void
+ */
+function displayClassesList(): void {
+    $classes = getAllClasses();
+
+    echo '<div class="class-management-table">';
+    echo '<table>';
+    echo '<thead>';
+    echo '<tr>';
+    echo '<th>ID</th>';
+    echo '<th>Code</th>';
+    echo '<th>Title</th>';
+    echo '<th>Homeroom Teacher</th>';
+    echo '<th>Actions</th>';
+    echo '</tr>';
+    echo '</thead>';
+    echo '<tbody>';
+
+    foreach ($classes as $class) {
+        echo '<tr>';
+        echo '<td>' . htmlspecialchars($class['class_id']) . '</td>';
+        echo '<td>' . htmlspecialchars($class['class_code']) . '</td>';
+        echo '<td>' . htmlspecialchars($class['title']) . '</td>';
+        echo '<td>' . htmlspecialchars($class['homeroom_teacher_name']) . '</td>';
+        echo '<td class="actions">';
+        echo '<a href="?action=edit_class&class_id=' . $class['class_id'] . '" class="button edit">Uredi</a>';
+        echo '<a href="?action=delete_class&class_id=' . $class['class_id'] . '" class="button delete" 
+                onclick="return confirm(\'Ali ste prepričani, da želite izbrisati ta razred?\');">Izbriši</a>';
+        echo '</td>';
+        echo '</tr>';
+    }
+
+    echo '</tbody>';
+    echo '</table>';
+    echo '</div>';
 }
 
 /**
@@ -132,119 +822,370 @@ function displayClassesList() {
  * @param int $classId Class ID to fetch details for
  * @return array|null Class details or null if not found
  */
-function getClassDetails(int $classId) {
-    // Implementation would retrieve class details from database
+function getClassDetails(int $classId): ?array {
+    try {
+        $pdo = safeGetDBConnection('getClassDetails');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in getClassDetails", 500, "admin_functions.php");
+        }
+
+        $query = "
+            SELECT c.*, t.teacher_id, u.username as homeroom_teacher_name
+            FROM classes c
+            JOIN teachers t ON c.homeroom_teacher_id = t.teacher_id
+            JOIN users u ON t.user_id = u.user_id
+            WHERE c.class_id = ?
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$classId]);
+
+        $class = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$class) {
+            return null;
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT cs.class_subject_id, s.subject_id, s.name as subject_name,
+                   t.teacher_id, u.username as teacher_name
+            FROM class_subjects cs
+            JOIN subjects s ON cs.subject_id = s.subject_id
+            JOIN teachers t ON cs.teacher_id = t.teacher_id
+            JOIN users u ON t.user_id = u.user_id
+            WHERE cs.class_id = ?
+        ");
+        $stmt->execute([$classId]);
+        $class['subjects'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $pdo->prepare("
+            SELECT s.student_id, s.first_name, s.last_name, u.username
+            FROM students s
+            JOIN users u ON s.user_id = u.user_id
+            WHERE s.class_code = ?
+        ");
+        $stmt->execute([$class['class_code']]);
+        $class['students'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $class;
+    } catch (PDOException $e) {
+        logDBError("Error retrieving class details: " . $e->getMessage());
+        return null;
+    }
 }
 
 /**
- * Creates a new homeroom class
+ * Creates a new class
  *
- * @param array $classData Class data
+ * @param array $classData Class data including class_code, title, homeroom_teacher_id
  * @return bool|int False on failure, class ID on success
  */
-function createClass(array $classData) {
-    // Implementation would validate and create class
+function createClass(array $classData): bool|int {
+    if (empty($classData['class_code']) || empty($classData['title']) || empty($classData['homeroom_teacher_id'])) {
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('createClass');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in createClass", 500, "admin_functions.php");
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO classes (class_code, title, homeroom_teacher_id) VALUES (?, ?, ?)");
+        $stmt->execute([
+            $classData['class_code'],
+            $classData['title'],
+            $classData['homeroom_teacher_id']
+        ]);
+
+        return $pdo->lastInsertId();
+    } catch (PDOException $e) {
+        logDBError("Error creating class: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
- * Updates an existing class's information
+ * Updates an existing class
  *
  * @param int $classId Class ID to update
  * @param array $classData Updated class data
  * @return bool Success or failure
  */
-function updateClass(int $classId, array $classData) {
-    // Implementation would validate and update class
+function updateClass(int $classId, array $classData): bool {
+    if (empty($classId) || empty($classData)) {
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('updateClass');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in updateClass", 500, "admin_functions.php");
+        }
+
+        $updates = [];
+        $params = [];
+
+        if (!empty($classData['class_code'])) {
+            $updates[] = "class_code = ?";
+            $params[] = $classData['class_code'];
+        }
+
+        if (!empty($classData['title'])) {
+            $updates[] = "title = ?";
+            $params[] = $classData['title'];
+        }
+
+        if (!empty($classData['homeroom_teacher_id'])) {
+            $updates[] = "homeroom_teacher_id = ?";
+            $params[] = $classData['homeroom_teacher_id'];
+        }
+
+        if (empty($updates)) {
+            return false;
+        }
+
+        $query = "UPDATE classes SET " . implode(", ", $updates) . " WHERE class_id = ?";
+        $params[] = $classId;
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        logDBError("Error updating class: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
- * Deletes a class if it has no enrollments
+ * Deletes a class if it has no dependencies
  *
  * @param int $classId Class ID to delete
  * @return bool Success or failure
  */
-function deleteClass(int $classId) {
-    // Implementation would check dependencies and delete if possible
+function deleteClass(int $classId): bool {
+    try {
+        $pdo = safeGetDBConnection('deleteClass');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in deleteClass", 500, "admin_functions.php");
+        }
+
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM enrollments WHERE class_id = ?");
+        $stmt->execute([$classId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['count'] > 0) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM class_subjects WHERE class_id = ?");
+        $stmt->execute([$classId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['count'] > 0) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        $stmt = $pdo->prepare("DELETE FROM classes WHERE class_id = ?");
+        $stmt->execute([$classId]);
+
+        $pdo->commit();
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        logDBError("Error deleting class: " . $e->getMessage());
+        return false;
+    }
+}
+
+// ===== Class-Subject Assignment Functions =====
+
+/**
+ * Assigns a subject to a class with a specific teacher
+ *
+ * @param array $assignmentData Assignment data including class_id, subject_id, teacher_id
+ * @return bool|int False on failure, assignment ID on success
+ */
+function assignSubjectToClass(array $assignmentData): bool|int {
+    if (empty($assignmentData['class_id']) || empty($assignmentData['subject_id']) || empty($assignmentData['teacher_id'])) {
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('assignSubjectToClass');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in assignSubjectToClass", 500, "admin_functions.php");
+        }
+
+        $stmt = $pdo->prepare("SELECT class_subject_id FROM class_subjects WHERE class_id = ? AND subject_id = ?");
+        $stmt->execute([$assignmentData['class_id'], $assignmentData['subject_id']]);
+
+        if ($stmt->fetch()) {
+            return false;
+        }
+
+        $stmt = $pdo->prepare("INSERT INTO class_subjects (class_id, subject_id, teacher_id) VALUES (?, ?, ?)");
+        $stmt->execute([
+            $assignmentData['class_id'],
+            $assignmentData['subject_id'],
+            $assignmentData['teacher_id']
+        ]);
+
+        return $pdo->lastInsertId();
+    } catch (PDOException $e) {
+        logDBError("Error assigning subject to class: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
- * Adds a student to a homeroom class
+ * Updates a class-subject assignment
  *
- * @param int $classId Class ID
- * @param int $studentId Student ID
+ * @param int $assignmentId Assignment ID to update
+ * @param array $assignmentData Updated assignment data
  * @return bool Success or failure
  */
-function addStudentToClass(int $classId, int $studentId) {
-    // Implementation would create enrollment and update student class code
+function updateClassSubjectAssignment(int $assignmentId, array $assignmentData): bool {
+    if (empty($assignmentId) || empty($assignmentData) || empty($assignmentData['teacher_id'])) {
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('updateClassSubjectAssignment');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in updateClassSubjectAssignment", 500, "admin_functions.php");
+        }
+
+        $stmt = $pdo->prepare("UPDATE class_subjects SET teacher_id = ? WHERE class_subject_id = ?");
+        $stmt->execute([$assignmentData['teacher_id'], $assignmentId]);
+
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        logDBError("Error updating class-subject assignment: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
- * Removes a student from a homeroom class
+ * Removes a subject assignment from a class
  *
- * @param int $enrollId Enrollment ID to remove
+ * @param int $assignmentId Assignment ID to remove
  * @return bool Success or failure
  */
-function removeStudentFromClass(int $enrollId) {
-    // Implementation would check for grades/attendance and delete if possible
+function removeSubjectFromClass(int $assignmentId): bool {
+    try {
+        $pdo = safeGetDBConnection('removeSubjectFromClass');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in removeSubjectFromClass", 500, "admin_functions.php");
+        }
+
+        $pdo->beginTransaction();
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM grade_items WHERE class_subject_id = ?");
+        $stmt->execute([$assignmentId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['count'] > 0) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM periods WHERE class_subject_id = ?");
+        $stmt->execute([$assignmentId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($result['count'] > 0) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        $stmt = $pdo->prepare("DELETE FROM class_subjects WHERE class_subject_id = ?");
+        $stmt->execute([$assignmentId]);
+
+        $pdo->commit();
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        logDBError("Error removing subject from class: " . $e->getMessage());
+        return false;
+    }
 }
 
 /**
- * Assigns a homeroom teacher to a class
+ * Gets all class-subject assignments
  *
- * @param int $classId Class ID
- * @param int $teacherId Teacher ID
- * @return bool Success or failure
+ * @return array Array of class-subject assignments
  */
-function assignHomeRoomTeacher(int $classId, int $teacherId) {
-    // Implementation would update class homeroom teacher
+function getAllClassSubjectAssignments(): array {
+    try {
+        $pdo = safeGetDBConnection('getAllClassSubjectAssignments');
+
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in getAllClassSubjectAssignments", 500, "admin_functions.php");
+        }
+
+        $query = "
+            SELECT cs.class_subject_id, c.class_id, c.class_code, c.title as class_title,
+                   s.subject_id, s.name as subject_name,
+                   t.teacher_id, u.username as teacher_name
+            FROM class_subjects cs
+            JOIN classes c ON cs.class_id = c.class_id
+            JOIN subjects s ON cs.subject_id = s.subject_id
+            JOIN teachers t ON cs.teacher_id = t.teacher_id
+            JOIN users u ON t.user_id = u.user_id
+            ORDER BY c.class_code, s.name
+        ";
+
+        return $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error getting class-subject assignments: " . $e->getMessage());
+        return [];
+    }
 }
 
-// ===== Class-Subject Management Functions =====
-
 /**
- * Displays a table of all class-subject assignments
- */
-function displayClassSubjectsList() {
-    // Implementation would list all class-subject assignments
-}
-
-/**
- * Fetches detailed information about a specific class-subject
+ * Gets all available teachers
  *
- * @param int $classSubjectId Class-Subject ID to fetch details for
- * @return array|null Class-Subject details or null if not found
+ * @return array Array of teachers
  */
-function getClassSubjectDetails(int $classSubjectId) {
-    // Implementation would retrieve assignment details from database
-}
+function getAllTeachers(): array {
+    try {
+        $pdo = safeGetDBConnection('getAllTeachers');
 
-/**
- * Creates a new class-subject assignment
- *
- * @param array $classSubjectData Class-Subject data
- * @return bool|int False on failure, class-subject ID on success
- */
-function createClassSubject(array $classSubjectData) {
-    // Implementation would validate and create assignment
-}
+        if ($pdo === null) {
+            sendJsonErrorResponse("Failed to establish database connection in getAllTeachers", 500, "admin_functions.php");
+        }
 
-/**
- * Updates an existing class-subject assignment
- *
- * @param int $classSubjectId Class-Subject ID to update
- * @param array $classSubjectData Updated class-subject data
- * @return bool Success or failure
- */
-function updateClassSubject(int $classSubjectId, array $classSubjectData) {
-    // Implementation would validate and update assignment
-}
+        $query = "
+            SELECT t.teacher_id, u.user_id, u.username
+            FROM teachers t
+            JOIN users u ON t.user_id = u.user_id
+            WHERE u.role_id = ?
+            ORDER BY u.username
+        ";
 
-/**
- * Deletes a class-subject assignment if it has no periods or grade items
- *
- * @param int $classSubjectId Class-Subject ID to delete
- * @return bool Success or failure
- */
-function deleteClassSubject(int $classSubjectId) {
-    // Implementation would check dependencies and delete if possible
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([ROLE_TEACHER]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error getting teachers: " . $e->getMessage());
+        return [];
+    }
 }

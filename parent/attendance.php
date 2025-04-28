@@ -4,11 +4,6 @@
  *
  * Allows parents to view attendance records for their linked students in read-only mode
  *
- * Functions:
- * - getParentStudents($parentId) - Gets list of students linked to a parent
- * - getParentId() - Gets the parent ID for the current user
- * - getStudentAttendance($studentId) - Gets attendance records for a student
- * - getAttendanceStatusLabel($status) - Converts attendance status code to readable label
  */
 
 require_once '../includes/db.php';
@@ -36,11 +31,7 @@ $students = getParentStudents($parentId);
 $selectedStudentId = isset($_GET['student_id']) ? (int)$_GET['student_id'] : ($students[0]['student_id'] ?? 0);
 
 // Get attendance data if student is selected
-try {
-    $attendanceRecords = $selectedStudentId ? getStudentAttendance($selectedStudentId) : [];
-} catch (JsonException $e) {
-
-}
+$attendanceRecords = $selectedStudentId ? getStudentAttendance($selectedStudentId) : [];
 
 // Find the selected student's name
 $selectedStudent = null;

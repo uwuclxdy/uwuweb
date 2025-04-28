@@ -18,38 +18,36 @@
  * - updateLastActivityTime() - Updates the last activity timestamp
  */
 
-// Start session if not already started
+use JetBrains\PhpStorm\NoReturn;
+use Random\RandomException;
+
 if (session_status() === PHP_SESSION_NONE) {
-    // Set session timeout to 30 minutes as per security notes
     ini_set('session.gc_maxlifetime', 1800);
     session_set_cookie_params(1800);
     session_start();
 
-    // Regenerate session ID periodically for security
     if (!isset($_SESSION['last_regeneration'])) {
         $_SESSION['last_regeneration'] = time();
-    } elseif (time() - $_SESSION['last_regeneration'] > 600) { // 10 minutes
+    } elseif (time() - $_SESSION['last_regeneration'] > 600) {
         session_regenerate_id(true);
         $_SESSION['last_regeneration'] = time();
     }
 
-    // Initialize last activity time if not set
     if (!isset($_SESSION['last_activity'])) {
         $_SESSION['last_activity'] = time();
     }
 
-    // Check for session timeout due to inactivity
     checkSessionTimeout();
 
-    // Update last activity time for the current request
     if (isLoggedIn()) {
         updateLastActivityTime();
     }
 }
 
 // Check if user is logged in
-function isLoggedIn() {
-    return isset($_SESSION['user_id']) && !empty($_SESSION['user_id']);
+function isLoggedIn(): bool
+{
+    return !empty($_SESSION['user_id'] ?? null);
 }
 
 // Get current user's role ID
@@ -63,7 +61,8 @@ function getUserId() {
 }
 
 // Check if user has a specific role
-function hasRole($roleId) {
+function hasRole($roleId): bool
+{
     return getUserRole() == $roleId;
 }
 
@@ -75,7 +74,7 @@ function requireRole($roleId) {
         exit;
     }
 
-    if (!hasRole($roleId) && !hasRole(1)) { // Role ID 1 is assumed to be admin with all access
+    if (!hasRole($roleId) && !hasRole(1)) {
         header('Location: /dashboard.php?error=unauthorized');
         exit;
     }
@@ -84,6 +83,9 @@ function requireRole($roleId) {
 }
 
 // Generate CSRF token
+/**
+ * @throws RandomException
+ */
 function generateCSRFToken() {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -92,22 +94,26 @@ function generateCSRFToken() {
 }
 
 // Verify CSRF token
-function verifyCSRFToken($token) {
-    if (!isset($_SESSION['csrf_token']) || $token !== $_SESSION['csrf_token']) {
-        header('Location: /dashboard.php?error=invalid_csrf');
-        exit;
+function verifyCSRFToken(string $token): bool {
+    if (empty($_SESSION['csrf_token'])) {
+        return false;
     }
-    return true;
+
+    return hash_equals($_SESSION['csrf_token'], $token);
 }
 
-// Role constants for improved code readability
-define('ROLE_ADMIN', 1);
-define('ROLE_TEACHER', 2);
-define('ROLE_STUDENT', 3);
-define('ROLE_PARENT', 4);
+const ROLE_ADMIN = 1;
+const ROLE_TEACHER = 2;
+const ROLE_STUDENT = 3;
+const ROLE_PARENT = 4;
 
-// Get role name by ID
-function getRoleName($roleId) {
+/**
+ * Returns the name of a role by ID
+ *
+ * @param int $roleId The role ID to lookup
+ * @return string The name of the role or 'Unknown' if not found
+ */
+function getRoleName(int $roleId): string {
     $roleNames = [
         ROLE_ADMIN => 'Administrator',
         ROLE_TEACHER => 'Teacher',
@@ -115,38 +121,44 @@ function getRoleName($roleId) {
         ROLE_PARENT => 'Parent/Guardian'
     ];
 
-    return $roleNames[$roleId] ?? 'Unknown';
+    if (isset($roleNames[$roleId])) {
+        return $roleNames[$roleId];
+    }
+
+    require_once 'db.php';
+
+    try {
+            $pdo = safeGetDBConnection('getRoleName');
+            if ($pdo === null) {
+                logDBError("Failed to establish database connection in getRoleName");
+                return 'Unknown';
+            }
+
+            $stmt = $pdo->prepare("SELECT name FROM roles WHERE role_id = ? LIMIT 1");
+            $stmt->execute([$roleId]);
+            $role = $stmt->fetch();
+
+            return $role ? $role['name'] : 'Unknown';
+        } catch (PDOException $e) {
+            logDBError("Error in getRoleName: " . $e->getMessage());
+            return 'Unknown';
+        }
 }
 
 /**
- * Check if session has timed out due to inactivity
- * Automatically logs out user if session is inactive for more than 30 minutes
+ * Checks if the session has timed out due to inactivity
+ *
+ * @return void
  */
-function checkSessionTimeout() {
-    // Only check timeout if user is logged in
+function checkSessionTimeout(): void {
     if (isLoggedIn()) {
-        $max_idle_time = 1800; // 30 minutes in seconds
+        $timeout = 1800;
 
-        // If last activity was set and user has been inactive longer than the max idle time
         if (isset($_SESSION['last_activity']) &&
-            (time() - $_SESSION['last_activity'] > $max_idle_time)) {
-
-            // Clear all session variables
-            $_SESSION = array();
-
-            // Destroy the session cookie
-            if (ini_get("session.use_cookies")) {
-                $params = session_get_cookie_params();
-                setcookie(session_name(), '', time() - 42000,
-                    $params["path"], $params["domain"],
-                    $params["secure"], $params["httponly"]
-                );
-            }
-
-            // Destroy the session
+            (time() - $_SESSION['last_activity'] > $timeout)) {
+            session_unset();
             session_destroy();
 
-            // Redirect to login page with timeout message
             header('Location: /index.php?error=session_timeout');
             exit;
         }
@@ -154,9 +166,38 @@ function checkSessionTimeout() {
 }
 
 /**
- * Update the last activity time to the current time
- * Should be called on every user interaction
+ * Updates the last activity timestamp for the current session
+ *
+ * @return void
  */
-function updateLastActivityTime() {
+function updateLastActivityTime(): void {
     $_SESSION['last_activity'] = time();
+}
+
+/**
+ * Destroys the current session and redirects to login page
+ *
+ * @param string $reason Optional reason to include in the redirect URL
+ * @return void
+ */
+#[NoReturn] function destroySession(string $reason = ''): void {
+    $_SESSION = array();
+
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
+
+    session_destroy();
+
+    $redirect = '/index.php';
+    if (!empty($reason)) {
+        $redirect .= '?error=' . $reason;
+    }
+
+    header('Location: ' . $redirect);
+    exit;
 }

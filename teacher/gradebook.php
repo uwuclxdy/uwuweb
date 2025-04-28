@@ -5,13 +5,9 @@
  * Provides interface for teachers to manage student grades
  * Supports viewing, adding, and editing grades for assigned classes
  *
- * Functions:
- * - getTeacherId($userId) - Retrieves teacher ID from user ID
- * - getTeacherClasses($teacherId) - Gets classes taught by a teacher
- * - getClassStudents($classId) - Gets students enrolled in a class
- * - getGradeItems($classId) - Gets grade items for a class
- * - getClassGrades($classId) - Gets all grades for a class
  */
+
+use Random\RandomException;
 
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
@@ -61,8 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = 'Error adding grade item. Please try again.';
                     $messageType = 'error';
                 }
-            } catch (JsonException $e) {
-
+            } catch (JsonException|Exception $e) {
+                $message = 'Error adding grade item. Please try again.';
+                $messageType = 'error';
             }
         }
     } else if (isset($_POST['save_grades'])) {
@@ -82,8 +79,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!saveGrade($enrollId, $itemId, $points)) {
                         $success = false;
                     }
-                } catch (JsonException $e) {
-
+                } catch (JsonException|Exception $e) {
+                    $success = false;
                 }
             }
 
@@ -111,7 +108,11 @@ $students = $selectedClassId ? getClassStudents($selectedClassId) : [];
 $grades = $selectedClassId ? getClassGrades($selectedClassId) : [];
 
 // Generate CSRF token
-$csrfToken = generateCSRFToken();
+try {
+    $csrfToken = generateCSRFToken();
+} catch (RandomException $e) {
+    die('Error generating CSRF token.');
+}
 
 ?>
 

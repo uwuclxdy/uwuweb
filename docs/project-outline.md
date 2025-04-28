@@ -26,7 +26,7 @@ features:
   grade_book:              {admin: write, teacher: write, student: none, parent: none}
   attendance_per_period:   {admin: write, teacher: write, student: read, parent: read}
   absence_justification:   {admin: none, teacher: approve, student: submit, parent: read}
-  class_average_dashboard: {admin: view_all, teacher: view_own, student: view_own, parent: view_own}
+  class_average_dashboard: {admin: none, teacher: view_own, student: view_own, parent: view_own}
   school_management:       {admin: full, teacher: none, student: none, parent: none}
 ```
 
@@ -55,6 +55,7 @@ uwuweb/
 │   ├── backend-checklist.md  # backend implementation guidelines
 │   ├── frontend-checklist.md  # frontend implementation guidelines
 │   ├── css-readme.md         # CSS documentation and guidelines
+|   ├── project-functions.md  # centralized function documentation
 │   └── local-setup.md        # local development setup instructions
 ├── /includes/
 │   ├── db.php                # PDO connection
@@ -124,11 +125,12 @@ uwuweb/
 ## 9. Future Extension Hooks
 
 - `/api/` endpoints isolated for easy REST upgrade.
+- Documentation of public functions in the `project-functions.md` file. This file exists so you don't need to read the code to understand what the functions do. It is a good idea to keep it up to date, so you don't have to read the code every time you want to understand what a function does.
 
 ## 10. Comments & Code Structure
 
 - NO inline comments.
-- Short description of each function in the function header (max 1-2 lines).
+- Short description of each function in the function header (max 1-2 lines), including datatypes of function arguments and datatypes of what a function returns. 
 - Functions consolidated in role-specific `[subfolder]_functions.php` files (e.g., `admin_functions.php` for admin subfolder).
 - Each page file includes the appropriate centralized functions file and contains only processing logic with function calls.
 - Every source file starts with header block containing: purpose explanation, relative path to that file.
@@ -137,3 +139,11 @@ uwuweb/
   - Logic (functions) in centralized functions files that cannot be accessed via browser
   - Processing in page files (data retrieval, calculations, UI code - HTML)
 - The `[subfolder]_functions.php` file serves as a complete API for that role's functionality.
+
+## 11. Common Errors to Avoid
+- `Missing function's return type declaration` when defining functions
+- `Missing parameter's type declaration` when defining functions
+- `Missing return type declaration` when defining functions
+- `Column name must be either aggregated, or mentioned in GROUP BY clause` errors, caused by `ORDER BY s.name, gi.name";`
+- Fix `Unhandled \JsonException` by using a predefined function - sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never
+- Fix `[EA] Null pointer exception may occur here.` by setting returning an error code, JSON response error message and terminating the script using a predefined function - sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never
