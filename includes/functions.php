@@ -1,5 +1,8 @@
 <?php /** @noinspection ALL */
 
+// Include auth.php to ensure authentication functions are available first
+require_once __DIR__ . '/auth.php';
+
 /**
  * Common Utility Functions Library
  *
@@ -14,13 +17,10 @@
  * - getUserInfo(int $userId): array|null - Retrieves user profile information by user ID
  * - getUserId(): int|null - Gets current user ID from session
  * - getUserRole(): int|null - Gets the role ID of the current user from session
- * - getTeacherId(): int|null - Gets teacher ID for current user
  * - getStudentId(): int|null - Gets student ID for current user
  * - getRoleName(int $roleId): string - Returns the name of a role by ID
  *
  * Security Functions:
- * - generateCSRFToken(): string - Creates a CSRF token for form security
- * - verifyCSRFToken(string $token): bool - Validates submitted CSRF token
  * - sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never - Sends a standardized JSON error response and exits
  *
  * Navigation and Widgets:
@@ -74,9 +74,9 @@ function getUserInfo($userId) {
 
         $db->beginTransaction();
 
-        $query = "SELECT u.user_id, u.username, u.role_id, r.name as role_name 
-                  FROM users u 
-                  JOIN roles r ON u.role_id = r.role_id 
+        $query = "SELECT u.user_id, u.username, u.role_id, r.name as role_name
+                  FROM users u
+                  JOIN roles r ON u.role_id = r.role_id
                   WHERE u.user_id = :user_id";
 
         $stmt = $db->prepare($query);
@@ -93,7 +93,7 @@ function getUserInfo($userId) {
         switch ($user['role_id']) {
             case 2: // Teacher
                 $teacherQuery = "SELECT t.teacher_id
-                               FROM teachers t 
+                               FROM teachers t
                                WHERE t.user_id = :user_id";
                 $teacherStmt = $db->prepare($teacherQuery);
                 $teacherStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
@@ -105,8 +105,8 @@ function getUserInfo($userId) {
                 break;
 
             case 3: // Student
-                $studentQuery = "SELECT s.student_id, s.first_name, s.last_name, s.class_code 
-                                FROM students s 
+                $studentQuery = "SELECT s.student_id, s.first_name, s.last_name, s.class_code
+                                FROM students s
                                 WHERE s.user_id = :user_id";
                 $studentStmt = $db->prepare($studentQuery);
                 $studentStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
@@ -119,7 +119,7 @@ function getUserInfo($userId) {
 
             case 4: // Parent
                 $parentQuery = "SELECT p.parent_id
-                              FROM parents p 
+                              FROM parents p
                               WHERE p.user_id = :user_id";
                 $parentStmt = $db->prepare($parentQuery);
                 $parentStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
@@ -129,16 +129,16 @@ function getUserInfo($userId) {
                 if ($parentInfo) {
                     $user['parent_id'] = $parentInfo['parent_id'];
 
-                    $childrenQuery = "SELECT 
-                                    s.student_id, 
-                                    s.first_name, 
-                                    s.last_name, 
+                    $childrenQuery = "SELECT
+                                    s.student_id,
+                                    s.first_name,
+                                    s.last_name,
                                     s.class_code,
                                     s.dob,
                                     c.title as class_name,
                                     c.class_id
-                                    FROM students s 
-                                    JOIN student_parent sp ON s.student_id = sp.student_id 
+                                    FROM students s
+                                    JOIN student_parent sp ON s.student_id = sp.student_id
                                     LEFT JOIN classes c ON s.class_code = c.class_code
                                     WHERE sp.parent_id = :parent_id
                                     ORDER BY s.last_name, s.first_name";
@@ -163,57 +163,6 @@ function getUserInfo($userId) {
 }
 
 /**
- * Creates or retrieves a token stored in the session to prevent CSRF attacks
- *
- * @return string The generated CSRF token
- * @throws RandomException When secure random bytes cannot be generated
- */
-if (!function_exists('generateCSRFToken')) {
-    function generateCSRFToken() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        if (isset($_SESSION['csrf_token']) && !empty($_SESSION['csrf_token'])) {
-            return $_SESSION['csrf_token'];
-        }
-
-        $token = bin2hex(random_bytes(32));
-        $_SESSION['csrf_token'] = $token;
-        $_SESSION['csrf_token_time'] = time();
-
-        return $token;
-    }
-}
-
-/**
- * Compares the provided token with the one stored in the session using constant-time comparison
- *
- * @param string $token The token to verify
- * @return bool True if token is valid, false otherwise
- */
-if (!function_exists('verifyCSRFToken')) {
-    function verifyCSRFToken($token): bool {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        if (!isset($_SESSION['csrf_token']) || empty($_SESSION['csrf_token'])) {
-            return false;
-        }
-
-        if (isset($_SESSION['csrf_token_time']) &&
-            time() - $_SESSION['csrf_token_time'] > 1800) {
-            unset($_SESSION['csrf_token']);
-            unset($_SESSION['csrf_token_time']);
-            return false;
-        }
-
-        return hash_equals($_SESSION['csrf_token'], $token);
-    }
-}
-
-/**
  * Returns an array of navigation menu items customized for the user's role
  *
  * @param int $role The user's role ID
@@ -224,7 +173,7 @@ function getNavItemsByRole(int $role): array {
 
     $items[] = [
         'title' => 'Dashboard',
-        'url' => '/dashboard.php',
+        'url' => '/uwuweb/dashboard.php',
         'icon' => 'dashboard'
     ];
 
@@ -232,17 +181,17 @@ function getNavItemsByRole(int $role): array {
         case 1: // Administrator
             $items[] = [
                 'title' => 'Upravljanje uporabnikov',
-                'url' => '/admin/users.php',
+                'url' => '/uwuweb/admin/users.php',
                 'icon' => 'people'
             ];
             $items[] = [
                 'title' => 'Nastavitve',
-                'url' => '/admin/settings.php',
+                'url' => '/uwuweb/admin/settings.php',
                 'icon' => 'settings'
             ];
             $items[] = [
                 'title' => 'Razredi in predmeti',
-                'url' => '/admin/class_subjects.php',
+                'url' => '/uwuweb/admin/class_subjects.php',
                 'icon' => 'school'
             ];
             break;
@@ -250,17 +199,17 @@ function getNavItemsByRole(int $role): array {
         case 2: // Teacher
             $items[] = [
                 'title' => 'Redovalnica',
-                'url' => '/teacher/gradebook.php',
+                'url' => '/uwuweb/teacher/gradebook.php',
                 'icon' => 'grade'
             ];
             $items[] = [
                 'title' => 'Prisotnost',
-                'url' => '/teacher/attendance.php',
+                'url' => '/uwuweb/teacher/attendance.php',
                 'icon' => 'event_available'
             ];
             $items[] = [
                 'title' => 'Opravičila',
-                'url' => '/teacher/justifications.php',
+                'url' => '/uwuweb/teacher/justifications.php',
                 'icon' => 'note'
             ];
             break;
@@ -268,17 +217,17 @@ function getNavItemsByRole(int $role): array {
         case 3: // Student
             $items[] = [
                 'title' => 'Ocene',
-                'url' => '/student/grades.php',
+                'url' => '/uwuweb/student/grades.php',
                 'icon' => 'grade'
             ];
             $items[] = [
                 'title' => 'Prisotnost',
-                'url' => '/student/attendance.php',
+                'url' => '/uwuweb/student/attendance.php',
                 'icon' => 'event_available'
             ];
             $items[] = [
                 'title' => 'Opravičila',
-                'url' => '/student/justification.php',
+                'url' => '/uwuweb/student/justification.php',
                 'icon' => 'note'
             ];
             break;
@@ -286,20 +235,19 @@ function getNavItemsByRole(int $role): array {
         case 4: // Parent
             $items[] = [
                 'title' => 'Ocene otroka',
-                'url' => '/parent/grades.php',
+                'url' => '/uwuweb/parent/grades.php',
                 'icon' => 'grade'
             ];
             $items[] = [
                 'title' => 'Prisotnost otroka',
-                'url' => '/parent/attendance.php',
+                'url' => '/uwuweb/parent/attendance.php',
                 'icon' => 'event_available'
             ];
             break;
     }
 
     $items[] = [
-        'title' => 'Odjava',
-        'url' => '/includes/logout.php',
+        'title' => 'Odjava',                'url' => '/uwuweb/includes/logout.php',
         'icon' => 'logout'
     ];
 
@@ -464,7 +412,7 @@ function renderRecentActivityWidget(): string {
 
         switch ($roleId) {
             case 1: // Admin
-                $query = "SELECT 'user_activity' as type, u.username, r.name as role_name, 
+                $query = "SELECT 'user_activity' as type, u.username, r.name as role_name,
                           u.created_at as activity_date, 'Registracija novega uporabnika' as description
                           FROM users u
                           JOIN roles r ON u.role_id = r.role_id
@@ -481,16 +429,16 @@ function renderRecentActivityWidget(): string {
                     return renderPlaceholderWidget('Podatki učitelja niso na voljo.');
                 }
 
-                $gradeQuery = "SELECT 
+                $gradeQuery = "SELECT
                           'grade' as activity_type,
-                          g.grade_id, 
-                          gi.name as grade_item, 
+                          g.grade_id,
+                          gi.name as grade_item,
                           CONCAT(s.first_name, ' ', s.last_name) as student_name,
                           s.first_name,
                           s.last_name,
                           sub.name as subject_name,
-                          g.points, 
-                          gi.max_points, 
+                          g.points,
+                          gi.max_points,
                           COALESCE(g.comment, '') as comment,
                           NOW() as activity_date
                           FROM grades g
@@ -514,12 +462,12 @@ function renderRecentActivityWidget(): string {
                     return renderPlaceholderWidget('Podatki študenta niso na voljo.');
                 }
 
-                $query = "SELECT 
-                          g.grade_id, 
-                          gi.name as grade_item, 
+                $query = "SELECT
+                          g.grade_id,
+                          gi.name as grade_item,
                           sub.name as subject_name,
-                          g.points, 
-                          gi.max_points, 
+                          g.points,
+                          gi.max_points,
                           COALESCE(g.comment, '') as comment,
                           NOW() as activity_date
                           FROM grades g
@@ -537,14 +485,14 @@ function renderRecentActivityWidget(): string {
                 break;
 
             case 4: // Parent
-                $query = "SELECT 
-                          g.grade_id, 
-                          gi.name as grade_item, 
-                          s.first_name, 
+                $query = "SELECT
+                          g.grade_id,
+                          gi.name as grade_item,
+                          s.first_name,
                           s.last_name,
-                          subj.name as subject_name, 
-                          g.points, 
-                          gi.max_points, 
+                          subj.name as subject_name,
+                          g.points,
+                          gi.max_points,
                           COALESCE(g.comment, '') as comment,
                           NOW() as activity_date
                           FROM parents p
@@ -581,7 +529,7 @@ function renderRecentActivityWidget(): string {
                     $html .= '<div class="activity-content">';
                     $html .= '<span class="activity-title">' . htmlspecialchars($activity['description']) . '</span>';
                     $html .= '<span class="activity-details">Uporabnik: ' . htmlspecialchars($activity['username']) .
-                             ' (' . htmlspecialchars($activity['role_name']) . ')</span>';
+                        ' (' . htmlspecialchars($activity['role_name']) . ')</span>';
                     $html .= '<span class="activity-time">' . date('d.m.Y H:i', strtotime($activity['activity_date'])) . '</span>';
                     $html .= '</div>';
                     break;
@@ -591,7 +539,7 @@ function renderRecentActivityWidget(): string {
                     $html .= '<div class="activity-content">';
                     $html .= '<span class="activity-title">Nova ocena: ' . htmlspecialchars($activity['grade_item']) . '</span>';
                     $html .= '<span class="activity-details">Dijak: ' . htmlspecialchars($activity['first_name'] . ' ' . $activity['last_name']) .
-                             ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
+                        ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
                     if (!empty($activity['comment'])) {
                         $html .= '<span class="activity-comment">"' . htmlspecialchars($activity['comment']) . '"</span>';
                     }
@@ -603,7 +551,7 @@ function renderRecentActivityWidget(): string {
                     $html .= '<div class="activity-content">';
                     $html .= '<span class="activity-title">Nova ocena: ' . htmlspecialchars($activity['subject_name']) . '</span>';
                     $html .= '<span class="activity-details">' . htmlspecialchars($activity['grade_item']) .
-                             ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
+                        ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
                     if (!empty($activity['comment'])) {
                         $html .= '<span class="activity-comment">"' . htmlspecialchars($activity['comment']) . '"</span>';
                     }
@@ -614,9 +562,9 @@ function renderRecentActivityWidget(): string {
                     $html .= '<div class="activity-icon parent-icon">👨‍👩‍👧‍👦</div>';
                     $html .= '<div class="activity-content">';
                     $html .= '<span class="activity-title">Nova ocena: ' . htmlspecialchars($activity['first_name']) .
-                             ' - ' . htmlspecialchars($activity['subject_name']) . '</span>';
+                        ' - ' . htmlspecialchars($activity['subject_name']) . '</span>';
                     $html .= '<span class="activity-details">' . htmlspecialchars($activity['grade_item']) .
-                             ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
+                        ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
                     $html .= '</div>';
                     break;
             }
@@ -631,37 +579,6 @@ function renderRecentActivityWidget(): string {
     } catch (PDOException $e) {
         error_log("Database error in renderRecentActivityWidget: " . $e->getMessage());
         return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o nedavnih aktivnostih.');
-    }
-}
-
-/**
- * Retrieves the teacher ID associated with the current user
- *
- * @return int|null Teacher ID or null if not a teacher or not logged in
- */
-function getTeacherId() {
-    $userId = getUserId();
-    if (!$userId) {
-        return null;
-    }
-
-    try {
-        $db = getDBConnection();
-        if (!$db) {
-            return null;
-        }
-
-        $query = "SELECT teacher_id FROM teachers WHERE user_id = :user_id";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $result ? (int)$result['teacher_id'] : null;
-    } catch (PDOException $e) {
-        error_log("Database error in getTeacherId: " . $e->getMessage());
-        return null;
     }
 }
 
@@ -701,12 +618,14 @@ function getStudentId() {
  *
  * @return int|null User ID or null if not logged in
  */
-function getUserId() {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+if (!function_exists('getUserId')) {
+    function getUserId() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
 
-    return isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+        return isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
+    }
 }
 
 /**
@@ -714,12 +633,14 @@ function getUserId() {
  *
  * @return int|null Role ID or null if not logged in
  */
-function getUserRole() {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+if (!function_exists('getUserRole')) {
+    function getUserRole() {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
 
-    return isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : null;
+        return isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : null;
+    }
 }
 
 /**
@@ -728,7 +649,7 @@ function getUserRole() {
  * @return string HTML content for the widget
  */
 function renderTeacherClassAveragesWidget() {
-    $teacherId = getTeacherId();
+    $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
 
     if (!$teacherId) {
         return renderPlaceholderWidget('Za prikaz povprečij razredov se morate identificirati kot učitelj.');
@@ -742,7 +663,7 @@ function renderTeacherClassAveragesWidget() {
     $classAverages = [];
 
     try {
-        $query = "SELECT 
+        $query = "SELECT
                     cs.class_subject_id,
                     c.class_id,
                     c.title AS class_title,
@@ -750,8 +671,8 @@ function renderTeacherClassAveragesWidget() {
                     s.name AS subject_name,
                     COUNT(DISTINCT e.student_id) AS student_count,
                     AVG(
-                        CASE WHEN g.points IS NOT NULL AND gi.max_points > 0 THEN 
-                            (g.points / gi.max_points) * 100 
+                        CASE WHEN g.points IS NOT NULL AND gi.max_points > 0 THEN
+                            (g.points / gi.max_points) * 100
                         END
                     ) AS avg_score
                   FROM class_subjects cs
@@ -819,7 +740,7 @@ function renderTeacherClassAveragesWidget() {
             $html .= '</div>';
 
             $html .= '<div class="class-footer">';
-            $html .= '<a href="teacher/gradebook.php?class_id=' . (int)$class['class_id'] . '" class="widget-link">Ogled redovalnice</a>';
+            $html .= '<a href="/uwuweb/teacher/gradebook.php?class_id=' . (int)$class['class_id'] . '" class="widget-link">Ogled redovalnice</a>';
             $html .= '</div>';
 
             $html .= '</div>';
@@ -853,20 +774,20 @@ function renderStudentClassAveragesWidget() {
     $studentGrades = [];
 
     try {
-        $query = "SELECT 
+        $query = "SELECT
                     s.subject_id,
                     s.name AS subject_name,
                     c.class_id,
                     c.title AS class_title,
                     cs.class_subject_id,
                     AVG(
-                        CASE WHEN g.points IS NOT NULL AND gi.max_points > 0 
-                        THEN (g.points / gi.max_points) * 100 
+                        CASE WHEN g.points IS NOT NULL AND gi.max_points > 0
+                        THEN (g.points / gi.max_points) * 100
                         END
                     ) AS student_avg_score,
                     (SELECT AVG(
-                        CASE WHEN gi2.max_points > 0 
-                        THEN (g2.points / gi2.max_points) * 100 
+                        CASE WHEN gi2.max_points > 0
+                        THEN (g2.points / gi2.max_points) * 100
                         END
                     )
                     FROM enrollments e2
@@ -954,7 +875,7 @@ function renderStudentClassAveragesWidget() {
     }
 
     $html .= '<div class="widget-footer">';
-    $html .= '<a href="../student/grades.php" class="widget-link">Ogled vseh ocen</a>';
+    $html .= '<a href="/uwuweb/student/grades.php" class="widget-link">Ogled vseh ocen</a>';
     $html .= '</div>';
 
     return $html;
@@ -1006,15 +927,15 @@ function renderParentChildClassAveragesWidget() {
 
         $childGrades = [];
         try {
-            $query = "SELECT 
+            $query = "SELECT
                         s.subject_id,
                         s.name AS subject_name,
                         c.class_id,
                         c.title AS class_title,
                         cs.class_subject_id,
                         AVG(
-                            CASE WHEN g.points IS NOT NULL AND gi.max_points > 0 
-                            THEN (g.points / gi.max_points) * 100 
+                            CASE WHEN g.points IS NOT NULL AND gi.max_points > 0
+                            THEN (g.points / gi.max_points) * 100
                             END
                         ) AS student_avg_score,
                         (SELECT AVG(
@@ -1085,7 +1006,7 @@ function renderParentChildClassAveragesWidget() {
         }
 
         $html .= '<div class="child-footer">';
-        $html .= '<a href="parent/grades.php?student_id=' . (int)$child['student_id'] . '" class="widget-link">Ogled vseh ocen</a>';
+        $html .= '<a href="/uwuweb/parent/grades.php?student_id=' . (int)$child['student_id'] . '" class="widget-link">Ogled vseh ocen</a>';
         $html .= '</div>';
         $html .= '</div>';
     }
@@ -1117,7 +1038,7 @@ function renderUpcomingClassesWidget() {
     $upcomingClasses = [];
 
     try {
-        $query = "SELECT 
+        $query = "SELECT
                     p.period_id,
                     p.period_date,
                     p.period_label,
@@ -1229,7 +1150,7 @@ function renderStudentGradesWidget() {
     $subjectAverages = [];
 
     try {
-        $query = "SELECT 
+        $query = "SELECT
                     g.grade_id,
                     g.points,
                     gi.max_points,
@@ -1252,11 +1173,11 @@ function renderStudentGradesWidget() {
         $stmt->execute();
         $recentGrades = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $query = "SELECT 
+        $query = "SELECT
                     s.subject_id,
                     s.name AS subject_name,
-                    AVG(CASE WHEN g.points IS NOT NULL AND gi.max_points > 0 
-                         THEN (g.points / gi.max_points) * 100 
+                    AVG(CASE WHEN g.points IS NOT NULL AND gi.max_points > 0
+                         THEN (g.points / gi.max_points) * 100
                          END) AS avg_score,
                     COUNT(g.grade_id) AS grade_count
                   FROM enrollments e
@@ -1349,9 +1270,9 @@ function renderStudentGradesWidget() {
             $html .= '<div class="grade-header">';
             $html .= '<div class="grade-subject">' . htmlspecialchars($grade['subject_name']) . '</div>';
             $html .= '<div class="grade-score ' . $scoreClass . '">' .
-                     htmlspecialchars($grade['points']) . '/' .
-                     htmlspecialchars($grade['max_points']) .
-                     ' (' . htmlspecialchars($grade['percentage']) . '%)</div>';
+                htmlspecialchars($grade['points']) . '/' .
+                htmlspecialchars($grade['max_points']) .
+                ' (' . htmlspecialchars($grade['percentage']) . '%)</div>';
             $html .= '</div>';
 
             $html .= '<div class="grade-details">';
@@ -1371,7 +1292,7 @@ function renderStudentGradesWidget() {
     $html .= '</div>';
 
     $html .= '<div class="widget-footer">';
-    $html .= '<a href="../student/grades.php" class="widget-link">Ogled vseh ocen</a>';
+    $html .= '<a href="/uwuweb/student/grades.php" class="widget-link">Ogled vseh ocen</a>';
     $html .= '</div>';
 
     return $html;
@@ -1449,17 +1370,17 @@ function renderAdminUserStatsWidget(): string {
             return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
         }
 
-        $roleQuery = "SELECT r.role_id, r.name, COUNT(u.user_id) as count 
-                      FROM roles r 
-                      LEFT JOIN users u ON r.role_id = u.role_id 
-                      GROUP BY r.role_id 
+        $roleQuery = "SELECT r.role_id, r.name, COUNT(u.user_id) as count
+                      FROM roles r
+                      LEFT JOIN users u ON r.role_id = u.role_id
+                      GROUP BY r.role_id
                       ORDER BY r.role_id";
         $roleStmt = $db->prepare($roleQuery);
         $roleStmt->execute();
         $roleCounts = $roleStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $recentQuery = "SELECT COUNT(*) as new_users 
-                        FROM users 
+        $recentQuery = "SELECT COUNT(*) as new_users
+                        FROM users
                         WHERE created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)";
         $recentStmt = $db->prepare($recentQuery);
         $recentStmt->execute();
@@ -1483,7 +1404,7 @@ function renderAdminUserStatsWidget(): string {
         $output .= '<ul class="role-list">';
         foreach ($roleCounts as $role) {
             $output .= '<li>
-                            <span class="role-name">' . htmlspecialchars($role['name']) . ':</span> 
+                            <span class="role-name">' . htmlspecialchars($role['name']) . ':</span>
                             <span class="role-count">' . htmlspecialchars($role['count']) . '</span>
                         </li>';
         }
@@ -1510,12 +1431,12 @@ function renderAdminSystemStatusWidget(): string {
             return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
         }
 
-        $tableQuery = "SELECT 
+        $tableQuery = "SELECT
                           COUNT(DISTINCT TABLE_NAME) as table_count,
                           SUM(DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024 as size_mb
-                       FROM 
-                          information_schema.TABLES 
-                       WHERE 
+                       FROM
+                          information_schema.TABLES
+                       WHERE
                           TABLE_SCHEMA = DATABASE()";
         $tableStmt = $db->prepare($tableQuery);
         $tableStmt->execute();
@@ -1608,7 +1529,7 @@ function renderAdminAttendanceWidget(): string {
         $absentPercent = $total > 0 ? round(($absent / $total) * 100, 1) : 0;
         $latePercent = $total > 0 ? round(($late / $total) * 100, 1) : 0;
 
-        $bestClassQuery = "SELECT c.class_code, c.title, 
+        $bestClassQuery = "SELECT c.class_code, c.title,
                           COUNT(CASE WHEN a.status = 'P' THEN 1  END) as present_count,
                           COUNT(a.att_id) as total_count,
                           (COUNT(CASE WHEN a.status = 'P' THEN 1  END) / COUNT(a.att_id) * 100) as present_percent
@@ -1670,7 +1591,7 @@ function renderAdminAttendanceWidget(): string {
  */
 function renderTeacherClassOverviewWidget(): string {
     try {
-        $teacherId = getTeacherId();
+        $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
         if (!$teacherId) {
             return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
         }
@@ -1680,7 +1601,7 @@ function renderTeacherClassOverviewWidget(): string {
             return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
         }
 
-        $query = "SELECT c.class_id, c.class_code, c.title as class_title, 
+        $query = "SELECT c.class_id, c.class_code, c.title as class_title,
                          s.subject_id, s.name as subject_name,
                          COUNT(DISTINCT e.student_id) as student_count
                   FROM class_subjects cs
@@ -1716,8 +1637,8 @@ function renderTeacherClassOverviewWidget(): string {
             $output .= '</div>';
 
             $output .= '<div class="class-actions">';
-            $output .= '<a href="/teacher/gradebook.php?class_id=' . urlencode($class['class_id']) . '&subject_id=' . urlencode($class['subject_id']) . '" class="btn btn-sm">Redovalnica</a>';
-            $output .= '<a href="/teacher/attendance.php?class_id=' . urlencode($class['class_id']) . '" class="btn btn-sm">Prisotnost</a>';
+            $output .= '<a href="/uwuweb/teacher/gradebook.php?class_id=' . urlencode($class['class_id']) . '&subject_id=' . urlencode($class['subject_id']) . '" class="btn btn-sm">Redovalnica</a>';
+            $output .= '<a href="/uwuweb/teacher/attendance.php?class_id=' . urlencode($class['class_id']) . '" class="btn btn-sm">Prisotnost</a>';
             $output .= '</div>';
 
             $output .= '</li>';
@@ -1740,7 +1661,7 @@ function renderTeacherClassOverviewWidget(): string {
  */
 function renderTeacherAttendanceWidget(): string {
     try {
-        $teacherId = getTeacherId();
+        $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
         if (!$teacherId) {
             return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
         }
@@ -1810,10 +1731,8 @@ function renderTeacherAttendanceWidget(): string {
         }
 
         $output .= '</tbody>';
-        $output .= '</table>';
-
-        $output .= '<div class="mt-md text-right">';
-        $output .= '<a href="/teacher/attendance.php" class="btn btn-secondary btn-sm">Zabeleži prisotnost</a>';
+        $output .= '</table>';            $output .= '<div class="mt-md text-right">';
+        $output .= '<a href="/uwuweb/teacher/attendance.php" class="btn btn-secondary btn-sm">Zabeleži prisotnost</a>';
         $output .= '</div>';
 
         $output .= '</div>';
@@ -1832,7 +1751,7 @@ function renderTeacherAttendanceWidget(): string {
  */
 function renderTeacherPendingJustificationsWidget(): string {
     try {
-        $teacherId = getTeacherId();
+        $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
         if (!$teacherId) {
             return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
         }
@@ -1918,8 +1837,8 @@ function renderTeacherPendingJustificationsWidget(): string {
             }
 
             $output .= '<div class="justification-actions">';
-            $output .= '<a href="/teacher/justifications.php?action=approve&id=' . urlencode($just['att_id']) . '" class="btn btn-sm btn-success">Odobri</a>';
-            $output .= '<a href="/teacher/justifications.php?action=reject&id=' . urlencode($just['att_id']) . '" class="btn btn-sm btn-danger">Zavrni</a>';
+            $output .= '<a href="/uwuweb/teacher/justifications.php?action=approve&id=' . urlencode($just['att_id']) . '" class="btn btn-sm btn-success">Odobri</a>';
+            $output .= '<a href="/uwuweb/teacher/justifications.php?action=reject&id=' . urlencode($just['att_id']) . '" class="btn btn-sm btn-danger">Zavrni</a>';
             $output .= '</div>';
 
             $output .= '</li>';
@@ -1929,7 +1848,7 @@ function renderTeacherPendingJustificationsWidget(): string {
 
         if ($totalPending > count($justifications)) {
             $output .= '<div class="more-link">';
-            $output .= '<a href="/teacher/justifications.php">Prikaži vsa opravičila (' . $totalPending . ')</a>';
+            $output .= '<a href="/uwuweb/teacher/justifications.php">Prikaži vsa opravičila (' . $totalPending . ')</a>';
             $output .= '</div>';
         }
 
@@ -1970,7 +1889,7 @@ function renderStudentAttendanceWidget(): string {
             'recent' => []
         ];
 
-        $query = "SELECT 
+        $query = "SELECT
             COUNT(*) as total,
             SUM(CASE WHEN status = 'P' THEN 1 ELSE 0 END) as present,
             SUM(CASE WHEN status = 'A' THEN 1 ELSE 0 END) as absent,
@@ -1997,7 +1916,7 @@ function renderStudentAttendanceWidget(): string {
             }
         }
 
-        $recentQuery = "SELECT 
+        $recentQuery = "SELECT
             a.status,
             a.justification,
             a.approved,
@@ -2009,6 +1928,7 @@ function renderStudentAttendanceWidget(): string {
          JOIN periods p ON a.period_id = p.period_id
          JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
          JOIN subjects s ON cs.subject_id = s.subject_id
+         JOIN classes c ON cs.class_id = c.class_id
          JOIN enrollments e ON a.enroll_id = e.enroll_id
          WHERE e.student_id = :student_id
          ORDER BY p.period_date DESC, p.period_label
@@ -2095,10 +2015,10 @@ function renderStudentAttendanceWidget(): string {
         }
 
         $html .= '<div class="widget-footer">';
-        $html .= '<a href="/student/attendance.php" class="widget-link">Popolna evidenca prisotnosti</a>';
+        $html .= '<a href="/uwuweb/student/attendance.php" class="widget-link">Popolna evidenca prisotnosti</a>';
 
         if ($stats['absent'] > $stats['justified']) {
-            $html .= '<a href="/student/justification.php" class="widget-link">Oddaj opravičilo</a>';
+            $html .= '<a href="/uwuweb/student/justification.php" class="widget-link">Oddaj opravičilo</a>';
         }
 
         $html .= '</div>';
@@ -2174,7 +2094,7 @@ function renderParentAttendanceWidget(): string {
                 'recent_absences' => []
             ];
 
-            $statsQuery = "SELECT 
+            $statsQuery = "SELECT
                 COUNT(*) as total,
                 SUM(CASE WHEN status = 'P' THEN 1 ELSE 0 END) as present,
                 SUM(CASE WHEN status = 'A' THEN 1 ELSE 0 END) as absent,
@@ -2201,7 +2121,7 @@ function renderParentAttendanceWidget(): string {
                 }
             }
 
-            $absenceQuery = "SELECT 
+            $absenceQuery = "SELECT
                 a.status,
                 a.justification,
                 a.approved,
@@ -2289,7 +2209,7 @@ function renderParentAttendanceWidget(): string {
                     $html .= '<span class="absence-date">' . htmlspecialchars($date) . '</span>';
                     $html .= '<span class="absence-class">' . htmlspecialchars($absence['subject_name']) . '</span>';
                     $html .= '<span class="absence-status ' . strtolower(str_replace(' ', '-', $justificationStatus)) . '">' .
-                             htmlspecialchars($justificationStatus) . '</span>';
+                        htmlspecialchars($justificationStatus) . '</span>';
                     $html .= '</li>';
                 }
 
@@ -2298,7 +2218,7 @@ function renderParentAttendanceWidget(): string {
             }
 
             $html .= '<div class="child-footer">';
-            $html .= '<a href="/parent/attendance.php?student_id=' . $childStats['student_id'] . '" class="widget-link">Popolna evidenca prisotnosti</a>';
+            $html .= '<a href="/uwuweb/parent/attendance.php?student_id=' . $childStats['student_id'] . '" class="widget-link">Popolna evidenca prisotnosti</a>';
             $html .= '</div>';
 
             $html .= '</div>';
