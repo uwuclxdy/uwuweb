@@ -63,7 +63,8 @@ require_once __DIR__ . '/auth.php';
  * @param int $userId The user ID to look up
  * @return array|null User information array or null if not found
  */
-function getUserInfo(int $userId): ?array {
+function getUserInfo(int $userId): ?array
+{
     try {
         $db = getDBConnection();
         if (!$db) {
@@ -166,7 +167,8 @@ function getUserInfo(int $userId): ?array {
  * @param int $role The user's role ID
  * @return array Array of navigation items with title, URL and icon
  */
-function getNavItemsByRole(int $role): array {
+function getNavItemsByRole(int $role): array
+{
     $items = [];
 
     $items[] = [
@@ -259,7 +261,8 @@ function getNavItemsByRole(int $role): array {
  * @param int $role The user's role ID
  * @return array Array of widgets with title and rendering function
  */
-function getWidgetsByRole(int $role): array {
+function getWidgetsByRole(int $role): array
+{
     $widgets = [];
 
     // Common widget(s) can be added here if needed
@@ -344,7 +347,8 @@ function getWidgetsByRole(int $role): array {
  * @return string Role name or "Unknown Role" if not found
  */
 if (!function_exists('getRoleName')) {
-    function getRoleName(int $roleId): string {
+    function getRoleName(int $roleId): string
+    {
         static $roleCache = [];
 
         if (isset($roleCache[$roleId])) {
@@ -382,7 +386,8 @@ if (!function_exists('getRoleName')) {
  * @param string $message Optional message to display in the placeholder
  * @return string HTML content for the placeholder widget
  */
-function renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string {
+function renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string
+{
     return '<div class="card card__content p-lg text-center text-secondary">
                 <div class="placeholder-icon font-size-xxl mb-md">📊</div>
                 <p class="m-0">' . htmlspecialchars($message) . '</p>
@@ -394,7 +399,8 @@ function renderPlaceholderWidget(string $message = 'Podatki trenutno niso na vol
  *
  * @return string HTML content for the widget
  */
-function renderRecentActivityWidget(): string {
+function renderRecentActivityWidget(): string
+{
     $userId = getUserId();
     $roleId = getUserRole();
 
@@ -611,7 +617,8 @@ function renderRecentActivityWidget(): string {
  *
  * @return int|null Student ID or null if not a student or not logged in
  */
-function getStudentId(): ?int {
+function getStudentId(): ?int
+{
     $userId = getUserId();
     if (!$userId) {
         return null;
@@ -654,7 +661,8 @@ function getStudentId(): ?int {
  * @return int|null User ID or null if not logged in
  */
 if (!function_exists('getUserId')) {
-    function getUserId(): ?int {
+    function getUserId(): ?int
+    {
         if (session_status() === PHP_SESSION_NONE) {
             // Avoid starting session if headers already sent
             if (!headers_sent()) {
@@ -675,7 +683,8 @@ if (!function_exists('getUserId')) {
  * @return int|null Role ID or null if not logged in
  */
 if (!function_exists('getUserRole')) {
-    function getUserRole(): ?int {
+    function getUserRole(): ?int
+    {
         if (session_status() === PHP_SESSION_NONE) {
             if (!headers_sent()) {
                 session_start();
@@ -693,7 +702,8 @@ if (!function_exists('getUserRole')) {
  *
  * @return string HTML content for the widget
  */
-function renderTeacherClassAveragesWidget(): string {
+function renderTeacherClassAveragesWidget(): string
+{
     $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
 
     if (!$teacherId) {
@@ -1063,7 +1073,8 @@ function renderParentChildClassAveragesWidget(): string
  *
  * @return string HTML content for the widget
  */
-function renderUpcomingClassesWidget(): string {
+function renderUpcomingClassesWidget(): string
+{
     $studentId = getStudentId();
 
     if (!$studentId) {
@@ -1177,7 +1188,8 @@ function renderUpcomingClassesWidget(): string {
  *
  * @return string HTML content for the widget
  */
-function renderStudentGradesWidget(): string {
+function renderStudentGradesWidget(): string
+{
     $studentId = getStudentId();
 
     if (!$studentId) {
@@ -1345,7 +1357,8 @@ function renderStudentGradesWidget(): string {
  * @param string $status The status code (P, A, L)
  * @return string Human-readable status label
  */
-function getAttendanceStatusLabel(string $status): string {
+function getAttendanceStatusLabel(string $status): string
+{
     return match (strtoupper($status)) {
         'P' => 'Prisoten',
         'A' => 'Odsoten',
@@ -1360,7 +1373,8 @@ function getAttendanceStatusLabel(string $status): string {
  * @param array $attendance Array of attendance records to analyze
  * @return array Statistics including present_count, absent_count, late_count, and percentages
  */
-function calculateAttendanceStats(array $attendance): array {
+function calculateAttendanceStats(array $attendance): array
+{
     $total = count($attendance);
     $present = 0;
     $absent = 0;
@@ -1371,9 +1385,15 @@ function calculateAttendanceStats(array $attendance): array {
             continue;
         } // Skip if status is missing
         switch (strtoupper($record['status'])) {
-            case 'P': $present++; break;
-            case 'A': $absent++; break;
-            case 'L': $late++; break;
+            case 'P':
+                $present++;
+                break;
+            case 'A':
+                $absent++;
+                break;
+            case 'L':
+                $late++;
+                break;
         }
     }
 
@@ -1393,7 +1413,8 @@ function calculateAttendanceStats(array $attendance): array {
  *
  * @return string HTML content for the widget
  */
-function renderAdminUserStatsWidget(): string {
+function renderAdminUserStatsWidget(): string
+{
     try {
         $db = getDBConnection();
         if (!$db) {
@@ -1464,7 +1485,8 @@ function renderAdminUserStatsWidget(): string {
  *
  * @return string HTML content for the widget
  */
-function renderAdminSystemStatusWidget(): string {
+function renderAdminSystemStatusWidget(): string
+{
     try {
         $db = getDBConnection();
         if (!$db) {
@@ -1495,7 +1517,7 @@ function renderAdminSystemStatusWidget(): string {
                 if ($sessionLifetime <= 0) {
                     $sessionLifetime = 1800;
                 } // Default if not set properly
-                $sessionCount = count(array_filter($sessionFiles, static function($file) use ($sessionLifetime) {
+                $sessionCount = count(array_filter($sessionFiles, static function ($file) use ($sessionLifetime) {
                     return (time() - filemtime($file)) < $sessionLifetime;
                 }));
             }
@@ -1541,7 +1563,8 @@ function renderAdminSystemStatusWidget(): string {
  *
  * @return string HTML content for the widget
  */
-function renderAdminAttendanceWidget(): string {
+function renderAdminAttendanceWidget(): string
+{
     try {
         $db = getDBConnection();
         if (!$db) {
@@ -1638,7 +1661,8 @@ function renderAdminAttendanceWidget(): string {
  *
  * @return string HTML content for the widget
  */
-function renderTeacherClassOverviewWidget(): string {
+function renderTeacherClassOverviewWidget(): string
+{
     try {
         $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
         if (!$teacherId) {
@@ -1719,7 +1743,8 @@ function renderTeacherClassOverviewWidget(): string {
  *
  * @return string HTML content for the widget
  */
-function renderTeacherAttendanceWidget(): string {
+function renderTeacherAttendanceWidget(): string
+{
     try {
         $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
         if (!$teacherId) {
@@ -1826,7 +1851,8 @@ function renderTeacherAttendanceWidget(): string {
  *
  * @return string HTML content for the widget
  */
-function renderTeacherPendingJustificationsWidget(): string {
+function renderTeacherPendingJustificationsWidget(): string
+{
     try {
         $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
         if (!$teacherId) {
@@ -1957,7 +1983,8 @@ function renderTeacherPendingJustificationsWidget(): string {
  *
  * @return string HTML content for the widget
  */
-function renderStudentAttendanceWidget(): string {
+function renderStudentAttendanceWidget(): string
+{
     $studentId = getStudentId();
 
     if (!$studentId) {
@@ -2041,7 +2068,7 @@ function renderStudentAttendanceWidget(): string {
 
         // Attendance Rate Circle (Left Column)
         $html .= '<div class="attendance-rate col-12 col-md-4 text-center">';
-        $rateColorClass = match(true) {
+        $rateColorClass = match (true) {
             $stats['attendance_rate'] >= 95 => 'text-success',
             $stats['attendance_rate'] >= 85 => 'text-warning',
             default => 'text-error'
@@ -2179,7 +2206,8 @@ function renderStudentAttendanceWidget(): string {
  *
  * @return string HTML content for the widget
  */
-function renderParentAttendanceWidget(): string {
+function renderParentAttendanceWidget(): string
+{
     $userId = getUserId();
 
     if (!$userId) {
@@ -2275,7 +2303,7 @@ function renderParentAttendanceWidget(): string {
             $html .= '<div class="attendance-stats-row row align-items-center gap-lg mb-lg">';
             // Mini Rate Circle
             $html .= '<div class="mini-attendance-rate col-12 col-md-3 text-center">';
-            $rateColorClass = match(true) {
+            $rateColorClass = match (true) {
                 $childStats['attendance_rate'] >= 95 => 'text-success',
                 $childStats['attendance_rate'] >= 85 => 'text-warning',
                 default => 'text-error'
@@ -2381,7 +2409,8 @@ function renderParentAttendanceWidget(): string {
  * @param string $context Additional context for error logging (e.g., 'attendance.php/addPeriod')
  * @return never This function will terminate script execution
  */
-function sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never {
+function sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never
+{
     // Ensure headers are not already sent
     if (!headers_sent()) {
         header('Content-Type: application/json; charset=utf-8');
