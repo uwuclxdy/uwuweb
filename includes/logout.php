@@ -9,9 +9,7 @@
 include_once 'auth.php';
 
 // Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+if (session_status() === PHP_SESSION_NONE) session_start();
 
 // Destroy session
 destroySession();

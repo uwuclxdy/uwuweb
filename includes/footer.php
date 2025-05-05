@@ -5,18 +5,12 @@
  * Contains common HTML footer structure included in all pages
  * Includes necessary JavaScript files
  *
- * Functions:
- * - None (template file)
  */
 ?>
-    </div><!-- End .container -->
+<footer class="mt-xl p-lg bg-secondary rounded shadow-sm">
+    <div class="container">
+        <p class="text-center text-secondary mb-0">© <?= date('Y') ?> uwuweb - Grade Management System</p>
+    </div>
+</footer>
 
-    <footer class="mt-xl">
-        <div class="container">
-            <p class="text-center text-secondary">© <?= date('Y') ?> uwuweb - Grade Management System</p>
-        </div>
-    </footer>
-
-    <script src="../assets/js/main.js"></script>
-</body>
-</html>
+<script src="/uwuweb/assets/js/main.js"></script>

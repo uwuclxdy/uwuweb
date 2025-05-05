@@ -96,16 +96,14 @@ function testDBConnection(): string
 {
     try {
         $pdo = getDBConnection();
-        if (!$pdo) {
-            return "Connection failed. Check database settings.";
-        }
+        if (!$pdo) return "Connection failed. Check database settings.";
 
         $stmt = $pdo->query("SELECT VERSION() as version, DATABASE() as db_name");
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return "Connection successful! MySQL Version: " .
-               ($result['version'] ?? 'Unknown') .
-               ", Database: " . ($result['db_name'] ?? 'Unknown');
+            ($result['version'] ?? 'Unknown') .
+            ", Database: " . ($result['db_name'] ?? 'Unknown');
     } catch (PDOException $e) {
         logDBError($e->getMessage());
         return "Connection test failed: " . $e->getMessage();

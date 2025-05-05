@@ -66,9 +66,7 @@ function getUserInfo(int $userId): ?array
 {
     try {
         $db = getDBConnection();
-        if (!$db) {
-            return null;
-        }
+        if (!$db) return null;
 
         $db->beginTransaction();
 
@@ -97,9 +95,7 @@ function getUserInfo(int $userId): ?array
                 $teacherStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
                 $teacherStmt->execute();
                 $teacherInfo = $teacherStmt->fetch(PDO::FETCH_ASSOC);
-                if ($teacherInfo) {
-                    $user['teacher_id'] = $teacherInfo['teacher_id'];
-                }
+                if ($teacherInfo) $user['teacher_id'] = $teacherInfo['teacher_id'];
                 break;
 
             case 3: // Student
@@ -110,9 +106,7 @@ function getUserInfo(int $userId): ?array
                 $studentStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
                 $studentStmt->execute();
                 $studentInfo = $studentStmt->fetch(PDO::FETCH_ASSOC);
-                if ($studentInfo) {
-                    $user = array_merge($user, $studentInfo);
-                }
+                if ($studentInfo) $user = array_merge($user, $studentInfo);
                 break;
 
             case 4: // Parent
@@ -152,9 +146,7 @@ function getUserInfo(int $userId): ?array
         return $user;
 
     } catch (PDOException $e) {
-        if (isset($db) && $db->inTransaction()) {
-            $db->rollBack();
-        }
+        if (isset($db) && $db->inTransaction()) $db->rollBack();
         error_log("Database error in getUserInfo: " . $e->getMessage());
         return null;
     }
@@ -334,46 +326,6 @@ function getWidgetsByRole(int $role): array
 }
 
 /**
- * Translates a role ID to a human-readable role name
- *
- * @param int $roleId Role ID
- * @return string Role name or "Unknown Role" if not found
- */
-if (!function_exists('getRoleName')) {
-    function getRoleName(int $roleId): string
-    {
-        static $roleCache = [];
-
-        if (isset($roleCache[$roleId])) {
-            return $roleCache[$roleId];
-        }
-
-        try {
-            $db = getDBConnection();
-            if (!$db) {
-                return "Unknown Role";
-            }
-
-            $query = "SELECT name FROM roles WHERE role_id = :role_id";
-            $stmt = $db->prepare($query);
-            $stmt->bindParam(':role_id', $roleId, PDO::PARAM_INT);
-            $stmt->execute();
-
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            $roleName = $result ? $result['name'] : "Unknown Role";
-
-            $roleCache[$roleId] = $roleName;
-
-            return $roleName;
-        } catch (PDOException $e) {
-            error_log("Database error in getRoleName: " . $e->getMessage());
-            return "Unknown Role";
-        }
-    }
-}
-
-/**
  * Creates a simple placeholder for widgets that don't have data or aren't implemented
  *
  * @param string $message Optional message to display in the placeholder
@@ -397,15 +349,11 @@ function renderRecentActivityWidget(): string
     $userId = getUserId();
     $roleId = getUserRole();
 
-    if (!$userId || !$roleId) {
-        return renderPlaceholderWidget('Za prikaz nedavnih aktivnosti se prijavite.');
-    }
+    if (!$userId || !$roleId) return renderPlaceholderWidget('Za prikaz nedavnih aktivnosti se prijavite.');
 
     try {
         $db = getDBConnection();
-        if (!$db) {
-            return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
-        }
+        if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
         $activities = [];
         $limit = 5;
@@ -426,9 +374,7 @@ function renderRecentActivityWidget(): string
 
             case 2: // Teacher
                 $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
-                if (!$teacherId) {
-                    return renderPlaceholderWidget('Podatki učitelja niso na voljo.');
-                }
+                if (!$teacherId) return renderPlaceholderWidget('Podatki učitelja niso na voljo.');
 
                 $gradeQuery = "SELECT
                           'grade' as activity_type,
@@ -460,9 +406,7 @@ function renderRecentActivityWidget(): string
 
             case 3: // Student
                 $studentId = function_exists('getStudentId') ? getStudentId() : null;
-                if (!$studentId) {
-                    return renderPlaceholderWidget('Podatki dijaka niso na voljo.');
-                }
+                if (!$studentId) return renderPlaceholderWidget('Podatki dijaka niso na voljo.');
 
                 $query = "SELECT
                           g.grade_id,
@@ -489,13 +433,9 @@ function renderRecentActivityWidget(): string
 
             case 4: // Parent
                 $parentInfo = getUserInfo($userId);
-                if (!$parentInfo || empty($parentInfo['children'])) {
-                    return renderPlaceholderWidget('Ni povezanih otrok ali podatkov o staršu.');
-                }
+                if (!$parentInfo || empty($parentInfo['children'])) return renderPlaceholderWidget('Ni povezanih otrok ali podatkov o staršu.');
                 $childIds = array_column($parentInfo['children'], 'student_id');
-                if (empty($childIds)) {
-                    return renderPlaceholderWidget('Ni povezanih otrok.');
-                }
+                if (empty($childIds)) return renderPlaceholderWidget('Ni povezanih otrok.');
                 $placeholders = implode(',', array_fill(0, count($childIds), '?'));
 
                 $query = "SELECT
@@ -518,18 +458,14 @@ function renderRecentActivityWidget(): string
                           ORDER BY g.grade_id DESC
                           LIMIT :limit";
                 $stmt = $db->prepare($query);
-                foreach ($childIds as $k => $id) {
-                    $stmt->bindValue(($k + 1), $id, PDO::PARAM_INT);
-                }
+                foreach ($childIds as $k => $id) $stmt->bindValue(($k + 1), $id, PDO::PARAM_INT);
                 $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
                 $stmt->execute();
                 $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 break;
         }
 
-        if (empty($activities)) {
-            return renderPlaceholderWidget('Ni nedavnih aktivnosti.');
-        }
+        if (empty($activities)) return renderPlaceholderWidget('Ni nedavnih aktivnosti.');
 
         $html = '<div class="card card__content p-0">';
         $html .= '<ul class="list-unstyled m-0 activity-list">';
@@ -558,9 +494,7 @@ function renderRecentActivityWidget(): string
                     $html .= '<span class="activity-title font-medium d-block">Nova ocena: ' . htmlspecialchars($activity['grade_item']) . '</span>';
                     $html .= '<span class="activity-details text-sm text-secondary d-block">Dijak: ' . htmlspecialchars($activity['first_name'] . ' ' . $activity['last_name']) .
                         ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
-                    if (!empty($activity['comment'])) {
-                        $html .= '<span class="activity-comment text-sm text-secondary fst-italic d-block">"' . htmlspecialchars($activity['comment']) . '"</span>';
-                    }
+                    if (!empty($activity['comment'])) $html .= '<span class="activity-comment text-sm text-secondary fst-italic d-block">"' . htmlspecialchars($activity['comment']) . '"</span>';
                     $html .= '</div>';
                     break;
 
@@ -572,9 +506,7 @@ function renderRecentActivityWidget(): string
                     $html .= '<span class="activity-title font-medium d-block">Nova ocena: ' . htmlspecialchars($activity['subject_name']) . '</span>';
                     $html .= '<span class="activity-details text-sm text-secondary d-block">' . htmlspecialchars($activity['grade_item']) .
                         ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
-                    if (!empty($activity['comment'])) {
-                        $html .= '<span class="activity-comment text-sm text-secondary fst-italic d-block">"' . htmlspecialchars($activity['comment']) . '"</span>';
-                    }
+                    if (!empty($activity['comment'])) $html .= '<span class="activity-comment text-sm text-secondary fst-italic d-block">"' . htmlspecialchars($activity['comment']) . '"</span>';
                     $html .= '</div>';
                     break;
 
@@ -612,20 +544,14 @@ function renderRecentActivityWidget(): string
 function getStudentId(): ?int
 {
     $userId = getUserId();
-    if (!$userId) {
-        return null;
-    }
+    if (!$userId) return null;
 
     static $studentIdCache = null;
-    if ($studentIdCache !== null && isset($studentIdCache[$userId])) {
-        return $studentIdCache[$userId];
-    }
+    if ($studentIdCache !== null && isset($studentIdCache[$userId])) return $studentIdCache[$userId];
 
     try {
         $db = getDBConnection();
-        if (!$db) {
-            return null;
-        }
+        if (!$db) return null;
 
         $query = "SELECT student_id FROM students WHERE user_id = :user_id";
         $stmt = $db->prepare($query);
@@ -635,55 +561,13 @@ function getStudentId(): ?int
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $id = $result ? (int)$result['student_id'] : null;
 
-        if ($studentIdCache === null) {
-            $studentIdCache = [];
-        }
+        if ($studentIdCache === null) $studentIdCache = [];
         $studentIdCache[$userId] = $id;
 
         return $id;
     } catch (PDOException $e) {
         error_log("Database error in getStudentId: " . $e->getMessage());
         return null;
-    }
-}
-
-/**
- * Retrieves the user ID from the session if it exists
- *
- * @return int|null User ID or null if not logged in
- */
-if (!function_exists('getUserId')) {
-    function getUserId(): ?int
-    {
-        if (session_status() === PHP_SESSION_NONE) {
-            if (!headers_sent()) {
-                session_start();
-            } else {
-                error_log("Session cannot be started - headers already sent.");
-                return null;
-            }
-        }
-        return isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
-    }
-}
-
-/**
- * Retrieves the user's role ID from the session if it exists
- *
- * @return int|null Role ID or null if not logged in
- */
-if (!function_exists('getUserRole')) {
-    function getUserRole(): ?int
-    {
-        if (session_status() === PHP_SESSION_NONE) {
-            if (!headers_sent()) {
-                session_start();
-            } else {
-                error_log("Session cannot be started - headers already sent.");
-                return null;
-            }
-        }
-        return isset($_SESSION['role_id']) ? (int)$_SESSION['role_id'] : null;
     }
 }
 
@@ -696,14 +580,10 @@ function renderTeacherClassAveragesWidget(): string
 {
     $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
 
-    if (!$teacherId) {
-        return renderPlaceholderWidget('Za prikaz povprečij razredov se morate identificirati kot učitelj.');
-    }
+    if (!$teacherId) return renderPlaceholderWidget('Za prikaz povprečij razredov se morate identificirati kot učitelj.');
 
     $db = getDBConnection();
-    if (!$db) {
-        return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
-    }
+    if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
     try {
         $query = "SELECT
@@ -736,24 +616,15 @@ function renderTeacherClassAveragesWidget(): string
 
     $html = '<div class="widget-content">';
 
-    if (empty($classAverages)) {
-        $html .= '<div class="card card__content text-center p-md"><p class="m-0">Nimate razredov z ocenami.</p></div>';
-    } else {
+    if (empty($classAverages)) $html .= '<div class="card card__content text-center p-md"><p class="m-0">Nimate razredov z ocenami.</p></div>'; else {
         $html .= '<div class="row">';
 
         foreach ($classAverages as $class) {
             $avgScoreFormatted = $class['avg_score'] !== null ? number_format($class['avg_score'], 1) : 'N/A';
             $scoreClass = 'text-secondary';
 
-            if ($class['avg_score'] !== null) {
-                if ($class['avg_score'] >= 80) {
-                    $scoreClass = 'grade-high';
-                } elseif ($class['avg_score'] >= 60) {
-                    $scoreClass = 'grade-medium';
-                } else {
-                    $scoreClass = 'grade-low';
-                }
-            }
+            if ($class['avg_score'] !== null) if ($class['avg_score'] >= 80) $scoreClass = 'grade-high'; elseif ($class['avg_score'] >= 60) $scoreClass = 'grade-medium';
+            else $scoreClass = 'grade-low';
 
             $html .= '<div class="col-12 col-md-6 col-lg-4 mb-md">';
             $html .= '<div class="card class-average-card h-100 d-flex flex-column">';
@@ -804,14 +675,10 @@ function renderStudentClassAveragesWidget(): string
 {
     $studentId = getStudentId();
 
-    if (!$studentId) {
-        return renderPlaceholderWidget('Za prikaz povprečij razredov se morate identificirati kot dijak.');
-    }
+    if (!$studentId) return renderPlaceholderWidget('Za prikaz povprečij razredov se morate identificirati kot dijak.');
 
     $db = getDBConnection();
-    if (!$db) {
-        return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
-    }
+    if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
     try {
         $query = "SELECT
@@ -857,18 +724,14 @@ function renderStudentClassAveragesWidget(): string
 
     $html = '<div class="widget-content card card__content p-0">';
 
-    if (empty($studentGrades) || !array_filter($studentGrades, static fn($g) => $g['student_avg_score'] !== null)) {
-        $html .= '<div class="text-center p-md"><p class="m-0">Nimate razredov z ocenami.</p></div>';
-    } else {
+    if (empty($studentGrades) || !array_filter($studentGrades, static fn($g) => $g['student_avg_score'] !== null)) $html .= '<div class="text-center p-md"><p class="m-0">Nimate razredov z ocenami.</p></div>'; else {
         $html .= '<div class="student-averages-table table-responsive">';
         $html .= '<table class="data-table w-100">';
         $html .= '<thead><tr><th>Predmet</th><th class="text-center">Vaše povprečje</th><th class="text-center">Povprečje razreda</th><th class="text-center">Primerjava</th></tr></thead>';
         $html .= '<tbody>';
 
         foreach ($studentGrades as $grade) {
-            if ($grade['student_avg_score'] === null && $grade['class_avg_score'] === null) {
-                continue;
-            }
+            if ($grade['student_avg_score'] === null && $grade['class_avg_score'] === null) continue;
 
             $studentAvgFormatted = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) . '%' : 'N/A';
             $classAvgFormatted = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) . '%' : 'N/A';
@@ -878,13 +741,8 @@ function renderStudentClassAveragesWidget(): string
             $comparisonClass = 'text-secondary';
 
             if ($grade['student_avg_score'] !== null) {
-                if ($grade['student_avg_score'] >= 80) {
-                    $scoreClass = 'grade-high';
-                } elseif ($grade['student_avg_score'] >= 60) {
-                    $scoreClass = 'grade-medium';
-                } else {
-                    $scoreClass = 'grade-low';
-                }
+                if ($grade['student_avg_score'] >= 80) $scoreClass = 'grade-high'; elseif ($grade['student_avg_score'] >= 60) $scoreClass = 'grade-medium';
+                else $scoreClass = 'grade-low';
 
                 if ($grade['class_avg_score'] !== null) {
                     $diff = $grade['student_avg_score'] - $grade['class_avg_score'];
@@ -896,9 +754,7 @@ function renderStudentClassAveragesWidget(): string
                     } elseif ($diff < -5) {
                         $comparisonText = $diffFormatted . '%';
                         $comparisonClass = 'text-error';
-                    } else {
-                        $comparisonText = '≈';
-                    }
+                    } else $comparisonText = '≈';
                 }
             }
 
@@ -932,20 +788,14 @@ function renderStudentClassAveragesWidget(): string
 function renderParentChildClassAveragesWidget(): string
 {
     $userId = getUserId();
-    if (!$userId) {
-        return renderPlaceholderWidget('Za prikaz povprečij razredov se morate prijaviti.');
-    }
+    if (!$userId) return renderPlaceholderWidget('Za prikaz povprečij razredov se morate prijaviti.');
 
     $db = getDBConnection();
-    if (!$db) {
-        return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
-    }
+    if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
     $parentInfo = getUserInfo($userId);
 
-    if (!$parentInfo || empty($parentInfo['children'])) {
-        return renderPlaceholderWidget('Na vaš račun ni povezanih otrok ali podatkov o staršu.');
-    }
+    if (!$parentInfo || empty($parentInfo['children'])) return renderPlaceholderWidget('Na vaš račun ni povezanih otrok ali podatkov o staršu.');
     $children = $parentInfo['children'];
 
 
@@ -1003,32 +853,21 @@ function renderParentChildClassAveragesWidget(): string
 
         $html .= '<div class="card__content p-0">';
 
-        if (empty($childGrades) || !array_filter($childGrades, static fn($g) => $g['student_avg_score'] !== null)) {
-            $html .= '<div class="p-md text-center"><p class="m-0 text-secondary">Za tega otroka ni podatkov o ocenah.</p></div>';
-        } else {
+        if (empty($childGrades) || !array_filter($childGrades, static fn($g) => $g['student_avg_score'] !== null)) $html .= '<div class="p-md text-center"><p class="m-0 text-secondary">Za tega otroka ni podatkov o ocenah.</p></div>'; else {
             $html .= '<div class="child-grades-table table-responsive">';
             $html .= '<table class="data-table w-100">';
             $html .= '<thead><tr><th>Predmet</th><th class="text-center">Povprečje</th><th class="text-center">Povprečje razreda</th></tr></thead>';
             $html .= '<tbody>';
 
             foreach ($childGrades as $grade) {
-                if ($grade['student_avg_score'] === null && $grade['class_avg_score'] === null) {
-                    continue;
-                }
+                if ($grade['student_avg_score'] === null && $grade['class_avg_score'] === null) continue;
 
                 $studentAvgFormatted = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) . '%' : 'N/A';
                 $classAvgFormatted = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) . '%' : 'N/A';
 
                 $scoreClass = '';
-                if ($grade['student_avg_score'] !== null) {
-                    if ($grade['student_avg_score'] >= 80) {
-                        $scoreClass = 'grade-high';
-                    } elseif ($grade['student_avg_score'] >= 60) {
-                        $scoreClass = 'grade-medium';
-                    } else {
-                        $scoreClass = 'grade-low';
-                    }
-                }
+                if ($grade['student_avg_score'] !== null) if ($grade['student_avg_score'] >= 80) $scoreClass = 'grade-high'; elseif ($grade['student_avg_score'] >= 60) $scoreClass = 'grade-medium';
+                else $scoreClass = 'grade-low';
 
                 $html .= '<tr>';
                 $html .= '<td>' . htmlspecialchars($grade['subject_name']) . '<br><small class="text-disabled">' . htmlspecialchars($grade['class_title']) . '</small></td>';
@@ -1063,14 +902,10 @@ function renderUpcomingClassesWidget(): string
 {
     $studentId = getStudentId();
 
-    if (!$studentId) {
-        return renderPlaceholderWidget('Za prikaz prihajajočih ur se morate identificirati kot dijak.');
-    }
+    if (!$studentId) return renderPlaceholderWidget('Za prikaz prihajajočih ur se morate identificirati kot dijak.');
 
     $db = getDBConnection();
-    if (!$db) {
-        return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
-    }
+    if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
     $today = date('Y-m-d');
     $oneWeekLater = date('Y-m-d', strtotime('+7 days'));
@@ -1109,9 +944,7 @@ function renderUpcomingClassesWidget(): string
 
     $html = '<div class="widget-content card card__content p-0">';
 
-    if (empty($upcomingClasses)) {
-        $html .= '<div class="text-center p-md"><p class="m-0">Ni prihajajočih ur v naslednjem tednu.</p></div>';
-    } else {
+    if (empty($upcomingClasses)) $html .= '<div class="text-center p-md"><p class="m-0">Ni prihajajočih ur v naslednjem tednu.</p></div>'; else {
         $currentDay = '';
         $html .= '<div class="upcoming-classes p-md">';
 
@@ -1174,14 +1007,10 @@ function renderStudentGradesWidget(): string
 {
     $studentId = getStudentId();
 
-    if (!$studentId) {
-        return renderPlaceholderWidget('Za prikaz ocen se morate identificirati kot dijak.');
-    }
+    if (!$studentId) return renderPlaceholderWidget('Za prikaz ocen se morate identificirati kot dijak.');
 
     $db = getDBConnection();
-    if (!$db) {
-        return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
-    }
+    if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
     try {
         $queryRecent = "SELECT
@@ -1236,14 +1065,10 @@ function renderStudentGradesWidget(): string
     $html .= '<div class="grades-section subject-averages col-12 col-md-5">';
     $html .= '<h5 class="mb-md font-medium">Povprečja predmetov</h5>';
 
-    if (empty($subjectAverages)) {
-        $html .= '<div class="text-center p-md"><p class="m-0 text-secondary">Ni podatkov o povprečjih predmetov.</p></div>';
-    } else {
+    if (empty($subjectAverages)) $html .= '<div class="text-center p-md"><p class="m-0 text-secondary">Ni podatkov o povprečjih predmetov.</p></div>'; else {
         $html .= '<div class="averages-list d-flex flex-column gap-sm">';
         foreach ($subjectAverages as $subject) {
-            if ($subject['avg_score'] === null) {
-                continue;
-            }
+            if ($subject['avg_score'] === null) continue;
 
             $avgScore = number_format($subject['avg_score'], 1);
             $gradeCount = (int)$subject['grade_count'];
@@ -1274,20 +1099,16 @@ function renderStudentGradesWidget(): string
     $html .= '<div class="grades-section recent-grades col-12 col-md-7">';
     $html .= '<h5 class="mb-md font-medium">Nedavne ocene</h5>';
 
-    if (empty($recentGrades)) {
-        $html .= '<div class="text-center p-md"><p class="m-0 text-secondary">Nimate nedavnih ocen.</p></div>';
-    } else {
+    if (empty($recentGrades)) $html .= '<div class="text-center p-md"><p class="m-0 text-secondary">Nimate nedavnih ocen.</p></div>'; else {
         $html .= '<div class="recent-grades-list d-flex flex-column gap-md">';
         foreach ($recentGrades as $grade) {
             $percentage = $grade['percentage'];
             $scoreClass = 'badge-secondary';
-            if ($percentage !== null) {
-                $scoreClass = match (true) {
-                    $percentage >= 80 => 'grade-high',
-                    $percentage >= 60 => 'grade-medium',
-                    default => 'grade-low'
-                };
-            }
+            if ($percentage !== null) $scoreClass = match (true) {
+                $percentage >= 80 => 'grade-high',
+                $percentage >= 60 => 'grade-medium',
+                default => 'grade-low'
+            };
             $percentageFormatted = $percentage !== null ? '(' . htmlspecialchars($percentage) . '%)' : '';
 
             $html .= '<div class="grade-item p-md rounded bg-secondary shadow-sm">';
@@ -1300,9 +1121,7 @@ function renderStudentGradesWidget(): string
 
             $html .= '<div class="grade-details">';
             $html .= '<div class="grade-name text-sm">' . htmlspecialchars($grade['grade_item_name']) . '</div>';
-            if (!empty($grade['comment'])) {
-                $html .= '<div class="grade-comment text-sm text-secondary fst-italic mt-xs">"' . htmlspecialchars($grade['comment']) . '"</div>';
-            }
+            if (!empty($grade['comment'])) $html .= '<div class="grade-comment text-sm text-secondary fst-italic mt-xs">"' . htmlspecialchars($grade['comment']) . '"</div>';
             $html .= '</div>';
             $html .= '</div>';
         }
@@ -1351,9 +1170,7 @@ function calculateAttendanceStats(array $attendance): array
     $late = 0;
 
     foreach ($attendance as $record) {
-        if (!isset($record['status'])) {
-            continue;
-        }
+        if (!isset($record['status'])) continue;
         switch (strtoupper($record['status'])) {
             case 'P':
                 $present++;
@@ -1387,9 +1204,7 @@ function renderAdminUserStatsWidget(): string
 {
     try {
         $db = getDBConnection();
-        if (!$db) {
-            return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
-        }
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
         $roleQuery = "SELECT r.role_id, r.name, COUNT(u.user_id) as count
                       FROM roles r
@@ -1456,9 +1271,7 @@ function renderAdminSystemStatusWidget(): string
 {
     try {
         $db = getDBConnection();
-        if (!$db) {
-            return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
-        }
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
         $dbName = $db->query('select database()')->fetchColumn();
         $tableQuery = "SELECT
@@ -1477,9 +1290,7 @@ function renderAdminSystemStatusWidget(): string
             $sessionFiles = glob($sessionPath . "/sess_*");
             if ($sessionFiles !== false) {
                 $sessionLifetime = (int)ini_get('session.gc_maxlifetime');
-                if ($sessionLifetime <= 0) {
-                    $sessionLifetime = 1800;
-                }
+                if ($sessionLifetime <= 0) $sessionLifetime = 1800;
                 $sessionCount = count(array_filter($sessionFiles, static fn($file) => (time() - filemtime($file)) < $sessionLifetime));
             }
         }
@@ -1526,9 +1337,7 @@ function renderAdminAttendanceWidget(): string
 {
     try {
         $db = getDBConnection();
-        if (!$db) {
-            return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
-        }
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
         $intervalDays = 30;
         $startDate = date('Y-m-d', strtotime("-$intervalDays days"));
@@ -1619,14 +1428,10 @@ function renderTeacherClassOverviewWidget(): string
 {
     try {
         $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
-        if (!$teacherId) {
-            return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
-        }
+        if (!$teacherId) return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
 
         $db = getDBConnection();
-        if (!$db) {
-            return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
-        }
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
         $query = "SELECT cs.class_subject_id, c.class_id, c.class_code, c.title as class_title,
                          s.subject_id, s.name as subject_name,
@@ -1644,9 +1449,7 @@ function renderTeacherClassOverviewWidget(): string
         $stmt->execute();
         $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if (empty($classes)) {
-            return renderPlaceholderWidget('Trenutno ne poučujete nobenega razreda.');
-        }
+        if (empty($classes)) return renderPlaceholderWidget('Trenutno ne poučujete nobenega razreda.');
 
         $output = '<div class="teacher-class-overview card card__content p-0">';
         $output .= '<ul class="class-list list-unstyled p-0 m-0">';
@@ -1698,14 +1501,10 @@ function renderTeacherAttendanceWidget(): string
 {
     try {
         $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
-        if (!$teacherId) {
-            return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
-        }
+        if (!$teacherId) return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
 
         $db = getDBConnection();
-        if (!$db) {
-            return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
-        }
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
         $todayQuery = "SELECT p.period_id, p.period_label, c.class_code, s.name as subject_name,
                              cs.class_subject_id,
@@ -1724,9 +1523,7 @@ function renderTeacherAttendanceWidget(): string
         $stmt->execute();
         $todayClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if (empty($todayClasses)) {
-            return renderPlaceholderWidget('Danes nimate načrtovanega pouka.');
-        }
+        if (empty($todayClasses)) return renderPlaceholderWidget('Danes nimate načrtovanega pouka.');
 
         $output = '<div class="teacher-today-attendance card card__content p-0">';
         $output .= '<div class="table-responsive">';
@@ -1803,14 +1600,10 @@ function renderTeacherPendingJustificationsWidget(): string
 {
     try {
         $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
-        if (!$teacherId) {
-            return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
-        }
+        if (!$teacherId) return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
 
         $db = getDBConnection();
-        if (!$db) {
-            return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
-        }
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
         $limit = 5;
 
@@ -1851,9 +1644,7 @@ function renderTeacherPendingJustificationsWidget(): string
         $countStmt->execute();
         $totalPending = $countStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
 
-        if ($totalPending == 0) {
-            return renderPlaceholderWidget('Trenutno ni čakajočih opravičil.');
-        }
+        if ($totalPending == 0) return renderPlaceholderWidget('Trenutno ni čakajočih opravičil.');
 
         $output = '<div class="pending-justifications card card__content p-0">';
 
@@ -1884,11 +1675,9 @@ function renderTeacherPendingJustificationsWidget(): string
                 $output .= '<div class="justification-text text-sm mb-sm fst-italic bg-tertiary p-sm rounded">"' . htmlspecialchars($justificationExcerpt) . '"</div>';
             }
 
-            if (!empty($just['justification_file'])) {
-                $output .= '<div class="attachment-indicator text-sm text-secondary d-flex items-center gap-xs mb-md">
-                                <span class="material-icons-outlined text-sm">attachment</span> Priloga
-                             </div>';
-            }
+            if (!empty($just['justification_file'])) $output .= '<div class="attachment-indicator text-sm text-secondary d-flex items-center gap-xs mb-md">
+                            <span class="material-icons-outlined text-sm">attachment</span> Priloga
+                         </div>';
 
             $output .= '<div class="justification-actions d-flex gap-sm justify-end">';
             $output .= '<a href="/uwuweb/teacher/justifications.php?action=view&id=' . urlencode($just['att_id']) . '" class="btn btn-sm btn-secondary d-flex items-center gap-xs" title="Podrobnosti">
@@ -1931,15 +1720,11 @@ function renderStudentAttendanceWidget(): string
 {
     $studentId = getStudentId();
 
-    if (!$studentId) {
-        return renderPlaceholderWidget('Za prikaz prisotnosti se morate identificirati kot dijak.');
-    }
+    if (!$studentId) return renderPlaceholderWidget('Za prikaz prisotnosti se morate identificirati kot dijak.');
 
     try {
         $db = getDBConnection();
-        if (!$db) {
-            return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
-        }
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
         $stats = [
             'total' => 0, 'present' => 0, 'late' => 0,
@@ -1975,9 +1760,7 @@ function renderStudentAttendanceWidget(): string
             $stats['needs_justification'] = (int)$result['needs_justification'];
             $stats['unjustified'] = $stats['needs_justification'] + $stats['rejected'];
 
-            if ($stats['total'] > 0) {
-                $stats['attendance_rate'] = round((($stats['present'] + $stats['late']) / $stats['total']) * 100, 1);
-            }
+            if ($stats['total'] > 0) $stats['attendance_rate'] = round((($stats['present'] + $stats['late']) / $stats['total']) * 100, 1);
         }
 
         $recentQuery = "SELECT
@@ -2074,15 +1857,9 @@ function renderStudentAttendanceWidget(): string
                         break;
                     case 'A':
                         $statusBadge = '<span class="badge status-absent">Odsoten</span>';
-                        if ($record['approved'] === 1) {
-                            $justificationHtml = '<span class="badge badge-success">Opravičeno</span>';
-                        } elseif ($record['approved'] === 0) {
-                            $justificationHtml = '<span class="badge badge-error">Zavrnjeno</span>';
-                        } elseif ($record['justification'] !== null && $record['approved'] === null) {
-                            $justificationHtml = '<span class="badge badge-warning">V obdelavi</span>';
-                        } else {
-                            $justificationHtml = '<a href="/uwuweb/student/justification.php?att_id=' . $record['att_id'] . '" class="btn btn-xs btn-warning d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-xs">edit</span> Oddaj</a>';
-                        }
+                        if ($record['approved'] === 1) $justificationHtml = '<span class="badge badge-success">Opravičeno</span>'; elseif ($record['approved'] === 0) $justificationHtml = '<span class="badge badge-error">Zavrnjeno</span>';
+                        elseif ($record['justification'] !== null && $record['approved'] === null) $justificationHtml = '<span class="badge badge-warning">V obdelavi</span>';
+                        else $justificationHtml = '<a href="/uwuweb/student/justification.php?att_id=' . $record['att_id'] . '" class="btn btn-xs btn-warning d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-xs">edit</span> Oddaj</a>';
                         break;
                 }
 
@@ -2102,9 +1879,7 @@ function renderStudentAttendanceWidget(): string
 
         $html .= '<div class="widget-footer d-flex justify-between items-center mt-lg border-top pt-md">';
         $html .= '<a href="/uwuweb/student/attendance.php" class="btn btn-sm btn-secondary">Celotna evidenca</a>';
-        if ($stats['needs_justification'] > 0) {
-            $html .= '<a href="/uwuweb/student/justification.php" class="btn btn-sm btn-primary">Oddaj opravičilo (' . $stats['needs_justification'] . ')</a>';
-        }
+        if ($stats['needs_justification'] > 0) $html .= '<a href="/uwuweb/student/justification.php" class="btn btn-sm btn-primary">Oddaj opravičilo (' . $stats['needs_justification'] . ')</a>';
         $html .= '</div>';
 
         $html .= '</div>';
@@ -2129,20 +1904,14 @@ function renderParentAttendanceWidget(): string
 {
     $userId = getUserId();
 
-    if (!$userId) {
-        return renderPlaceholderWidget('Za prikaz prisotnosti otrok se morate prijaviti.');
-    }
+    if (!$userId) return renderPlaceholderWidget('Za prikaz prisotnosti otrok se morate prijaviti.');
 
     try {
         $db = getDBConnection();
-        if (!$db) {
-            return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
-        }
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
         $parentInfo = getUserInfo($userId);
-        if (!$parentInfo || empty($parentInfo['children'])) {
-            return renderPlaceholderWidget('Na vaš račun ni povezanih otrok ali podatkov o staršu.');
-        }
+        if (!$parentInfo || empty($parentInfo['children'])) return renderPlaceholderWidget('Na vaš račun ni povezanih otrok ali podatkov o staršu.');
         $children = $parentInfo['children'];
 
         $html = '<div class="widget-content parent-attendance-widget">';
@@ -2184,9 +1953,7 @@ function renderParentAttendanceWidget(): string
                 $childStats['pending'] = (int)$statsResult['pending'];
                 $childStats['unjustified'] = $childStats['absent'] - $childStats['justified'] - $childStats['rejected'] - $childStats['pending'];
 
-                if ($childStats['total'] > 0) {
-                    $childStats['attendance_rate'] = round((($childStats['present'] + $childStats['late']) / $childStats['total']) * 100, 1);
-                }
+                if ($childStats['total'] > 0) $childStats['attendance_rate'] = round((($childStats['present'] + $childStats['late']) / $childStats['total']) * 100, 1);
             }
 
             $absenceQuery = "SELECT
@@ -2240,12 +2007,8 @@ function renderParentAttendanceWidget(): string
             $html .= '</div>';
             if ($childStats['pending'] > 0 || $childStats['rejected'] > 0) {
                 $html .= '<div class="row mt-xs">';
-                if ($childStats['pending'] > 0) {
-                    $html .= '<div class="col-6 text-center"><span class="text-xs text-secondary">V obdelavi: ' . $childStats['pending'] . '</span></div>';
-                }
-                if ($childStats['rejected'] > 0) {
-                    $html .= '<div class="col-6 text-center"><span class="text-xs text-secondary">Zavrnjeno: ' . $childStats['rejected'] . '</span></div>';
-                }
+                if ($childStats['pending'] > 0) $html .= '<div class="col-6 text-center"><span class="text-xs text-secondary">V obdelavi: ' . $childStats['pending'] . '</span></div>';
+                if ($childStats['rejected'] > 0) $html .= '<div class="col-6 text-center"><span class="text-xs text-secondary">Zavrnjeno: ' . $childStats['rejected'] . '</span></div>';
                 $html .= '</div>';
             }
             $html .= '</div>';
@@ -2282,9 +2045,7 @@ function renderParentAttendanceWidget(): string
 
                 $html .= '</ul>';
                 $html .= '</div>';
-            } elseif ($childStats['absent'] > 0) {
-                $html .= '<div class="recent-absences border-top pt-lg text-center text-secondary"><p>Ni nedavnih odsotnosti.</p></div>';
-            }
+            } elseif ($childStats['absent'] > 0) $html .= '<div class="recent-absences border-top pt-lg text-center text-secondary"><p>Ni nedavnih odsotnosti.</p></div>';
 
             $html .= '</div>';
 
@@ -2330,9 +2091,7 @@ function sendJsonErrorResponse(string $message, int $statusCode = 400, string $c
         echo json_encode(['success' => false, 'message' => $message], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
     } catch (JsonException $e) {
         error_log("Failed to encode JSON error response: " . $e->getMessage());
-        if (!headers_sent()) {
-            header('Content-Type: text/plain; charset=utf-8');
-        }
+        if (!headers_sent()) header('Content-Type: text/plain; charset=utf-8');
         echo "{\"success\": false, \"message\": \"Internal Server Error: Failed to create JSON response.\"}";
     }
     exit;
