@@ -300,31 +300,33 @@ responses for client-side processing. Access control based on user role: student
 
 ## /api/attendance.php
 
-Attendance API Endpoint - Handles CRUD operations for attendance data via AJAX requests. Returns JSON responses for
-client-side processing.
+Attendance API Endpoint - Handles CRUD operations for attendance data via AJAX requests.
 
 ### Period Management:
 
-- `addPeriod(): void` - Creates a new period for a class with initial attendance records.
-- `updatePeriod(): void` - Updates date and label information for an existing period.
-- `deletePeriod(): void` - Deletes a period and all associated attendance records.
+- `handleAddPeriod(): void` - Creates a new period for a class with initial attendance records using POST data (
+  class_subject_id, period_date, period_label)
+- `handleUpdatePeriod(): void` - Updates date and label information for an existing period using POST data (period_id,
+  period_date, period_label)
+- `handleDeletePeriod(): void` - Deletes a period and all associated attendance records using POST data (period_id)
 
 ### Attendance Recording:
 
-- `saveAttendance(): void` - Saves attendance status for a single student.
-- `bulkAttendance(): void` - Saves attendance status for multiple students at once.
+- `handleSaveAttendance(): void` - Saves attendance status ('P', 'A', 'L') for a single student using POST data (
+  enroll_id, period_id, status)
+- `handleBulkAttendance(): void` - Saves attendance status for multiple students at once using POST data (period_id,
+  attendance_data array)
 
 ### Justification Management:
 
-- `justifyAbsence(): void` - Records or approves absence justification based on user role.
-- `getStudentAttendance(): void` - Gets attendance summary and statistics for a student.
+- `handleJustifyAbsence(): void` - Records or approves absence justification based on user role using POST data (att_id,
+  justification, approved, reject_reason)
+- `handleGetStudentAttendance(): void` - Retrieves attendance summary and statistics for a student using POST data (
+  student_id, optional date_from, date_to)
 
-### Access Control Helpers:
-
-- `teacherHasAccessToClass(int $classSubjectId): bool` - Verifies teacher has access to class-subject.
-- `teacherHasAccessToPeriod(int $periodId): bool` - Verifies teacher has access to specific period.
-- `teacherHasAccessToEnrollment(int $enrollId): bool` - Verifies teacher has access to student enrollment.
-- `studentOwnsEnrollment(int $enrollId): bool` - Checks if current student owns the enrollment record.
+All functions perform role-based access control checks and output JSON responses directly. Admin and Teacher roles can
+manage all attendance data, while Students can only submit justifications and view their own attendance records. Parents
+can view attendance for their linked students.
 
 ## /api/grades.php
 
