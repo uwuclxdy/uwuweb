@@ -1,0 +1,1 @@
+instead of using command `php` use `sudo /opt/lampp/bin/php`
