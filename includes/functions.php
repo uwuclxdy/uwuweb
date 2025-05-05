@@ -1,5 +1,4 @@
 <?php /** @noinspection PhpUnused */
-
 /**
  * Common Utility Functions Library
  *
@@ -11,11 +10,8 @@
  *
  * Functions:
  * User and Role Management:
- * - getUserInfo(int $userId): array|null - Retrieves user profile information by user ID
- * - getUserId(): int|null - Gets current user ID from session
- * - getUserRole(): int|null - Gets the role ID of the current user from session
- * - getStudentId(): int|null - Gets student ID for current user
- * - getRoleName(int $roleId): string - Returns the name of a role by ID
+ * - getUserInfo(int $userId): ?array - Retrieves user profile information by user ID
+ * - getStudentId(): ?int - Gets student ID for current user
  *
  * Security Functions:
  * - sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never - Sends a standardized JSON error response and exits

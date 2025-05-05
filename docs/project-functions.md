@@ -8,57 +8,64 @@ Common Utility Functions Library
 
 ### User and Role Management:
 
-- `getUserInfo(int $userId): array|null` - Returns user profile with role and role-specific data.
-- `getUserId(): int|null` - Returns current user ID from session.
-- `getUserRole(): int|null` - Returns current user's role ID.
-- `getStudentId(): int|null` - Returns student ID for current user.
-- `getRoleName(int $roleId): string` - Returns role name from ID.
+- `getUserInfo(int $userId): ?array` - Retrieves comprehensive user profile with role-specific data (teacher_id, student
+  details, parent_id with children).
+- `getStudentId(): ?int` - Returns student ID for current user, with caching for optimization.
 
 ### Security Functions:
 
-- `sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never` - Sends JSON error and
-  exits. Context for logging.
+- `sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never` - Sends standardized JSON
+  error with status code and logs error with context before terminating execution.
 
 ### Navigation and Widgets:
 
-- `getNavItemsByRole(int $role): array` - Returns role-specific navigation items.
-- `getWidgetsByRole(int $role): array` - Returns role-specific dashboard widgets.
-- `renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string` - Renders data unavailable
-  placeholder.
+- `getNavItemsByRole(int $role): array` - Returns role-specific navigation menu items with title, URL and icon.
+- `getWidgetsByRole(int $role): array` - Returns dashboard widgets configuration appropriate for user role.
+- `renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string` - Creates a simple placeholder
+  card for widgets without data.
 
 ### Activity Widgets:
 
-- `renderRecentActivityWidget(): string` - Displays recent system activity.
+- `renderRecentActivityWidget(): string` - Generates role-appropriate recent activity summary with different content
+  based on user role.
 
 ### Admin Widgets:
 
-- `renderAdminUserStatsWidget(): string` - Displays user statistics.
-- `renderAdminSystemStatusWidget(): string` - Displays system status.
-- `renderAdminAttendanceWidget(): string` - Displays school-wide attendance data.
+- `renderAdminUserStatsWidget(): string` - Displays user statistics by role with counts and recent registrations.
+- `renderAdminSystemStatusWidget(): string` - Shows system status including database stats, active sessions, and PHP
+  configuration.
+- `renderAdminAttendanceWidget(): string` - Visualizes school-wide attendance metrics with charts and highlights
+  best-performing class.
 
 ### Teacher Widgets:
 
-- `renderTeacherClassOverviewWidget(): string` - Displays teacher's classes summary.
-- `renderTeacherAttendanceWidget(): string` - Displays daily attendance data.
-- `renderTeacherPendingJustificationsWidget(): string` - Displays pending absence justifications.
-- `renderTeacherClassAveragesWidget(): string` - Displays academic averages by class.
+- `renderTeacherClassOverviewWidget(): string` - Displays teacher's assigned classes with subject and student count
+  information.
+- `renderTeacherAttendanceWidget(): string` - Shows today's classes with attendance recording status and quick action
+  links.
+- `renderTeacherPendingJustificationsWidget(): string` - Lists pending absence justifications awaiting teacher approval.
+- `renderTeacherClassAveragesWidget(): string` - Visualizes academic performance averages across teacher's classes.
 
 ### Student Widgets:
 
-- `renderStudentGradesWidget(): string` - Displays student's grades summary.
-- `renderStudentAttendanceWidget(): string` - Displays student's attendance statistics.
-- `renderStudentClassAveragesWidget(): string` - Displays student's class performance.
-- `renderUpcomingClassesWidget(): string` - Displays student's upcoming classes.
+- `renderStudentGradesWidget(): string` - Displays student's recent grades and subject performance statistics.
+- `renderStudentAttendanceWidget(): string` - Shows attendance summary with statistics and recent attendance records.
+- `renderStudentClassAveragesWidget(): string` - Compares student's performance against class averages across subjects.
+- `renderUpcomingClassesWidget(): string` - Lists student's scheduled classes for the next week organized by day.
 
 ### Parent Widgets:
 
-- `renderParentAttendanceWidget(): string` - Displays child's attendance summary.
-- `renderParentChildClassAveragesWidget(): string` - Displays child's academic performance.
+- `renderParentAttendanceWidget(): string` - Displays attendance summary for each child with statistics and recent
+  absences.
+- `renderParentChildClassAveragesWidget(): string` - Shows academic performance for each child compared to class
+  averages.
 
 ### Attendance Utilities:
 
-- `getAttendanceStatusLabel(string $status): string` - Translates status code to readable label.
-- `calculateAttendanceStats(array $attendance): array` - Computes attendance metrics from records.
+- `getAttendanceStatusLabel(string $status): string` - Translates single-letter status code (P/A/L) to human-readable
+  label.
+- `calculateAttendanceStats(array $attendance): array` - Computes attendance metrics including counts and percentages
+  from attendance records.
 
 ## /admin/admin_functions.php
 
