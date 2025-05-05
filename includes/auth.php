@@ -2,22 +2,32 @@
 /**
  * Authentication and Session Management
  *
- * Provides functions for user authentication, session management,
- * and role-based access control
+ * File: /includes/auth.php
  *
- * Functions:
- * - isLoggedIn() - Checks if a user is currently logged in
- * - getUserRole() - Returns the current user's role ID
- * - getUserId() - Returns the current user's ID
- * - hasRole($roleId) - Checks if current user has a specific role
- * - requireRole($roleId) - Restricts page access to users with specific role
- * - generateCSRFToken() - Creates a CSRF token for form security
- * - verifyCSRFToken($token) - Validates submitted CSRF token
- * - getRoleName($roleId) - Returns the name of a role by ID
- * - checkSessionTimeout() - Checks if the session has timed out due to inactivity
- * - updateLastActivityTime() - Updates the last activity timestamp
+ * Provides functions for user authentication, session management,
+ * and role-based access control.
+ *
+ * Session Management:
+ * - isLoggedIn(): bool - Checks if a user is currently logged in
+ * - checkSessionTimeout(): void - Checks if the session has timed out due to inactivity
+ * - updateLastActivityTime(): void - Updates the last activity timestamp
+ * - destroySession(string $reason = ''): void - Destroys current session and redirects to login
+ *
+ * User Information:
+ * - getUserRole(): int|null - Returns the current user's role ID from session
+ * - getUserId(): int|null - Returns the current user's ID from session
+ * - hasRole(int $roleId): bool - Checks if current user has a specific role
+ * - getRoleName(int $roleId): string - Returns the name of a role by ID
+ *
+ * Access Control:
+ * - requireRole(int $roleId): bool - Restricts page access to users with specific role
+ *
+ * Security:
+ * - generateCSRFToken(): string - Creates a CSRF token for form security
+ * - verifyCSRFToken(string $token): bool - Validates submitted CSRF token
  */
 
+// Initialize session if it hasn't been started
 use JetBrains\PhpStorm\NoReturn;
 use Random\RandomException;
 
@@ -26,82 +36,111 @@ if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params(1800);
     session_start();
 
-    if (!isset($_SESSION['last_regeneration'])) {
-        $_SESSION['last_regeneration'] = time();
-    } elseif (time() - $_SESSION['last_regeneration'] > 600) {
+    if (!isset($_SESSION['last_regeneration'])) $_SESSION['last_regeneration'] = time(); elseif (time() - $_SESSION['last_regeneration'] > 600) {
         session_regenerate_id(true);
         $_SESSION['last_regeneration'] = time();
     }
 
-    if (!isset($_SESSION['last_activity'])) {
-        $_SESSION['last_activity'] = time();
-    }
+    if (!isset($_SESSION['last_activity'])) $_SESSION['last_activity'] = time();
 
     checkSessionTimeout();
 
-    if (isLoggedIn()) {
-        updateLastActivityTime();
-    }
+    if (isLoggedIn()) updateLastActivityTime();
 }
 
-// Check if user is logged in
+// Enforce session timeout
+checkSessionTimeout();
+
+/**
+ * Checks if a user is currently logged in
+ *
+ * @return bool True if user is logged in, false otherwise
+ */
 function isLoggedIn(): bool
 {
     return !empty($_SESSION['user_id'] ?? null);
 }
 
-// Get current user's role ID
-function getUserRole() {
+/**
+ * Returns the current user's role ID from session
+ *
+ * @return int|null Role ID or null if not set
+ */
+function getUserRole(): int|null
+{
     return $_SESSION['role_id'] ?? null;
 }
 
-// Get current user's ID
-function getUserId() {
+/**
+ * Returns the current user's ID from session
+ *
+ * @return int|null User ID or null if not set
+ */
+function getUserId(): int|null
+{
     return $_SESSION['user_id'] ?? null;
 }
 
-// Check if user has a specific role
-function hasRole($roleId): bool
+/**
+ * Checks if the current user has a specific role
+ *
+ * @param int $roleId The role ID to check
+ * @return bool True if user has the role, false otherwise
+ */
+function hasRole(int $roleId): bool
 {
     return getUserRole() == $roleId;
 }
 
-// Require specific role to access page, redirect if not authorized
-function requireRole($roleId) {
+/**
+ * Restricts page access to users with a specific role
+ * Redirects to login or dashboard if unauthorized
+ *
+ * @param int $roleId The required role ID for access
+ * @return bool True if user has access (will exit if not)
+ */
+function requireRole(int $roleId): bool
+{
     if (!isLoggedIn()) {
         $_SESSION['redirect_after_login'] = $_SERVER['REQUEST_URI'];
-        header('Location: /index.php');
+        header('Location: /uwuweb/index.php');
         exit;
     }
 
     if (!hasRole($roleId) && !hasRole(1)) {
-        header('Location: /dashboard.php?error=unauthorized');
+        header('Location: /uwuweb/dashboard.php?error=unauthorized');
         exit;
     }
 
     return true;
 }
 
-// Generate CSRF token
 /**
+ * Creates a CSRF token for form security
+ *
+ * @return string The generated CSRF token
  * @throws RandomException
  */
-function generateCSRFToken() {
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
+function generateCSRFToken(): string
+{
+    if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     return $_SESSION['csrf_token'];
 }
 
-// Verify CSRF token
-function verifyCSRFToken(string $token): bool {
-    if (empty($_SESSION['csrf_token'])) {
-        return false;
-    }
+/**
+ * Validates a submitted CSRF token
+ *
+ * @param string $token The token to verify
+ * @return bool True if token is valid, false otherwise
+ */
+function verifyCSRFToken(string $token): bool
+{
+    if (empty($_SESSION['csrf_token'])) return false;
 
     return hash_equals($_SESSION['csrf_token'], $token);
 }
 
+// Role constants
 const ROLE_ADMIN = 1;
 const ROLE_TEACHER = 2;
 const ROLE_STUDENT = 3;
@@ -113,7 +152,8 @@ const ROLE_PARENT = 4;
  * @param int $roleId The role ID to lookup
  * @return string The name of the role or 'Unknown' if not found
  */
-function getRoleName(int $roleId): string {
+function getRoleName(int $roleId): string
+{
     $roleNames = [
         ROLE_ADMIN => 'Administrator',
         ROLE_TEACHER => 'Teacher',
@@ -121,28 +161,26 @@ function getRoleName(int $roleId): string {
         ROLE_PARENT => 'Parent/Guardian'
     ];
 
-    if (isset($roleNames[$roleId])) {
-        return $roleNames[$roleId];
-    }
+    if (isset($roleNames[$roleId])) return $roleNames[$roleId];
 
     require_once 'db.php';
 
     try {
-            $pdo = safeGetDBConnection('getRoleName');
-            if ($pdo === null) {
-                logDBError("Failed to establish database connection in getRoleName");
-                return 'Unknown';
-            }
-
-            $stmt = $pdo->prepare("SELECT name FROM roles WHERE role_id = ? LIMIT 1");
-            $stmt->execute([$roleId]);
-            $role = $stmt->fetch();
-
-            return $role ? $role['name'] : 'Unknown';
-        } catch (PDOException $e) {
-            logDBError("Error in getRoleName: " . $e->getMessage());
+        $pdo = safeGetDBConnection('getRoleName');
+        if ($pdo === null) {
+            logDBError("Failed to establish database connection in getRoleName");
             return 'Unknown';
         }
+
+        $stmt = $pdo->prepare("SELECT name FROM roles WHERE role_id = ? LIMIT 1");
+        $stmt->execute([$roleId]);
+        $role = $stmt->fetch();
+
+        return $role ? $role['name'] : 'Unknown';
+    } catch (PDOException $e) {
+        logDBError("Error in getRoleName: " . $e->getMessage());
+        return 'Unknown';
+    }
 }
 
 /**
@@ -150,7 +188,8 @@ function getRoleName(int $roleId): string {
  *
  * @return void
  */
-function checkSessionTimeout(): void {
+function checkSessionTimeout(): void
+{
     if (isLoggedIn()) {
         $timeout = 1800;
 
@@ -159,7 +198,7 @@ function checkSessionTimeout(): void {
             session_unset();
             session_destroy();
 
-            header('Location: /index.php?error=session_timeout');
+            header('Location: /uwuweb/index.php?error=session_timeout');
             exit;
         }
     }
@@ -170,7 +209,8 @@ function checkSessionTimeout(): void {
  *
  * @return void
  */
-function updateLastActivityTime(): void {
+function updateLastActivityTime(): void
+{
     $_SESSION['last_activity'] = time();
 }
 
@@ -180,7 +220,8 @@ function updateLastActivityTime(): void {
  * @param string $reason Optional reason to include in the redirect URL
  * @return void
  */
-#[NoReturn] function destroySession(string $reason = ''): void {
+#[NoReturn] function destroySession(string $reason = ''): void
+{
     $_SESSION = array();
 
     if (ini_get("session.use_cookies")) {
@@ -193,10 +234,8 @@ function updateLastActivityTime(): void {
 
     session_destroy();
 
-    $redirect = '/index.php';
-    if (!empty($reason)) {
-        $redirect .= '?error=' . $reason;
-    }
+    $redirect = '/uwuweb/index.php';
+    if (!empty($reason)) $redirect .= '?error=' . $reason;
 
     header('Location: ' . $redirect);
     exit;

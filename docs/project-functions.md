@@ -244,23 +244,25 @@ The file includes automatic session initialization code that:
 
 ### Authentication and Session:
 
-- `isLoggedIn(): bool` - Checks login status.
-- `getUserRole(): int|null` - Returns user's role ID from session.
-- `getUserId(): int|null` - Returns user's ID from session.
-- `hasRole(int $roleId): bool` - Checks if user has specified role.
-- `requireRole(int $roleId): bool` - Restricts access to users with role or redirects.
-- `checkSessionTimeout(): void` - Verifies session hasn't timed out.
-- `updateLastActivityTime(): void` - Updates session activity timestamp.
-- `destroySession(string $reason = ''): void` - Terminates session and redirects to login page.
+- `isLoggedIn(): bool` - Checks if a user is currently logged in based on session data.
+- `getUserRole(): int|null` - Returns current user's role ID from session or null if not set.
+- `getUserId(): int|null` - Returns current user's ID from session or null if not set.
+- `hasRole(int $roleId): bool` - Checks if current user has the specified role.
+- `requireRole(int $roleId): bool` - Restricts page access to users with specific role, redirects if unauthorized.
+- `checkSessionTimeout(): void` - Checks if the session has timed out due to inactivity and logs out if needed.
+- `updateLastActivityTime(): void` - Updates the last activity timestamp in the current session.
+- `destroySession(string $reason = ''): void` - Destroys the current session, clears cookies, and redirects to login
+  page.
 
 ### Security Functions:
 
-- `generateCSRFToken(): string` - Creates CSRF token for forms.
-- `verifyCSRFToken(string $token): bool` - Validates CSRF token.
+- `generateCSRFToken(): string` - Creates a CSRF token for form security and stores in session.
+- `verifyCSRFToken(string $token): bool` - Validates submitted CSRF token against the one stored in session.
 
 ### Role Management:
 
-- `getRoleName(int $roleId): string` - Returns role name from ID or 'Unknown'.
+- `getRoleName(int $roleId): string` - Returns the name of a role by ID, falls back to database lookup if not in
+  predefined list.
 
 ### Role Constants:
 
