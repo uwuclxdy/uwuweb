@@ -330,22 +330,19 @@ can view attendance for their linked students.
 
 ## /api/grades.php
 
-Grades API Endpoint - Handles CRUD operations for grade data via AJAX requests. Returns JSON responses for client-side
-processing. Restricted to teacher role access.
+Handles CRUD operations for grade data via AJAX requests. Returns JSON responses for client-side processing.
 
 ### Grade Item Management:
 
-- `addGradeItem(): void` - Creates a new grade item for a specific class-subject based on request data.
-- `updateGradeItem(): void` - Updates name, max points, and weight for an existing grade item based on request data.
-- `deleteGradeItem(): void` - Removes a grade item and all associated grades based on request data.
-- `saveGrade(): void` - Creates or updates a grade for a student on a specific grade item based on request data.
+- `addGradeItem(): void` - Creates a new grade item for a specific class-subject using JSON request data
+- `updateGradeItem(): void` - Updates name, max points, and weight for an existing grade item
+- `deleteGradeItem(): void` - Removes a grade item and all associated grades
+- `saveGrade(): void` - Creates or updates a grade for a student on a specific grade item
 
-### Access Control Helpers:
+### Authorization Functions:
 
-- `teacherHasAccessToClass(int $classId): bool` - Verifies if the current teacher is assigned to the given class.
+- `teacherHasAccessToClass(int $classId): bool` - Verifies if the current teacher is assigned to the given class
 - `teacherHasAccessToGradeItem(int $itemId, int $teacherId): bool` - Verifies if the teacher is authorized to modify the
-  given grade item.
+  given grade item
 - `teacherHasAccessToEnrollment(int $enrollId): bool` - Verifies if the current teacher is authorized to modify grades
-  for the given enrollment.
-- `teacherHasAccessToClassSubject(int $classSubjectId): bool` - Verifies if the current teacher is assigned to the given
-  class-subject.
+  for the given enrollment
