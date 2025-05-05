@@ -7,45 +7,45 @@
  * including user management, system settings, and class-subject assignments.
  *
  * User Management Functions:
- * - getAllUsers(): array - Retrieves all users with their role information
- * - displayUserList(): void - Displays a table of all users with management actions
- * - getUserDetails(int $userId): ?array - Fetches detailed information about a specific user
- * - createNewUser(array $userData): bool|int - Creates a new user with specified role
- * - updateUser(int $userId, array $userData): bool - Updates an existing user's information
- * - resetUserPassword(int $userId, string $newPassword): bool - Resets a user's password
- * - deleteUser(int $userId): bool - Deletes a user if they have no dependencies
+ * - getAllUsers(): array - Returns all users with role information.
+ * - displayUserList(): void - Renders user management table with action buttons.
+ * - getUserDetails(int $userId): ?array - Returns detailed user information with role-specific data.
+ * - createNewUser(array $userData): bool|int - Creates user with role. Returns user_id or false.
+ * - updateUser(int $userId, array $userData): bool - Updates user information. Returns success status.
+ * - resetUserPassword(int $userId, string $newPassword): bool - Sets new user password. Returns success status.
+ * - deleteUser(int $userId): bool - Removes user if no dependencies exist. Returns success status.
  *
  * Subject Management Functions:
- * - getAllSubjects(): array - Retrieves all subjects
- * - displaySubjectsList(): void - Displays a table of all subjects with management actions
- * - getSubjectDetails(int $subjectId): ?array - Fetches detailed information about a specific subject
- * - createSubject(array $subjectData): bool|int - Creates a new subject
- * - updateSubject(int $subjectId, array $subjectData): bool - Updates an existing subject
- * - deleteSubject(int $subjectId): bool - Deletes a subject if it's not in use
+ * - getAllSubjects(): array - Returns all subjects from the database.
+ * - displaySubjectsList(): void - Renders subject management table with actions.
+ * - getSubjectDetails(int $subjectId): ?array - Returns detailed subject information or null if not found.
+ * - createSubject(array $subjectData): bool|int - Creates subject. Returns subject_id or false.
+ * - updateSubject(int $subjectId, array $subjectData): bool - Updates subject information. Returns success status.
+ * - deleteSubject(int $subjectId): bool - Removes subject if not in use. Returns success status.
  *
  * Class Management Functions:
- * - getAllClasses(): array - Retrieves all classes
- * - displayClassesList(): void - Displays a table of all classes with management actions
- * - getClassDetails(int $classId): ?array - Fetches detailed information about a specific class
- * - createClass(array $classData): bool|int - Creates a new class
- * - updateClass(int $classId, array $classData): bool - Updates an existing class
- * - deleteClass(int $classId): bool - Deletes a class if it has no dependencies
+ * - getAllClasses(): array - Returns all classes with homeroom teacher information.
+ * - displayClassesList(): void - Renders class management table with actions.
+ * - getClassDetails(int $classId): ?array - Returns detailed class information or null if not found.
+ * - createClass(array $classData): bool|int - Creates class. Returns class_id or false.
+ * - updateClass(int $classId, array $classData): bool - Updates class information. Returns success status.
+ * - deleteClass(int $classId): bool - Removes class if no dependencies exist. Returns success status.
  *
  * Class-Subject Assignment Functions:
- * - assignSubjectToClass(array $assignmentData): bool|int - Assigns a subject to a class with a specific teacher.
- * - updateClassSubjectAssignment(int $assignmentId, array $assignmentData): bool - Updates a class-subject assignment.
- * - removeSubjectFromClass(int $assignmentId): bool - Removes a subject assignment from a class.
- * - getAllClassSubjectAssignments(): array - Gets all class-subject assignments.
- * - getAllTeachers(): array - Gets all available teachers.
+ * - assignSubjectToClass(array $assignmentData): bool|int - Assigns subject to class with teacher. Returns assignment_id or false.
+ * - updateClassSubjectAssignment(int $assignmentId, array $assignmentData): bool - Updates class-subject assignment. Returns success status.
+ * - removeSubjectFromClass(int $assignmentId): bool - Removes subject assignment from class. Returns success status.
+ * - getAllClassSubjectAssignments(): array - Returns all class-subject assignments with related information.
+ * - getAllTeachers(): array - Returns all teachers with their basic information.
  *
  * Validation and Utility Functions:
  * - getAllStudentsBasicInfo(): array - Retrieves basic information for all students.
- * - validateUserForm(array $userData): bool|string - Validates user form data based on role.
- * - usernameExists(string $username, ?int $excludeUserId = null): bool - Checks if a username already exists.
- * - validateDate(string $date): bool - Validates date format (YYYY-MM-DD).
- * - classCodeExists(string $classCode): bool - Checks if a class code exists.
- * - subjectExists(int $subjectId): bool - Checks if a subject exists.
- * - studentExists(int $studentId): bool - Checks if a student exists.
+ * - validateUserForm(array $userData): bool|string - Validates user form data based on role. Returns true or error message.
+ * - usernameExists(string $username, ?int $excludeUserId = null): bool - Checks if username already exists, optionally excluding a user.
+ * - validateDate(string $date): bool - Validates date format (YYYY-MM-DD). Returns true if valid.
+ * - classCodeExists(string $classCode): bool - Checks if class code exists. Returns true if found.
+ * - subjectExists(int $subjectId): bool - Checks if subject exists. Returns true if found.
+ * - studentExists(int $studentId): bool - Checks if student exists. Returns true if found.
  */
 
 require_once __DIR__ . '/../includes/db.php';
@@ -96,8 +96,8 @@ function displayUserList(): void
 {
     $users = getAllUsers();
 
-    echo '<div class="user-management-table">';
-    echo '<table>';
+    echo '<div class="table-responsive mb-md">';
+    echo '<table class="data-table">';
     echo '<thead>';
     echo '<tr>';
     echo '<th>ID</th>';
@@ -113,14 +113,16 @@ function displayUserList(): void
         echo '<tr>';
         echo '<td>' . htmlspecialchars($user['user_id']) . '</td>';
         echo '<td>' . htmlspecialchars($user['username']) . '</td>';
-        echo '<td>' . htmlspecialchars($user['role_name']) . '</td>';
+        echo '<td>';
+        echo '<span class="role-badge role-' . strtolower(htmlspecialchars($user['role_name'])) . '">' . htmlspecialchars($user['role_name']) . '</span>';
+        echo '</td>';
         echo '<td>' . htmlspecialchars($user['created_at']) . '</td>';
-        echo '<td class="actions">';
-        echo '<a href="/uwuweb/admin/users.php?action=edit&user_id=' . $user['user_id'] . '" class="button edit">Uredi</a>';
-        echo '<a href="/uwuweb/admin/users.php?action=reset&user_id=' . $user['user_id'] . '" class="button reset">Ponastavi geslo</a>';
+        echo '<td class="actions d-flex flex-wrap gap-xs">';
+        echo '<a href="/uwuweb/admin/users.php?action=edit&user_id=' . $user['user_id'] . '" class="btn btn-primary btn-sm">Uredi</a>';
+        echo '<a href="/uwuweb/admin/users.php?action=reset&user_id=' . $user['user_id'] . '" class="btn btn-secondary btn-sm">Ponastavi geslo</a>';
 
         if (!($user['role_id'] == ROLE_ADMIN && $user['user_id'] == 1) && $user['user_id'] != getUserId()) {
-            echo '<a href="/uwuweb/admin/users.php?action=delete&user_id=' . $user['user_id'] . '" class="button delete"
+            echo '<a href="/uwuweb/admin/users.php?action=delete&user_id=' . $user['user_id'] . '" class="btn btn-error btn-sm"
                     onclick="return confirm(\'Ali ste prepričani, da želite izbrisati tega uporabnika?\');">Izbriši</a>';
         }
 
@@ -381,7 +383,7 @@ function updateUser(int $userId, array $userData): bool
                 break;
 
             case ROLE_PARENT:
-                if (!empty($userData['student_ids']) && is_array($userData['student_ids'])) {
+                if (isset($userData['student_ids']) && is_array($userData['student_ids'])) {
                     $stmt = $pdo->prepare("SELECT parent_id FROM parents WHERE user_id = ?");
                     $stmt->execute([$userId]);
                     $parent = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -390,9 +392,11 @@ function updateUser(int $userId, array $userData): bool
                         $stmt = $pdo->prepare("DELETE FROM student_parent WHERE parent_id = ?");
                         $stmt->execute([$parent['parent_id']]);
 
-                        $stmt = $pdo->prepare("INSERT INTO student_parent (student_id, parent_id) VALUES (?, ?)");
-                        foreach ($userData['student_ids'] as $studentId) {
-                            $stmt->execute([$studentId, $parent['parent_id']]);
+                        if (!empty($userData['student_ids'])) {
+                            $stmt = $pdo->prepare("INSERT INTO student_parent (student_id, parent_id) VALUES (?, ?)");
+                            foreach ($userData['student_ids'] as $studentId) {
+                                $stmt->execute([$studentId, $parent['parent_id']]);
+                            }
                         }
                     }
                 }
@@ -597,8 +601,8 @@ function displaySubjectsList(): void
 {
     $subjects = getAllSubjects();
 
-    echo '<div class="subject-management-table">';
-    echo '<table>';
+    echo '<div class="table-responsive mb-md">';
+    echo '<table class="data-table">';
     echo '<thead>';
     echo '<tr>';
     echo '<th>ID</th>';
@@ -612,11 +616,11 @@ function displaySubjectsList(): void
         echo '<tr>';
         echo '<td>' . htmlspecialchars($subject['subject_id']) . '</td>';
         echo '<td>' . htmlspecialchars($subject['name']) . '</td>';
-        echo '<td class="actions">';
+        echo '<td class="actions d-flex gap-sm">'; // Use flex and gap for button spacing
 
-        echo '<a href="/uwuweb/admin/settings.php?action=edit_subject&subject_id=' . $subject['subject_id'] . '" class="button edit">Uredi</a>';
+        echo '<a href="/uwuweb/admin/settings.php?action=edit_subject&subject_id=' . $subject['subject_id'] . '" class="btn btn-primary btn-sm">Uredi</a>';
 
-        echo '<a href="/uwuweb/admin/settings.php?action=delete_subject&subject_id=' . $subject['subject_id'] . '" class="button delete"
+        echo '<a href="/uwuweb/admin/settings.php?action=delete_subject&subject_id=' . $subject['subject_id'] . '" class="btn btn-error btn-sm"
                 onclick="return confirm(\'Ali ste prepričani, da želite izbrisati ta predmet?\');">Izbriši</a>';
         echo '</td>';
         echo '</tr>';
@@ -803,8 +807,8 @@ function getAllClasses(): array
         $query = "
             SELECT c.*, t.teacher_id, u.username as homeroom_teacher_name
             FROM classes c
-            JOIN teachers t ON c.homeroom_teacher_id = t.teacher_id
-            JOIN users u ON t.user_id = u.user_id
+            LEFT JOIN teachers t ON c.homeroom_teacher_id = t.teacher_id
+            LEFT JOIN users u ON t.user_id = u.user_id
             ORDER BY c.class_code
         ";
 
@@ -824,8 +828,8 @@ function displayClassesList(): void
 {
     $classes = getAllClasses();
 
-    echo '<div class="class-management-table">';
-    echo '<table>';
+    echo '<div class="table-responsive mb-md">';
+    echo '<table class="data-table">';
     echo '<thead>';
     echo '<tr>';
     echo '<th>ID</th>';
@@ -840,12 +844,12 @@ function displayClassesList(): void
     foreach ($classes as $class) {
         echo '<tr>';
         echo '<td>' . htmlspecialchars($class['class_id']) . '</td>';
-        echo '<td>' . htmlspecialchars($class['class_code']) . '</td>';
+        echo '<td><span class="badge badge-primary">' . htmlspecialchars($class['class_code']) . '</span></td>';
         echo '<td>' . htmlspecialchars($class['title']) . '</td>';
-        echo '<td>' . htmlspecialchars($class['homeroom_teacher_name']) . '</td>';
-        echo '<td class="actions">';
-        echo '<a href="/uwuweb/admin/settings.php?action=edit_class&class_id=' . $class['class_id'] . '" class="button edit">Uredi</a>';
-        echo '<a href="/uwuweb/admin/settings.php?action=delete_class&class_id=' . $class['class_id'] . '" class="button delete"
+        echo '<td>' . ($class['homeroom_teacher_name'] ? htmlspecialchars($class['homeroom_teacher_name']) : '<span class="text-disabled">Ni dodeljen</span>') . '</td>';
+        echo '<td class="actions d-flex gap-sm">'; // Use flex and gap for button spacing
+        echo '<a href="/uwuweb/admin/settings.php?action=edit_class&class_id=' . $class['class_id'] . '" class="btn btn-primary btn-sm">Uredi</a>';
+        echo '<a href="/uwuweb/admin/settings.php?action=delete_class&class_id=' . $class['class_id'] . '" class="btn btn-error btn-sm"
                 onclick="return confirm(\'Ali ste prepričani, da želite izbrisati ta razred?\');">Izbriši</a>';
         echo '</td>';
         echo '</tr>';
@@ -874,8 +878,8 @@ function getClassDetails(int $classId): ?array
         $query = "
             SELECT c.*, t.teacher_id, u.username as homeroom_teacher_name
             FROM classes c
-            JOIN teachers t ON c.homeroom_teacher_id = t.teacher_id
-            JOIN users u ON t.user_id = u.user_id
+            LEFT JOIN teachers t ON c.homeroom_teacher_id = t.teacher_id
+            LEFT JOIN users u ON t.user_id = u.user_id
             WHERE c.class_id = ?
         ";
 
@@ -982,9 +986,9 @@ function updateClass(int $classId, array $classData): bool
             $params[] = $classData['title'];
         }
 
-        if (!empty($classData['homeroom_teacher_id'])) {
+        if (isset($classData['homeroom_teacher_id'])) { // Allow setting to null or empty
             $updates[] = "homeroom_teacher_id = ?";
-            $params[] = $classData['homeroom_teacher_id'];
+            $params[] = empty($classData['homeroom_teacher_id']) ? null : $classData['homeroom_teacher_id'];
         }
 
         if (empty($updates)) {
@@ -1274,40 +1278,45 @@ function getAllStudentsBasicInfo(): array
  */
 function validateUserForm(array $userData): bool|string
 {
-    // Check required fields for all users
     if (empty($userData['username'])) {
         return 'Username is required.';
     }
 
-    // Validate username format (alphanumeric, underscore)
     if (!preg_match('/^\w+$/', $userData['username'])) {
         return 'Username must contain only letters, numbers and underscores.';
     }
 
-    // Validate username length
     if (strlen($userData['username']) < 3 || strlen($userData['username']) > 50) {
         return 'Username must be between 3 and 50 characters.';
     }
 
-    // Check if username is already taken (for new users)
     if (!isset($userData['user_id']) && usernameExists($userData['username'])) {
         return 'Username is already taken.';
     }
+    // Check if username exists when updating, excluding self
+    if (isset($userData['user_id']) && usernameExists($userData['username'], $userData['user_id'])) {
+        return 'Username is already taken.';
+    }
 
-    // Validate role
     if (empty($userData['role_id']) || !in_array($userData['role_id'], [ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT, ROLE_PARENT], true)) {
         return 'Invalid role selected.';
     }
 
-    // For new users, password is required
     if (!isset($userData['user_id']) && empty($userData['password'])) {
         return 'Password is required for new users.';
     }
 
-    // Validate role-specific fields
+    if (!isset($userData['user_id']) && !empty($userData['password'])) {
+        if (strlen($userData['password']) < 8) {
+            return 'Password must be at least 8 characters long.';
+        }
+        if (!preg_match('/[A-Za-z]/', $userData['password']) || !preg_match('/\d/', $userData['password'])) {
+            return 'Password must contain at least one letter and one number.';
+        }
+    }
+
     switch ($userData['role_id']) {
         case ROLE_STUDENT:
-            // Check required student fields
             if (empty($userData['first_name'])) {
                 return 'First name is required for students.';
             }
@@ -1324,19 +1333,16 @@ function validateUserForm(array $userData): bool|string
                 return 'Date of birth is required for students.';
             }
 
-            // Validate date of birth format
             if (!validateDate($userData['dob'])) {
-                return 'Invalid date of birth format.';
+                return 'Invalid date of birth format (YYYY-MM-DD).';
             }
 
-            // Validate class code exists
             if (!classCodeExists($userData['class_code'])) {
                 return 'Selected class does not exist.';
             }
             break;
 
         case ROLE_TEACHER:
-            // Validate teacher subjects if provided
             if (!empty($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) {
                 foreach ($userData['teacher_subjects'] as $subjectId) {
                     if (!subjectExists($subjectId)) {
@@ -1347,7 +1353,6 @@ function validateUserForm(array $userData): bool|string
             break;
 
         case ROLE_PARENT:
-            // Validate linked students if provided
             if (!empty($userData['student_ids']) && is_array($userData['student_ids'])) {
                 foreach ($userData['student_ids'] as $studentId) {
                     if (!studentExists($studentId)) {
@@ -1411,7 +1416,7 @@ function classCodeExists(string $classCode): bool
 {
     $pdo = safeGetDBConnection('classCodeExists');
     if ($pdo === null) {
-        sendJsonErrorResponse("Failed to establish database connection in usernameExists", 500, "admin_functions.php");
+        sendJsonErrorResponse("Failed to establish database connection in classCodeExists", 500, "admin_functions.php");
     }
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM classes WHERE class_code = :class_code");
@@ -1430,7 +1435,7 @@ function subjectExists(int $subjectId): bool
 {
     $pdo = safeGetDBConnection('subjectExists');
     if ($pdo === null) {
-        sendJsonErrorResponse("Failed to establish database connection in usernameExists", 500, "admin_functions.php");
+        sendJsonErrorResponse("Failed to establish database connection in subjectExists", 500, "admin_functions.php");
     }
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM subjects WHERE subject_id = :subject_id");
@@ -1449,7 +1454,7 @@ function studentExists(int $studentId): bool
 {
     $pdo = safeGetDBConnection('studentExists');
     if ($pdo === null) {
-        sendJsonErrorResponse("Failed to establish database connection in usernameExists", 500, "admin_functions.php");
+        sendJsonErrorResponse("Failed to establish database connection in studentExists", 500, "admin_functions.php");
     }
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE student_id = :student_id");
