@@ -2,6 +2,106 @@
 
 This file contains centralized documentation for all functions across the uwuweb application.
 
+## /includes/functions.php
+
+Common Utility Functions Library
+
+### User and Role Management:
+
+- `getUserInfo(int $userId): array|null` - Returns user profile with role and role-specific data.
+- `getUserId(): int|null` - Returns current user ID from session.
+- `getUserRole(): int|null` - Returns current user's role ID.
+- `getStudentId(): int|null` - Returns student ID for current user.
+- `getRoleName(int $roleId): string` - Returns role name from ID.
+
+### Security Functions:
+
+- `sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never` - Sends JSON error and exits. Context for logging.
+
+### Navigation and Widgets:
+
+- `getNavItemsByRole(int $role): array` - Returns role-specific navigation items.
+- `getWidgetsByRole(int $role): array` - Returns role-specific dashboard widgets.
+- `renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string` - Renders data unavailable placeholder.
+
+### Activity Widgets:
+
+- `renderRecentActivityWidget(): string` - Displays recent system activity.
+
+### Admin Widgets:
+
+- `renderAdminUserStatsWidget(): string` - Displays user statistics.
+- `renderAdminSystemStatusWidget(): string` - Displays system status.
+- `renderAdminAttendanceWidget(): string` - Displays school-wide attendance data.
+
+### Teacher Widgets:
+
+- `renderTeacherClassOverviewWidget(): string` - Displays teacher's classes summary.
+- `renderTeacherAttendanceWidget(): string` - Displays daily attendance data.
+- `renderTeacherPendingJustificationsWidget(): string` - Displays pending absence justifications.
+- `renderTeacherClassAveragesWidget(): string` - Displays academic averages by class.
+
+### Student Widgets:
+
+- `renderStudentGradesWidget(): string` - Displays student's grades summary.
+- `renderStudentAttendanceWidget(): string` - Displays student's attendance statistics.
+- `renderStudentClassAveragesWidget(): string` - Displays student's class performance.
+- `renderUpcomingClassesWidget(): string` - Displays student's upcoming classes.
+
+### Parent Widgets:
+
+- `renderParentAttendanceWidget(): string` - Displays child's attendance summary.
+- `renderParentChildClassAveragesWidget(): string` - Displays child's academic performance.
+
+### Attendance Utilities:
+
+- `getAttendanceStatusLabel(string $status): string` - Translates status code to readable label.
+- `calculateAttendanceStats(array $attendance): array` - Computes attendance metrics from records.
+
+## /admin/admin_functions.php
+
+Admin Functions Library - Provides centralized functions for administrative operations including user management, system settings, and class-subject assignments.
+
+### User Management Functions:
+
+- `getAllUsers(): array` - Returns all users with role information.
+- `displayUserList(): void` - Renders user management table.
+- `getUserDetails(int $userId): ?array` - Returns detailed user information.
+- `createNewUser(array $userData): bool|int` - Creates user with role. Returns user_id or false.
+- `updateUser(int $userId, array $userData): bool` - Updates user information.
+- `resetUserPassword(int $userId, string $newPassword): bool` - Sets new user password.
+- `deleteUser(int $userId): bool` - Removes user if no dependencies exist.
+
+### Subject Management Functions:
+
+- `getAllSubjects(): array` - Returns all subjects.
+- `displaySubjectsList(): void` - Renders subject management table.
+- `getSubjectDetails(int $subjectId): ?array` - Returns detailed subject information.
+- `createSubject(array $subjectData): bool|int` - Creates subject. Returns subject_id or false.
+- `updateSubject(int $subjectId, array $subjectData): bool` - Updates subject information.
+- `deleteSubject(int $subjectId): bool` - Removes subject if not in use.
+
+### Class Management Functions:
+
+- `getAllClasses(): array` - Returns all classes.
+- `displayClassesList(): void` - Renders class management table.
+- `getClassDetails(int $classId): ?array` - Returns detailed class information.
+
+### Class-Subject Assignment Functions:
+
+- `getAllClassSubjectAssignments(): array` - Returns all class-subject assignments.
+- `getAllTeachers(): array` - Returns all teachers.
+
+### Validation and Utility Functions:
+
+- `getAllStudentsBasicInfo(): array` - Retrieves basic information for all students.
+- `validateUserForm(array $userData): bool|string` - Validates user form data based on role.
+- `usernameExists(string $username, ?int $excludeUserId = null): bool` - Checks if a username already exists.
+- `validateDate(string $date): bool` - Validates date format (YYYY-MM-DD).
+- `classCodeExists(string $classCode): bool` - Checks if a class code exists.
+- `subjectExists(int $subjectId): bool` - Checks if a subject exists.
+- `studentExists(int $studentId): bool` - Checks if a student exists.
+
 ## /teacher/teacher_functions.php
 
 Teacher Functions Library - Provides centralized functions for teacher operations including grade management, attendance tracking, and justification processing.
