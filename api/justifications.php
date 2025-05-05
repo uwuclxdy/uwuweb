@@ -9,14 +9,14 @@
  * File path: /api/justifications.php
  *
  * Functions:
- * - submitJustification(): void - Creates a new justification submitted by a student with optional file attachment
- * - approveJustification(): void - Updates an existing justification as approved/rejected by teacher with optional rejection reason
- * - getJustifications(): void - Retrieves justifications based on user role with appropriate filtering
- * - getJustificationDetails(): void - Gets detailed information about a specific justification including all related data
- * - handleJustificationFileUpload(int $attId): bool - Handles file upload for justification attachment with validation
- * - teacherHasAccessToJustification(int $attId): bool - Verifies if a teacher has access to specific justification through class assignment
- * - studentOwnsJustification(int $attId): bool - Verifies if a student owns the justification through enrollment
- * - parentHasAccessToJustification(int $attId): bool - Verifies if a parent has access to the justification through student relationship
+ * - submitJustification(): void - Creates student justification with optional file attachment
+ * - approveJustification(): void - Processes teacher approval/rejection of justification with reason
+ * - getJustifications(): void - Returns role-filtered justifications
+ * - getJustificationDetails(): void - Returns comprehensive justification data
+ * - handleJustificationFileUpload(int $attId): bool - Validates, secures and stores justification file
+ * - teacherHasAccessToJustification(int $attId): bool - Verifies teacher access to justification via class assignment
+ * - studentOwnsJustification(int $attId): bool - Verifies student owns justification via enrollment
+ * - parentHasAccessToJustification(int $attId): bool - Verifies parent access to justification via student relationship
  */
 
 require_once '../includes/auth.php';

@@ -10,23 +10,23 @@
  * File path: /api/attendance.php
  *
  * Period Management:
- * - addPeriod(): void - Creates a new period for a class with initial attendance records
- * - updatePeriod(): void - Updates date and label information for an existing period
- * - deletePeriod(): void - Deletes a period and all associated attendance records
+ * - addPeriod(): void - Creates a new period for a class with initial attendance records. Outputs JSON response directly.
+ * - updatePeriod(): void - Updates date and label information for an existing period. Outputs JSON response directly.
+ * - deletePeriod(): void - Deletes a period and all associated attendance records. Outputs JSON response directly.
  *
  * Attendance Recording:
- * - saveAttendance(): void - Saves attendance status for a single student
- * - bulkAttendance(): void - Saves attendance status for multiple students at once
+ * - saveAttendance(): void - Saves attendance status for a single student. Outputs JSON response directly.
+ * - bulkAttendance(): void - Saves attendance status for multiple students at once. Outputs JSON response directly.
  *
  * Justification Management:
- * - justifyAbsence(): void - Records or approves absence justification based on user role
- * - getStudentAttendance(): void - Gets attendance summary and statistics for a student
+ * - justifyAbsence(): void - Records or approves absence justification based on user role. Outputs JSON response directly.
+ * - getStudentAttendance(): void - Gets attendance summary and statistics for a student. Outputs JSON response directly.
  *
  * Access Control Helpers:
- * - teacherHasAccessToClass(int $classSubjectId): bool - Verifies teacher has access to class-subject
- * - teacherHasAccessToPeriod(int $periodId): bool - Verifies teacher has access to specific period
- * - teacherHasAccessToEnrollment(int $enrollId): bool - Verifies teacher has access to student enrollment
- * - studentOwnsEnrollment(int $enrollId): bool - Checks if current student owns the enrollment record
+ * - teacherHasAccessToClass(int $classSubjectId): bool - Verifies teacher has access to class-subject.
+ * - teacherHasAccessToPeriod(int $periodId): bool - Verifies teacher has access to specific period.
+ * - teacherHasAccessToEnrollment(int $enrollId): bool - Verifies teacher has access to student enrollment.
+ * - studentOwnsEnrollment(int $enrollId): bool - Checks if current student owns the enrollment record.
  */
 
 require_once '../includes/auth.php';
@@ -98,7 +98,8 @@ switch ($action) {
  *
  * @return void Outputs JSON response directly
  */
-function addPeriod(): void {
+function addPeriod(): void
+{
     try {
         if (!isset($_POST['class_subject_id'], $_POST['period_date'], $_POST['period_label'])) {
             sendJsonErrorResponse('Manjkajo zahtevani podatki', 400, 'attendance.php/addPeriod');
@@ -203,7 +204,8 @@ function addPeriod(): void {
  *
  * @return void Outputs JSON response directly
  */
-function updatePeriod(): void {
+function updatePeriod(): void
+{
     try {
         if (!isset($_POST['period_id'], $_POST['period_date'], $_POST['period_label'])) {
             sendJsonErrorResponse('Manjkajo zahtevani podatki', 400, 'attendance.php/updatePeriod');
@@ -292,7 +294,8 @@ function updatePeriod(): void {
  *
  * @return void Outputs JSON response directly
  */
-function deletePeriod(): void {
+function deletePeriod(): void
+{
     try {
         if (!isset($_POST['period_id'])) {
             http_response_code(400);
@@ -386,7 +389,8 @@ function deletePeriod(): void {
  *
  * @return void Outputs JSON response directly
  */
-function saveAttendance(): void {
+function saveAttendance(): void
+{
     try {
         if (!isset($_POST['enroll_id'], $_POST['period_id'], $_POST['status'])) {
             http_response_code(400);
@@ -506,7 +510,8 @@ function saveAttendance(): void {
  *
  * @return void Outputs JSON response directly
  */
-function bulkAttendance(): void {
+function bulkAttendance(): void
+{
     try {
         if (!isset($_POST['period_id'], $_POST['attendance_data']) || !is_array($_POST['attendance_data'])) {
             http_response_code(400);
@@ -608,7 +613,8 @@ function bulkAttendance(): void {
  *
  * @return void Outputs JSON response directly
  */
-function justifyAbsence(): void {
+function justifyAbsence(): void
+{
     try {
         if (!isset($_POST['att_id'])) {
             http_response_code(400);
@@ -690,8 +696,7 @@ function justifyAbsence(): void {
             } catch (JsonException $e) {
                 error_log('API Error (attendance.php/justifyAbsence): ' . $e->getMessage());
             }
-        }
-        elseif (hasRole(ROLE_TEACHER) || hasRole(ROLE_ADMIN)) {
+        } elseif (hasRole(ROLE_TEACHER) || hasRole(ROLE_ADMIN)) {
             if (hasRole(ROLE_TEACHER) && !teacherHasAccessToPeriod($attRecord['period_id'])) {
                 http_response_code(403);
                 try {
@@ -766,7 +771,8 @@ function justifyAbsence(): void {
  *
  * @return void Outputs JSON response directly
  */
-function getStudentAttendance(): void {
+function getStudentAttendance(): void
+{
     try {
         if (!isset($_POST['student_id'])) {
             http_response_code(400);
@@ -949,7 +955,8 @@ function getStudentAttendance(): void {
  * @param int $classSubjectId The class-subject ID to check access for
  * @return bool True if the teacher has access, false otherwise
  */
-function teacherHasAccessToClass(int $classSubjectId): bool {
+function teacherHasAccessToClass(int $classSubjectId): bool
+{
     try {
         $teacherId = getTeacherId();
         if (!$teacherId) {
@@ -985,7 +992,8 @@ function teacherHasAccessToClass(int $classSubjectId): bool {
  * @param int $periodId The period ID to check access for
  * @return bool True if the teacher has access, false otherwise
  */
-function teacherHasAccessToPeriod(int $periodId): bool {
+function teacherHasAccessToPeriod(int $periodId): bool
+{
     try {
         $teacherId = getTeacherId();
         if (!$teacherId) {
@@ -1022,7 +1030,8 @@ function teacherHasAccessToPeriod(int $periodId): bool {
  * @param int $enrollId The enrollment ID to check access for
  * @return bool True if the teacher has access, false otherwise
  */
-function teacherHasAccessToEnrollment(int $enrollId): bool {
+function teacherHasAccessToEnrollment(int $enrollId): bool
+{
     try {
         $teacherId = getTeacherId();
         if (!$teacherId) {
@@ -1059,7 +1068,8 @@ function teacherHasAccessToEnrollment(int $enrollId): bool {
  * @param int $enrollId The enrollment ID to check ownership for
  * @return bool True if the student owns the record, false otherwise
  */
-function studentOwnsEnrollment(int $enrollId): bool {
+function studentOwnsEnrollment(int $enrollId): bool
+{
     try {
         $studentId = getStudentId();
         if (!$studentId) {

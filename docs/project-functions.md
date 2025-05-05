@@ -278,12 +278,12 @@ responses for client-side processing. Access control based on user role: student
 
 ### Student Justification Functions:
 
-- `submitJustification(): void` - Creates student justification with optional attachment.
+- `submitJustification(): void` - Creates student justification with optional file attachment.
 - `studentOwnsJustification(int $attId): bool` - Verifies student owns justification via enrollment.
 
 ### Teacher Approval Functions:
 
-- `approveJustification(): void` - Approves/rejects justification with optional reason.
+- `approveJustification(): void` - Processes teacher approval/rejection of justification with reason.
 - `teacherHasAccessToJustification(int $attId): bool` - Verifies teacher access to justification via class assignment.
 
 ### Justification Access Functions:
@@ -303,26 +303,26 @@ client-side processing.
 
 ### Period Management:
 
-- `addPeriod(): void` - Creates class period with initial attendance.
-- `updatePeriod(): void` - Updates period date and label.
-- `deletePeriod(): void` - Removes period and related attendance.
+- `addPeriod(): void` - Creates a new period for a class with initial attendance records.
+- `updatePeriod(): void` - Updates date and label information for an existing period.
+- `deletePeriod(): void` - Deletes a period and all associated attendance records.
 
 ### Attendance Recording:
 
-- `saveAttendance(): void` - Records single student attendance.
-- `bulkAttendance(): void` - Records multiple student attendance.
+- `saveAttendance(): void` - Saves attendance status for a single student.
+- `bulkAttendance(): void` - Saves attendance status for multiple students at once.
 
 ### Justification Management:
 
-- `justifyAbsence(): void` - Processes absence justification by role.
-- `getStudentAttendance(): void` - Returns student attendance statistics.
+- `justifyAbsence(): void` - Records or approves absence justification based on user role.
+- `getStudentAttendance(): void` - Gets attendance summary and statistics for a student.
 
 ### Access Control Helpers:
 
-- `teacherHasAccessToClass(int $classSubjectId): bool` - Verifies teacher's class-subject access.
-- `teacherHasAccessToPeriod(int $periodId): bool` - Verifies teacher's period access.
-- `teacherHasAccessToEnrollment(int $enrollId): bool` - Verifies teacher's enrollment access.
-- `studentOwnsEnrollment(int $enrollId): bool` - Confirms student owns enrollment record.
+- `teacherHasAccessToClass(int $classSubjectId): bool` - Verifies teacher has access to class-subject.
+- `teacherHasAccessToPeriod(int $periodId): bool` - Verifies teacher has access to specific period.
+- `teacherHasAccessToEnrollment(int $enrollId): bool` - Verifies teacher has access to student enrollment.
+- `studentOwnsEnrollment(int $enrollId): bool` - Checks if current student owns the enrollment record.
 
 ## /api/grades.php
 
@@ -331,14 +331,17 @@ processing. Restricted to teacher role access.
 
 ### Grade Item Management:
 
-- `addGradeItem(): void` - Creates assessment item.
-- `updateGradeItem(): void` - Modifies assessment item.
-- `deleteGradeItem(): void` - Removes assessment item and grades.
-- `saveGrade(): void` - Records or updates student grade.
+- `addGradeItem(): void` - Creates a new grade item for a specific class-subject based on request data.
+- `updateGradeItem(): void` - Updates name, max points, and weight for an existing grade item based on request data.
+- `deleteGradeItem(): void` - Removes a grade item and all associated grades based on request data.
+- `saveGrade(): void` - Creates or updates a grade for a student on a specific grade item based on request data.
 
 ### Access Control Helpers:
 
-- `teacherHasAccessToClass(int $classId): bool` - Verifies teacher's class access.
-- `teacherHasAccessToGradeItem(int $itemId): bool` - Verifies teacher's grade item access.
-- `teacherHasAccessToEnrollment(int $enrollId): bool` - Verifies teacher's enrollment access.
-- `teacherHasAccessToClassSubject(int $classSubjectId): bool` - Verifies teacher's class-subject access.
+- `teacherHasAccessToClass(int $classId): bool` - Verifies if the current teacher is assigned to the given class.
+- `teacherHasAccessToGradeItem(int $itemId, int $teacherId): bool` - Verifies if the teacher is authorized to modify the
+  given grade item.
+- `teacherHasAccessToEnrollment(int $enrollId): bool` - Verifies if the current teacher is authorized to modify grades
+  for the given enrollment.
+- `teacherHasAccessToClassSubject(int $classSubjectId): bool` - Verifies if the current teacher is assigned to the given
+  class-subject.

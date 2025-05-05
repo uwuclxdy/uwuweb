@@ -9,14 +9,14 @@
  * File path: /api/grades.php
  *
  * Functions:
- * - addGradeItem() - Creates a new grade item
- * - updateGradeItem() - Updates an existing grade item
- * - deleteGradeItem() - Deletes a grade item and its grades
- * - saveGrade() - Saves or updates a student's grade
- * - teacherHasAccessToClass($classId) - Verifies teacher access to class
- * - teacherHasAccessToGradeItem($itemId) - Verifies teacher access to grade item
- * - teacherHasAccessToEnrollment($enrollId) - Verifies teacher access to enrollment
- * - teacherHasAccessToClassSubject($classSubjectId) - Verifies teacher access to class-subject
+ * - addGradeItem(): void - Creates a new grade item for a specific class-subject based on request data.
+ * - updateGradeItem(): void - Updates name, max points, and weight for an existing grade item based on request data.
+ * - deleteGradeItem(): void - Removes a grade item and all associated grades based on request data.
+ * - saveGrade(): void - Creates or updates a grade for a student on a specific grade item based on request data.
+ * - teacherHasAccessToClass(int $classId): bool - Verifies if the current teacher is assigned to the given class.
+ * - teacherHasAccessToGradeItem(int $itemId, int $teacherId): bool - Verifies if the teacher is authorized to modify the given grade item.
+ * - teacherHasAccessToEnrollment(int $enrollId): bool - Verifies if the current teacher is authorized to modify grades for the given enrollment.
+ * - teacherHasAccessToClassSubject(int $classSubjectId): bool - Verifies if the current teacher is assigned to the given class-subject.
  */
 
 require_once '../includes/auth.php';
@@ -94,7 +94,8 @@ try {
  * @throws JsonException
  * @throws Exception
  */
-function addGradeItem(): void {
+function addGradeItem(): void
+{
     $data = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR);
 
     if (!isset($data['class_subject_id'], $data['name'], $data['max_points'])) {
@@ -158,7 +159,8 @@ function addGradeItem(): void {
  * @throws JsonException
  * @throws Exception
  */
-function updateGradeItem(): void {
+function updateGradeItem(): void
+{
     $data = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR);
 
     if (!isset($data['item_id'], $data['name'], $data['max_points'])) {
@@ -178,7 +180,7 @@ function updateGradeItem(): void {
         return;
     }
 
-    if (!teacherHasAccessToGradeItem($itemId)) {
+    if (!teacherHasAccessToGradeItem($itemId, getTeacherId())) {
         http_response_code(403);
         echo json_encode(['status' => 'error', 'message' => 'Unauthorized access to this grade item'], JSON_THROW_ON_ERROR);
         return;
@@ -226,7 +228,8 @@ function updateGradeItem(): void {
  * @throws JsonException
  * @throws Exception
  */
-function deleteGradeItem(): void {
+function deleteGradeItem(): void
+{
     $data = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR);
 
     if (!isset($data['item_id'])) {
@@ -237,7 +240,7 @@ function deleteGradeItem(): void {
 
     $itemId = (int)$data['item_id'];
 
-    if (!teacherHasAccessToGradeItem($itemId)) {
+    if (!teacherHasAccessToGradeItem($itemId, getTeacherId())) {
         http_response_code(403);
         echo json_encode(['status' => 'error', 'message' => 'Unauthorized access to this grade item'], JSON_THROW_ON_ERROR);
         return;
@@ -292,7 +295,8 @@ function deleteGradeItem(): void {
  * @throws JsonException
  * @throws Exception
  */
-function saveGrade(): void {
+function saveGrade(): void
+{
     $data = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR);
 
     if (!isset($data['enroll_id'], $data['item_id'], $data['points'])) {
@@ -306,7 +310,7 @@ function saveGrade(): void {
     $points = (float)$data['points'];
     $comment = $data['comment'] ?? '';
 
-    if (!teacherHasAccessToEnrollment($enrollId) || !teacherHasAccessToGradeItem($itemId)) {
+    if (!teacherHasAccessToEnrollment($enrollId) || !teacherHasAccessToGradeItem($itemId, getTeacherId())) {
         http_response_code(403);
         echo json_encode(['status' => 'error', 'message' => 'Unauthorized access'], JSON_THROW_ON_ERROR);
         return;
@@ -378,7 +382,8 @@ function saveGrade(): void {
  * @param int $classId The class ID to check access for
  * @return bool True if teacher has access, false otherwise
  */
-function teacherHasAccessToClass(int $classId): bool {
+function teacherHasAccessToClass(int $classId): bool
+{
     if (hasRole(1)) {
         return true;
     }
@@ -426,12 +431,12 @@ function teacherHasAccessToClass(int $classId): bool {
  * @param int $itemId The grade item ID to check access for
  * @return bool True if teacher has access, false otherwise
  */
-function teacherHasAccessToGradeItem(int $itemId): bool {
+function teacherHasAccessToGradeItem(int $itemId, int $teacherId): bool
+{
     if (hasRole(1)) {
         return true;
     }
 
-    $teacherId = getTeacherId();
     if (!$teacherId) {
         return false;
     }
@@ -465,7 +470,8 @@ function teacherHasAccessToGradeItem(int $itemId): bool {
  * @param int $enrollId The enrollment ID to check access for
  * @return bool True if teacher has access, false otherwise
  */
-function teacherHasAccessToEnrollment(int $enrollId): bool {
+function teacherHasAccessToEnrollment(int $enrollId): bool
+{
     if (hasRole(1)) {
         return true;
     }
@@ -504,7 +510,8 @@ function teacherHasAccessToEnrollment(int $enrollId): bool {
  * @param int $classSubjectId The class-subject ID to check access for
  * @return bool True if teacher has access, false otherwise
  */
-function teacherHasAccessToClassSubject(int $classSubjectId): bool {
+function teacherHasAccessToClassSubject(int $classSubjectId): bool
+{
     if (hasRole(1)) {
         return true;
     }
