@@ -278,25 +278,27 @@ These constants are used throughout the application for role-based access contro
 Justifications API Endpoint - Handles CRUD operations for absence justifications via AJAX requests. Returns JSON
 responses for client-side processing. Access control based on user role: students can submit, teachers can approve.
 
-### Student Justification Functions:
+### Core API Functions:
 
-- `submitJustification(): void` - Creates student justification with optional file attachment.
-- `studentOwnsJustification(int $attId): bool` - Verifies student owns justification via enrollment.
+- `submitJustification(): void` - Processes student-submitted justification with text and optional file upload.
+  Validates student ownership and absence status before recording justification.
+- `handleApproveJustification(): void` - Processes teacher approval/rejection of justification with optional rejection
+  reason. Performs role and access verification before updating status.
+- `getJustifications(): void` - Returns role-filtered justifications with formatted dates and status labels. Results are
+  tailored based on user role (all for admin, class-specific for teachers, own for students, children's for parents).
+- `getJustificationDetails(): void` - Retrieves detailed justification information by ID. Implements role-based access
+  control and formats dates and status labels for display.
 
-### Teacher Approval Functions:
+### Access Control Functions:
 
-- `approveJustification(): void` - Processes teacher approval/rejection of justification with reason.
-- `teacherHasAccessToJustification(int $attId): bool` - Verifies teacher access to justification via class assignment.
+- `teacherHasAccessToJustification(int $attId): bool` - Verifies if current teacher has permission to access a specific
+  justification based on class-subject assignment. Returns true if authorized.
+- `studentOwnsJustification(int $attId): bool` - Verifies if current student is the owner of a specific attendance
+  record/justification. Returns true if student owns the record.
 
-### Justification Access Functions:
-
-- `getJustifications(): void` - Returns role-filtered justifications.
-- `getJustificationDetails(): void` - Returns comprehensive justification data.
-- `parentHasAccessToJustification(int $attId): bool` - Verifies parent access to justification via student relationship.
-
-### Helper Functions:
-
-- `handleJustificationFileUpload(int $attId): bool` - Validates, secures and stores justification file attachment.
+The API endpoint performs comprehensive role checks and ensures users can only access and modify justifications
+appropriate for their role. All functions enforce proper validation, sanitization, and error handling with meaningful
+JSON responses.
 
 ## /api/attendance.php
 
