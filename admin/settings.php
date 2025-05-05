@@ -40,237 +40,225 @@ $settings = [
 ];
 
 // If there's a function to get settings, use it instead of defaults
-if (function_exists('getSystemSettings')) {
-    $settings = getSystemSettings();
-}
+if (function_exists('getSystemSettings')) $settings = getSystemSettings();
 
 $subjects = getAllSubjects();
 $classes = getAllClasses();
 $classSubjects = getAllClassSubjectAssignments();
 $teachers = getAllTeachers();
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
-        $message = 'Neveljavna oddaja obrazca. Poskusite znova.';
-        $messageType = 'error';
-        error_log("CSRF token validation failed for user ID: " . ($_SESSION['user_id'] ?? 'Unknown'));
-    } else {
-        $action = array_key_first(array_intersect_key($_POST, [
-            'create_subject' => 1, 'update_subject' => 1, 'delete_subject' => 1,
-            'create_class' => 1, 'update_class' => 1, 'delete_class' => 1,
-            'create_assignment' => 1, 'update_assignment' => 1, 'delete_assignment' => 1,
-            'update_settings' => 1
-        ]));
+if ($_SERVER['REQUEST_METHOD'] === 'POST') if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
+    $message = 'Neveljavna oddaja obrazca. Poskusite znova.';
+    $messageType = 'error';
+    error_log("CSRF token validation failed for user ID: " . ($_SESSION['user_id'] ?? 'Unknown'));
+} else {
+    $action = array_key_first(array_intersect_key($_POST, [
+        'create_subject' => 1, 'update_subject' => 1, 'delete_subject' => 1,
+        'create_class' => 1, 'update_class' => 1, 'delete_class' => 1,
+        'create_assignment' => 1, 'update_assignment' => 1, 'delete_assignment' => 1,
+        'update_settings' => 1
+    ]));
 
-        switch ($action) {
-            case 'create_subject':
-                $subjectName = trim($_POST['subject_name'] ?? '');
-                if (empty($subjectName)) {
-                    $message = 'Ime predmeta je obvezno.';
-                    $messageType = 'error';
-                } elseif (createSubject(['name' => $subjectName])) {
-                    $message = 'Predmet uspešno ustvarjen.';
-                    $messageType = 'success';
-                } else {
-                    $message = 'Napaka pri ustvarjanju predmeta. Morda že obstaja.';
-                    $messageType = 'error';
-                }
-                $currentTab = 'subjects';
-                break;
+    switch ($action) {
+        case 'create_subject':
+            $subjectName = trim($_POST['subject_name'] ?? '');
+            if (empty($subjectName)) {
+                $message = 'Ime predmeta je obvezno.';
+                $messageType = 'error';
+            } elseif (createSubject(['name' => $subjectName])) {
+                $message = 'Predmet uspešno ustvarjen.';
+                $messageType = 'success';
+            } else {
+                $message = 'Napaka pri ustvarjanju predmeta. Morda že obstaja.';
+                $messageType = 'error';
+            }
+            $currentTab = 'subjects';
+            break;
 
-            case 'update_subject':
-                $subjectId = filter_input(INPUT_POST, 'subject_id', FILTER_VALIDATE_INT);
-                $subjectName = trim($_POST['subject_name'] ?? '');
+        case 'update_subject':
+            $subjectId = filter_input(INPUT_POST, 'subject_id', FILTER_VALIDATE_INT);
+            $subjectName = trim($_POST['subject_name'] ?? '');
 
-                if (!$subjectId || $subjectId <= 0) {
-                    $message = 'Izbran neveljaven predmet za posodobitev.';
-                    $messageType = 'error';
-                } elseif (empty($subjectName)) {
-                    $message = 'Ime predmeta je obvezno.';
-                    $messageType = 'error';
-                } elseif (updateSubject($subjectId, ['name' => $subjectName])) {
-                    $message = 'Predmet uspešno posodobljen.';
-                    $messageType = 'success';
-                } else {
-                    $message = 'Napaka pri posodabljanju predmeta.';
-                    $messageType = 'error';
-                }
-                $currentTab = 'subjects';
-                break;
+            if (!$subjectId || $subjectId <= 0) {
+                $message = 'Izbran neveljaven predmet za posodobitev.';
+                $messageType = 'error';
+            } elseif (empty($subjectName)) {
+                $message = 'Ime predmeta je obvezno.';
+                $messageType = 'error';
+            } elseif (updateSubject($subjectId, ['name' => $subjectName])) {
+                $message = 'Predmet uspešno posodobljen.';
+                $messageType = 'success';
+            } else {
+                $message = 'Napaka pri posodabljanju predmeta.';
+                $messageType = 'error';
+            }
+            $currentTab = 'subjects';
+            break;
 
-            case 'update_class':
-                $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
-                $className = trim($_POST['class_name'] ?? '');
-                $classCode = trim($_POST['class_code'] ?? '');
-                $homeroomTeacherId = filter_input(INPUT_POST, 'homeroom_teacher_id', FILTER_VALIDATE_INT);
+        case 'update_class':
+            $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
+            $className = trim($_POST['class_name'] ?? '');
+            $classCode = trim($_POST['class_code'] ?? '');
+            $homeroomTeacherId = filter_input(INPUT_POST, 'homeroom_teacher_id', FILTER_VALIDATE_INT);
 
-                if (!$classId || $classId <= 0) {
-                    $message = 'Izbran neveljaven razred za posodobitev.';
-                    $messageType = 'error';
-                } elseif (empty($className) || empty($classCode) || !$homeroomTeacherId || $homeroomTeacherId <= 0) {
-                    $message = 'Ime razreda, koda razreda in razrednik so obvezni.';
-                    $messageType = 'error';
-                } elseif (updateClass($classId, [
-                    'class_code' => $classCode,
-                    'title' => $className,
-                    'homeroom_teacher_id' => $homeroomTeacherId
-                ])) {
-                    $message = 'Razred uspešno posodobljen.';
-                    $messageType = 'success';
-                } else {
-                    $message = 'Napaka pri posodabljanju razreda. Razred s tem imenom ali kodo morda že obstaja.';
-                    $messageType = 'error';
-                }
-                $currentTab = 'classes';
-                break;
+            if (!$classId || $classId <= 0) {
+                $message = 'Izbran neveljaven razred za posodobitev.';
+                $messageType = 'error';
+            } elseif (empty($className) || empty($classCode) || !$homeroomTeacherId || $homeroomTeacherId <= 0) {
+                $message = 'Ime razreda, koda razreda in razrednik so obvezni.';
+                $messageType = 'error';
+            } elseif (updateClass($classId, [
+                'class_code' => $classCode,
+                'title' => $className,
+                'homeroom_teacher_id' => $homeroomTeacherId
+            ])) {
+                $message = 'Razred uspešno posodobljen.';
+                $messageType = 'success';
+            } else {
+                $message = 'Napaka pri posodabljanju razreda. Razred s tem imenom ali kodo morda že obstaja.';
+                $messageType = 'error';
+            }
+            $currentTab = 'classes';
+            break;
 
-            case 'update_assignment':
-                $assignmentId = filter_input(INPUT_POST, 'assignment_id', FILTER_VALIDATE_INT);
-                $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
-                $subjectId = filter_input(INPUT_POST, 'subject_id', FILTER_VALIDATE_INT);
-                $teacherId = filter_input(INPUT_POST, 'teacher_id', FILTER_VALIDATE_INT);
-                $schedule = trim($_POST['schedule'] ?? '');
+        case 'update_assignment':
+            $assignmentId = filter_input(INPUT_POST, 'assignment_id', FILTER_VALIDATE_INT);
+            $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
+            $subjectId = filter_input(INPUT_POST, 'subject_id', FILTER_VALIDATE_INT);
+            $teacherId = filter_input(INPUT_POST, 'teacher_id', FILTER_VALIDATE_INT);
+            $schedule = trim($_POST['schedule'] ?? '');
 
-                if (!$assignmentId || !$classId || !$subjectId || !$teacherId) {
-                    $message = 'ID dodelitve, razred, predmet in učitelj so obvezni.';
-                    $messageType = 'error';
-                } elseif (updateClassSubjectAssignment($assignmentId, [
-                    'class_id' => $classId,
-                    'subject_id' => $subjectId,
-                    'teacher_id' => $teacherId,
-                    'schedule' => $schedule
-                ])) {
-                    $message = 'Dodelitev uspešno posodobljena.';
-                    $messageType = 'success';
-                } else {
-                    $message = 'Napaka pri posodabljanju dodelitve. Ta kombinacija morda že obstaja.';
-                    $messageType = 'error';
-                }
-                $currentTab = 'assign';
-                break;
+            if (!$assignmentId || !$classId || !$subjectId || !$teacherId) {
+                $message = 'ID dodelitve, razred, predmet in učitelj so obvezni.';
+                $messageType = 'error';
+            } elseif (updateClassSubjectAssignment($assignmentId, [
+                'class_id' => $classId,
+                'subject_id' => $subjectId,
+                'teacher_id' => $teacherId,
+                'schedule' => $schedule
+            ])) {
+                $message = 'Dodelitev uspešno posodobljena.';
+                $messageType = 'success';
+            } else {
+                $message = 'Napaka pri posodabljanju dodelitve. Ta kombinacija morda že obstaja.';
+                $messageType = 'error';
+            }
+            $currentTab = 'assign';
+            break;
 
-            case 'delete_subject':
-                $subjectId = filter_input(INPUT_POST, 'subject_id', FILTER_VALIDATE_INT);
-                if (!$subjectId || $subjectId <= 0) {
-                    $message = 'Izbran neveljaven predmet za brisanje.';
-                    $messageType = 'error';
-                } elseif (deleteSubject($subjectId)) {
-                    $message = 'Predmet uspešno izbrisan.';
-                    $messageType = 'success';
-                } else {
-                    $message = 'Napaka pri brisanju predmeta. Morda je dodeljen razredu.';
-                    $messageType = 'error';
-                }
-                $currentTab = 'subjects';
-                break;
+        case 'delete_subject':
+            $subjectId = filter_input(INPUT_POST, 'subject_id', FILTER_VALIDATE_INT);
+            if (!$subjectId || $subjectId <= 0) {
+                $message = 'Izbran neveljaven predmet za brisanje.';
+                $messageType = 'error';
+            } elseif (deleteSubject($subjectId)) {
+                $message = 'Predmet uspešno izbrisan.';
+                $messageType = 'success';
+            } else {
+                $message = 'Napaka pri brisanju predmeta. Morda je dodeljen razredu.';
+                $messageType = 'error';
+            }
+            $currentTab = 'subjects';
+            break;
 
-            case 'create_class':
-                $className = trim($_POST['class_name'] ?? '');
-                $schoolYear = trim($_POST['school_year'] ?? '');
-                $homeroomTeacherId = filter_input(INPUT_POST, 'homeroom_teacher_id', FILTER_VALIDATE_INT);
+        case 'create_class':
+            $className = trim($_POST['class_name'] ?? '');
+            $schoolYear = trim($_POST['school_year'] ?? '');
+            $homeroomTeacherId = filter_input(INPUT_POST, 'homeroom_teacher_id', FILTER_VALIDATE_INT);
 
-                if (empty($className) || empty($schoolYear) || !$homeroomTeacherId || $homeroomTeacherId <= 0) {
-                    $message = 'Ime razreda, šolsko leto (koda) in razrednik so obvezni.';
-                    $messageType = 'error';
-                } elseif (createClass([
-                    'class_code' => $schoolYear,
-                    'title' => $className,
-                    'homeroom_teacher_id' => $homeroomTeacherId
-                ])) {
-                    $message = 'Razred uspešno ustvarjen.';
-                    $messageType = 'success';
-                } else {
-                    $message = 'Napaka pri ustvarjanju razreda. Razred s tem imenom ali kodo morda že obstaja.';
-                    $messageType = 'error';
-                }
-                $currentTab = 'classes';
-                break;
+            if (empty($className) || empty($schoolYear) || !$homeroomTeacherId || $homeroomTeacherId <= 0) {
+                $message = 'Ime razreda, šolsko leto (koda) in razrednik so obvezni.';
+                $messageType = 'error';
+            } elseif (createClass([
+                'class_code' => $schoolYear,
+                'title' => $className,
+                'homeroom_teacher_id' => $homeroomTeacherId
+            ])) {
+                $message = 'Razred uspešno ustvarjen.';
+                $messageType = 'success';
+            } else {
+                $message = 'Napaka pri ustvarjanju razreda. Razred s tem imenom ali kodo morda že obstaja.';
+                $messageType = 'error';
+            }
+            $currentTab = 'classes';
+            break;
 
-            case 'delete_class':
-                $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
-                if (!$classId || $classId <= 0) {
-                    $message = 'Izbran neveljaven razred za brisanje.';
-                    $messageType = 'error';
-                } elseif (deleteClass($classId)) {
-                    $message = 'Razred uspešno izbrisan.';
-                    $messageType = 'success';
-                } else {
-                    $message = 'Napaka pri brisanju razreda. Morda ima dodeljene učence ali predmete.';
-                    $messageType = 'error';
-                }
-                $currentTab = 'classes';
-                break;
+        case 'delete_class':
+            $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
+            if (!$classId || $classId <= 0) {
+                $message = 'Izbran neveljaven razred za brisanje.';
+                $messageType = 'error';
+            } elseif (deleteClass($classId)) {
+                $message = 'Razred uspešno izbrisan.';
+                $messageType = 'success';
+            } else {
+                $message = 'Napaka pri brisanju razreda. Morda ima dodeljene učence ali predmete.';
+                $messageType = 'error';
+            }
+            $currentTab = 'classes';
+            break;
 
-            case 'create_assignment':
-                $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
-                $subjectId = filter_input(INPUT_POST, 'subject_id', FILTER_VALIDATE_INT);
-                $teacherId = filter_input(INPUT_POST, 'teacher_id', FILTER_VALIDATE_INT);
-                $schedule = trim($_POST['schedule'] ?? '');
+        case 'create_assignment':
+            $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
+            $subjectId = filter_input(INPUT_POST, 'subject_id', FILTER_VALIDATE_INT);
+            $teacherId = filter_input(INPUT_POST, 'teacher_id', FILTER_VALIDATE_INT);
+            $schedule = trim($_POST['schedule'] ?? '');
 
-                if (!$classId || !$subjectId || !$teacherId) {
-                    $message = 'Razred, predmet in učitelj so obvezni.';
-                    $messageType = 'error';
-                } elseif (assignSubjectToClass([
-                    'class_id' => $classId,
-                    'subject_id' => $subjectId,
-                    'teacher_id' => $teacherId,
-                    'schedule' => $schedule
-                ])) {
-                    $message = 'Dodelitev uspešno ustvarjena.';
-                    $messageType = 'success';
-                } else {
-                    $message = 'Napaka pri ustvarjanju dodelitve. Ta kombinacija morda že obstaja.';
-                    $messageType = 'error';
-                }
-                $currentTab = 'assign';
-                break;
+            if (!$classId || !$subjectId || !$teacherId) {
+                $message = 'Razred, predmet in učitelj so obvezni.';
+                $messageType = 'error';
+            } elseif (assignSubjectToClass([
+                'class_id' => $classId,
+                'subject_id' => $subjectId,
+                'teacher_id' => $teacherId,
+                'schedule' => $schedule
+            ])) {
+                $message = 'Dodelitev uspešno ustvarjena.';
+                $messageType = 'success';
+            } else {
+                $message = 'Napaka pri ustvarjanju dodelitve. Ta kombinacija morda že obstaja.';
+                $messageType = 'error';
+            }
+            $currentTab = 'assign';
+            break;
 
-            case 'delete_assignment':
-                $assignmentId = filter_input(INPUT_POST, 'assignment_id', FILTER_VALIDATE_INT);
-                if (!$assignmentId || $assignmentId <= 0) {
-                    $message = 'Izbrana neveljavna dodelitev za brisanje.';
-                    $messageType = 'error';
-                } elseif (removeSubjectFromClass($assignmentId)) {
-                    $message = 'Dodelitev uspešno izbrisana.';
-                    $messageType = 'success';
-                } else {
-                    $message = 'Napaka pri brisanju dodelitve. Morda ima ocene ali termine.';
-                    $messageType = 'error';
-                }
-                $currentTab = 'assign';
-                break;
+        case 'delete_assignment':
+            $assignmentId = filter_input(INPUT_POST, 'assignment_id', FILTER_VALIDATE_INT);
+            if (!$assignmentId || $assignmentId <= 0) {
+                $message = 'Izbrana neveljavna dodelitev za brisanje.';
+                $messageType = 'error';
+            } elseif (removeSubjectFromClass($assignmentId)) {
+                $message = 'Dodelitev uspešno izbrisana.';
+                $messageType = 'success';
+            } else {
+                $message = 'Napaka pri brisanju dodelitve. Morda ima ocene ali termine.';
+                $messageType = 'error';
+            }
+            $currentTab = 'assign';
+            break;
 
-            case 'update_settings':
-                $message = 'Funkcionalnost posodobitve sistemskih nastavitev še ni implementirana.';
-                $messageType = 'info';
-                $currentTab = 'system';
-                break;
+        case 'update_settings':
+            $message = 'Funkcionalnost posodobitve sistemskih nastavitev še ni implementirana.';
+            $messageType = 'info';
+            $currentTab = 'system';
+            break;
 
-            default:
-                break;
-        }
+        default:
+            break;
     }
 }
 
 if (isset($_GET['subject_id']) && $currentTab === 'subjects') {
     $subjectId = filter_input(INPUT_GET, 'subject_id', FILTER_VALIDATE_INT);
-    if ($subjectId && $subjectId > 0) {
-        $subjectDetails = getSubjectDetails($subjectId);
-    }
+    if ($subjectId && $subjectId > 0) $subjectDetails = getSubjectDetails($subjectId);
 } elseif (isset($_GET['class_id']) && $currentTab === 'classes') {
     $classId = filter_input(INPUT_GET, 'class_id', FILTER_VALIDATE_INT);
-    if ($classId && $classId > 0) {
-        $classDetails = getClassDetails($classId);
-    }
+    if ($classId && $classId > 0) $classDetails = getClassDetails($classId);
 } elseif (isset($_GET['class_subject_id']) && $currentTab === 'assign') {
     $classSubjectId = filter_input(INPUT_GET, 'class_subject_id', FILTER_VALIDATE_INT);
-    if ($classSubjectId && $classSubjectId > 0) {
-        foreach ($classSubjects as $assignment) {
-            if ($assignment['class_subject_id'] == $classSubjectId) {
-                $classSubjectDetails = $assignment;
-                break;
-            }
-        }
+    if ($classSubjectId && $classSubjectId > 0) foreach ($classSubjects as $assignment) if ($assignment['class_subject_id'] == $classSubjectId) {
+        $classSubjectDetails = $assignment;
+        break;
     }
 }
 

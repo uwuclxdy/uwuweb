@@ -64,9 +64,7 @@ function getAllUsers(): array
     try {
         $pdo = safeGetDBConnection('getAllUsers');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in getAllUsers", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllUsers", 500, "admin_functions.php");
 
         $query = "SELECT u.*, r.name as role_name,
                     CASE
@@ -121,10 +119,8 @@ function displayUserList(): void
         echo '<a href="/uwuweb/admin/users.php?action=edit&user_id=' . $user['user_id'] . '" class="btn btn-primary btn-sm">Uredi</a>';
         echo '<a href="/uwuweb/admin/users.php?action=reset&user_id=' . $user['user_id'] . '" class="btn btn-secondary btn-sm">Ponastavi geslo</a>';
 
-        if (!($user['role_id'] == ROLE_ADMIN && $user['user_id'] == 1) && $user['user_id'] != getUserId()) {
-            echo '<a href="/uwuweb/admin/users.php?action=delete&user_id=' . $user['user_id'] . '" class="btn btn-error btn-sm"
-                    onclick="return confirm(\'Ali ste prepričani, da želite izbrisati tega uporabnika?\');">Izbriši</a>';
-        }
+        if (!($user['role_id'] == ROLE_ADMIN && $user['user_id'] == 1) && $user['user_id'] != getUserId()) echo '<a href="/uwuweb/admin/users.php?action=delete&user_id=' . $user['user_id'] . '" class="btn btn-error btn-sm"
+                onclick="return confirm(\'Ali ste prepričani, da želite izbrisati tega uporabnika?\');">Izbriši</a>';
 
         echo '</td>';
         echo '</tr>';
@@ -146,9 +142,7 @@ function getUserDetails(int $userId): ?array
     try {
         $pdo = safeGetDBConnection('getUserDetails');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in getUserDetails", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getUserDetails", 500, "admin_functions.php");
 
         $query = "SELECT u.*, r.name as role_name
                 FROM users u
@@ -160,9 +154,7 @@ function getUserDetails(int $userId): ?array
 
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$user) {
-            return null;
-        }
+        if (!$user) return null;
 
         switch ($user['role_id']) {
             case ROLE_STUDENT:
@@ -214,16 +206,12 @@ function getUserDetails(int $userId): ?array
  */
 function createNewUser(array $userData): bool|int
 {
-    if (empty($userData['username']) || empty($userData['password']) || empty($userData['role_id'])) {
-        return false;
-    }
+    if (empty($userData['username']) || empty($userData['password']) || empty($userData['role_id'])) return false;
 
     try {
         $pdo = safeGetDBConnection('createNewUser');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in createNewUser", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in createNewUser", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -276,9 +264,7 @@ function createNewUser(array $userData): bool|int
                         VALUES (?, ?)
                     ");
 
-                    foreach ($userData['student_ids'] as $studentId) {
-                        $stmt->execute([$studentId, $parentId]);
-                    }
+                    foreach ($userData['student_ids'] as $studentId) $stmt->execute([$studentId, $parentId]);
                 }
                 break;
         }
@@ -286,9 +272,7 @@ function createNewUser(array $userData): bool|int
         $pdo->commit();
         return $userId;
     } catch (PDOException $e) {
-        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
         logDBError("Error creating new user: " . $e->getMessage());
         return false;
     }
@@ -303,16 +287,12 @@ function createNewUser(array $userData): bool|int
  */
 function updateUser(int $userId, array $userData): bool
 {
-    if (empty($userId) || empty($userData)) {
-        return false;
-    }
+    if (empty($userId) || empty($userData)) return false;
 
     try {
         $pdo = safeGetDBConnection('updateUser');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in updateUser", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in updateUser", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -394,9 +374,7 @@ function updateUser(int $userId, array $userData): bool
 
                         if (!empty($userData['student_ids'])) {
                             $stmt = $pdo->prepare("INSERT INTO student_parent (student_id, parent_id) VALUES (?, ?)");
-                            foreach ($userData['student_ids'] as $studentId) {
-                                $stmt->execute([$studentId, $parent['parent_id']]);
-                            }
+                            foreach ($userData['student_ids'] as $studentId) $stmt->execute([$studentId, $parent['parent_id']]);
                         }
                     }
                 }
@@ -406,9 +384,7 @@ function updateUser(int $userId, array $userData): bool
         $pdo->commit();
         return true;
     } catch (PDOException $e) {
-        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
         logDBError("Error updating user: " . $e->getMessage());
         return false;
     }
@@ -423,16 +399,12 @@ function updateUser(int $userId, array $userData): bool
  */
 function resetUserPassword(int $userId, string $newPassword): bool
 {
-    if (empty($userId) || empty($newPassword)) {
-        return false;
-    }
+    if (empty($userId) || empty($newPassword)) return false;
 
     try {
         $pdo = safeGetDBConnection('resetUserPassword');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in resetUserPassword", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in resetUserPassword", 500, "admin_functions.php");
 
         $passHash = password_hash($newPassword, PASSWORD_DEFAULT);
 
@@ -457,9 +429,7 @@ function deleteUser(int $userId): bool
     try {
         $pdo = safeGetDBConnection('deleteUser');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in deleteUser", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in deleteUser", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -559,9 +529,7 @@ function deleteUser(int $userId): bool
         $pdo->commit();
         return true;
     } catch (PDOException $e) {
-        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
         logDBError("Error deleting user: " . $e->getMessage());
         return false;
     }
@@ -579,9 +547,7 @@ function getAllSubjects(): array
     try {
         $pdo = safeGetDBConnection('getAllSubjects');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in getAllSubjects", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllSubjects", 500, "admin_functions.php");
 
         $query = "SELECT * FROM subjects ORDER BY name";
 
@@ -642,9 +608,7 @@ function getSubjectDetails(int $subjectId): ?array
     try {
         $pdo = safeGetDBConnection('getSubjectDetails');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in getSubjectDetails", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getSubjectDetails", 500, "admin_functions.php");
 
         $query = "SELECT * FROM subjects WHERE subject_id = ?";
 
@@ -653,9 +617,7 @@ function getSubjectDetails(int $subjectId): ?array
 
         $subject = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$subject) {
-            return null;
-        }
+        if (!$subject) return null;
 
         $stmt = $pdo->prepare("
             SELECT cs.class_subject_id, c.class_code, c.title, t.teacher_id,
@@ -684,16 +646,12 @@ function getSubjectDetails(int $subjectId): ?array
  */
 function createSubject(array $subjectData): bool|int
 {
-    if (empty($subjectData['name'])) {
-        return false;
-    }
+    if (empty($subjectData['name'])) return false;
 
     try {
         $pdo = safeGetDBConnection('createSubject');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in createSubject", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in createSubject", 500, "admin_functions.php");
 
         $stmt = $pdo->prepare("INSERT INTO subjects (name) VALUES (?)");
         $stmt->execute([$subjectData['name']]);
@@ -714,16 +672,12 @@ function createSubject(array $subjectData): bool|int
  */
 function updateSubject(int $subjectId, array $subjectData): bool
 {
-    if (empty($subjectId) || empty($subjectData) || empty($subjectData['name'])) {
-        return false;
-    }
+    if (empty($subjectId) || empty($subjectData) || empty($subjectData['name'])) return false;
 
     try {
         $pdo = safeGetDBConnection('updateSubject');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in updateSubject", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in updateSubject", 500, "admin_functions.php");
 
         $stmt = $pdo->prepare("UPDATE subjects SET name = ? WHERE subject_id = ?");
         $stmt->execute([$subjectData['name'], $subjectId]);
@@ -746,9 +700,7 @@ function deleteSubject(int $subjectId): bool
     try {
         $pdo = safeGetDBConnection('deleteSubject');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in deleteSubject", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in deleteSubject", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -780,9 +732,7 @@ function deleteSubject(int $subjectId): bool
         $pdo->commit();
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
-        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
         logDBError("Error deleting subject: " . $e->getMessage());
         return false;
     }
@@ -800,9 +750,7 @@ function getAllClasses(): array
     try {
         $pdo = safeGetDBConnection('getAllClasses');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in getAllClasses", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllClasses", 500, "admin_functions.php");
 
         $query = "
             SELECT c.*, t.teacher_id, u.username as homeroom_teacher_name
@@ -871,9 +819,7 @@ function getClassDetails(int $classId): ?array
     try {
         $pdo = safeGetDBConnection('getClassDetails');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in getClassDetails", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getClassDetails", 500, "admin_functions.php");
 
         $query = "
             SELECT c.*, t.teacher_id, u.username as homeroom_teacher_name
@@ -888,9 +834,7 @@ function getClassDetails(int $classId): ?array
 
         $class = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$class) {
-            return null;
-        }
+        if (!$class) return null;
 
         $stmt = $pdo->prepare("
             SELECT cs.class_subject_id, s.subject_id, s.name as subject_name,
@@ -928,16 +872,12 @@ function getClassDetails(int $classId): ?array
  */
 function createClass(array $classData): bool|int
 {
-    if (empty($classData['class_code']) || empty($classData['title']) || empty($classData['homeroom_teacher_id'])) {
-        return false;
-    }
+    if (empty($classData['class_code']) || empty($classData['title']) || empty($classData['homeroom_teacher_id'])) return false;
 
     try {
         $pdo = safeGetDBConnection('createClass');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in createClass", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in createClass", 500, "admin_functions.php");
 
         $stmt = $pdo->prepare("INSERT INTO classes (class_code, title, homeroom_teacher_id) VALUES (?, ?, ?)");
         $stmt->execute([
@@ -962,16 +902,12 @@ function createClass(array $classData): bool|int
  */
 function updateClass(int $classId, array $classData): bool
 {
-    if (empty($classId) || empty($classData)) {
-        return false;
-    }
+    if (empty($classId) || empty($classData)) return false;
 
     try {
         $pdo = safeGetDBConnection('updateClass');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in updateClass", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in updateClass", 500, "admin_functions.php");
 
         $updates = [];
         $params = [];
@@ -991,9 +927,7 @@ function updateClass(int $classId, array $classData): bool
             $params[] = empty($classData['homeroom_teacher_id']) ? null : $classData['homeroom_teacher_id'];
         }
 
-        if (empty($updates)) {
-            return false;
-        }
+        if (empty($updates)) return false;
 
         $query = "UPDATE classes SET " . implode(", ", $updates) . " WHERE class_id = ?";
         $params[] = $classId;
@@ -1019,9 +953,7 @@ function deleteClass(int $classId): bool
     try {
         $pdo = safeGetDBConnection('deleteClass');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in deleteClass", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in deleteClass", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -1049,9 +981,7 @@ function deleteClass(int $classId): bool
         $pdo->commit();
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
-        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
         logDBError("Error deleting class: " . $e->getMessage());
         return false;
     }
@@ -1067,23 +997,17 @@ function deleteClass(int $classId): bool
  */
 function assignSubjectToClass(array $assignmentData): bool|int
 {
-    if (empty($assignmentData['class_id']) || empty($assignmentData['subject_id']) || empty($assignmentData['teacher_id'])) {
-        return false;
-    }
+    if (empty($assignmentData['class_id']) || empty($assignmentData['subject_id']) || empty($assignmentData['teacher_id'])) return false;
 
     try {
         $pdo = safeGetDBConnection('assignSubjectToClass');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in assignSubjectToClass", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in assignSubjectToClass", 500, "admin_functions.php");
 
         $stmt = $pdo->prepare("SELECT class_subject_id FROM class_subjects WHERE class_id = ? AND subject_id = ?");
         $stmt->execute([$assignmentData['class_id'], $assignmentData['subject_id']]);
 
-        if ($stmt->fetch()) {
-            return false; // Assignment already exists
-        }
+        if ($stmt->fetch()) return false;
 
         $stmt = $pdo->prepare("INSERT INTO class_subjects (class_id, subject_id, teacher_id) VALUES (?, ?, ?)");
         $stmt->execute([
@@ -1108,16 +1032,12 @@ function assignSubjectToClass(array $assignmentData): bool|int
  */
 function updateClassSubjectAssignment(int $assignmentId, array $assignmentData): bool
 {
-    if (empty($assignmentId) || empty($assignmentData) || empty($assignmentData['teacher_id'])) {
-        return false;
-    }
+    if (empty($assignmentId) || empty($assignmentData) || empty($assignmentData['teacher_id'])) return false;
 
     try {
         $pdo = safeGetDBConnection('updateClassSubjectAssignment');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in updateClassSubjectAssignment", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in updateClassSubjectAssignment", 500, "admin_functions.php");
 
         $stmt = $pdo->prepare("UPDATE class_subjects SET teacher_id = ? WHERE class_subject_id = ?");
         $stmt->execute([$assignmentData['teacher_id'], $assignmentId]);
@@ -1140,9 +1060,7 @@ function removeSubjectFromClass(int $assignmentId): bool
     try {
         $pdo = safeGetDBConnection('removeSubjectFromClass');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in removeSubjectFromClass", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in removeSubjectFromClass", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -1172,9 +1090,7 @@ function removeSubjectFromClass(int $assignmentId): bool
         $pdo->commit();
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
-        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) {
-            $pdo->rollBack();
-        }
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
         logDBError("Error removing subject from class: " . $e->getMessage());
         return false;
     }
@@ -1190,9 +1106,7 @@ function getAllClassSubjectAssignments(): array
     try {
         $pdo = safeGetDBConnection('getAllClassSubjectAssignments');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in getAllClassSubjectAssignments", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllClassSubjectAssignments", 500, "admin_functions.php");
 
         $query = "
             SELECT cs.class_subject_id, c.class_id, c.class_code, c.title as class_title,
@@ -1223,9 +1137,7 @@ function getAllTeachers(): array
     try {
         $pdo = safeGetDBConnection('getAllTeachers');
 
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in getAllTeachers", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllTeachers", 500, "admin_functions.php");
 
         $query = "
             SELECT t.teacher_id, u.user_id, u.username
@@ -1254,9 +1166,7 @@ function getAllStudentsBasicInfo(): array
 {
     try {
         $pdo = safeGetDBConnection('getAllStudentsBasicInfo');
-        if ($pdo === null) {
-            sendJsonErrorResponse("Failed to establish database connection in getAllStudentsBasicInfo", 500, "admin_functions.php");
-        }
+        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllStudentsBasicInfo", 500, "admin_functions.php");
 
         $query = "SELECT s.student_id, s.user_id, s.first_name, s.last_name, s.class_code, u.username
                  FROM students s
@@ -1278,88 +1188,46 @@ function getAllStudentsBasicInfo(): array
  */
 function validateUserForm(array $userData): bool|string
 {
-    if (empty($userData['username'])) {
-        return 'Username is required.';
-    }
+    if (empty($userData['username'])) return 'Username is required.';
 
-    if (!preg_match('/^\w+$/', $userData['username'])) {
-        return 'Username must contain only letters, numbers and underscores.';
-    }
+    if (!preg_match('/^\w+$/', $userData['username'])) return 'Username must contain only letters, numbers and underscores.';
 
-    if (strlen($userData['username']) < 3 || strlen($userData['username']) > 50) {
-        return 'Username must be between 3 and 50 characters.';
-    }
+    if (strlen($userData['username']) < 3 || strlen($userData['username']) > 50) return 'Username must be between 3 and 50 characters.';
 
-    if (!isset($userData['user_id']) && usernameExists($userData['username'])) {
-        return 'Username is already taken.';
-    }
+    if (!isset($userData['user_id']) && usernameExists($userData['username'])) return 'Username is already taken.';
     // Check if username exists when updating, excluding self
-    if (isset($userData['user_id']) && usernameExists($userData['username'], $userData['user_id'])) {
-        return 'Username is already taken.';
-    }
+    if (isset($userData['user_id']) && usernameExists($userData['username'], $userData['user_id'])) return 'Username is already taken.';
 
-    if (empty($userData['role_id']) || !in_array($userData['role_id'], [ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT, ROLE_PARENT], true)) {
-        return 'Invalid role selected.';
-    }
+    if (empty($userData['role_id']) || !in_array($userData['role_id'], [ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT, ROLE_PARENT], true)) return 'Invalid role selected.';
 
-    if (!isset($userData['user_id']) && empty($userData['password'])) {
-        return 'Password is required for new users.';
-    }
+    if (!isset($userData['user_id']) && empty($userData['password'])) return 'Password is required for new users.';
 
     if (!isset($userData['user_id']) && !empty($userData['password'])) {
-        if (strlen($userData['password']) < 8) {
-            return 'Password must be at least 8 characters long.';
-        }
-        if (!preg_match('/[A-Za-z]/', $userData['password']) || !preg_match('/\d/', $userData['password'])) {
-            return 'Password must contain at least one letter and one number.';
-        }
+        if (strlen($userData['password']) < 8) return 'Password must be at least 8 characters long.';
+        if (!preg_match('/[A-Za-z]/', $userData['password']) || !preg_match('/\d/', $userData['password'])) return 'Password must contain at least one letter and one number.';
     }
 
     switch ($userData['role_id']) {
         case ROLE_STUDENT:
-            if (empty($userData['first_name'])) {
-                return 'First name is required for students.';
-            }
+            if (empty($userData['first_name'])) return 'First name is required for students.';
 
-            if (empty($userData['last_name'])) {
-                return 'Last name is required for students.';
-            }
+            if (empty($userData['last_name'])) return 'Last name is required for students.';
 
-            if (empty($userData['class_code'])) {
-                return 'Class is required for students.';
-            }
+            if (empty($userData['class_code'])) return 'Class is required for students.';
 
-            if (empty($userData['dob'])) {
-                return 'Date of birth is required for students.';
-            }
+            if (empty($userData['dob'])) return 'Date of birth is required for students.';
 
-            if (!validateDate($userData['dob'])) {
-                return 'Invalid date of birth format (YYYY-MM-DD).';
-            }
+            if (!validateDate($userData['dob'])) return 'Invalid date of birth format (YYYY-MM-DD).';
 
-            if (!classCodeExists($userData['class_code'])) {
-                return 'Selected class does not exist.';
-            }
+            if (!classCodeExists($userData['class_code'])) return 'Selected class does not exist.';
             break;
 
         case ROLE_TEACHER:
-            if (!empty($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) {
-                foreach ($userData['teacher_subjects'] as $subjectId) {
-                    if (!subjectExists($subjectId)) {
-                        return 'One or more selected subjects do not exist.';
-                    }
-                }
-            }
+            if (!empty($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) foreach ($userData['teacher_subjects'] as $subjectId) if (!subjectExists($subjectId)) return 'One or more selected subjects do not exist.';
             break;
 
         case ROLE_PARENT:
-            if (!empty($userData['student_ids']) && is_array($userData['student_ids'])) {
-                foreach ($userData['student_ids'] as $studentId) {
-                    if (!studentExists($studentId)) {
-                        return 'One or more selected students do not exist.';
-                    }
-                }
-            }
+            if (!empty($userData['student_ids']) && is_array($userData['student_ids'])) foreach ($userData['student_ids'] as $studentId) if (!studentExists($studentId)) return 'One or more selected students do not exist.';
             break;
     }
 
@@ -1376,9 +1244,7 @@ function validateUserForm(array $userData): bool|string
 function usernameExists(string $username, ?int $excludeUserId = null): bool
 {
     $pdo = safeGetDBConnection('usernameExists');
-    if ($pdo === null) {
-        sendJsonErrorResponse("Failed to establish database connection in usernameExists", 500, "admin_functions.php");
-    }
+    if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in usernameExists", 500, "admin_functions.php");
 
     $sql = "SELECT COUNT(*) FROM users WHERE username = :username";
     $params = ['username' => $username];
@@ -1415,9 +1281,7 @@ function validateDate(string $date): bool
 function classCodeExists(string $classCode): bool
 {
     $pdo = safeGetDBConnection('classCodeExists');
-    if ($pdo === null) {
-        sendJsonErrorResponse("Failed to establish database connection in classCodeExists", 500, "admin_functions.php");
-    }
+    if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in classCodeExists", 500, "admin_functions.php");
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM classes WHERE class_code = :class_code");
     $stmt->execute(['class_code' => $classCode]);
@@ -1434,9 +1298,7 @@ function classCodeExists(string $classCode): bool
 function subjectExists(int $subjectId): bool
 {
     $pdo = safeGetDBConnection('subjectExists');
-    if ($pdo === null) {
-        sendJsonErrorResponse("Failed to establish database connection in subjectExists", 500, "admin_functions.php");
-    }
+    if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in subjectExists", 500, "admin_functions.php");
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM subjects WHERE subject_id = :subject_id");
     $stmt->execute(['subject_id' => $subjectId]);
@@ -1453,9 +1315,7 @@ function subjectExists(int $subjectId): bool
 function studentExists(int $studentId): bool
 {
     $pdo = safeGetDBConnection('studentExists');
-    if ($pdo === null) {
-        sendJsonErrorResponse("Failed to establish database connection in studentExists", 500, "admin_functions.php");
-    }
+    if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in studentExists", 500, "admin_functions.php");
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE student_id = :student_id");
     $stmt->execute(['student_id' => $studentId]);

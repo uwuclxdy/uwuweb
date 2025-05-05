@@ -25,20 +25,10 @@ $userDetails = null;
 $pdo = safeGetDBConnection('admin/users.php');
 
 // Process form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
-        $message = 'Invalid form submission. Please try again.';
-        $messageType = 'error';
-    } else if (isset($_POST['create_user'])) {
-        handleCreateUser();
-    } else if (isset($_POST['update_user'])) {
-        handleUpdateUser();
-    } else if (isset($_POST['reset_password'])) {
-        handleResetPassword();
-    } else if (isset($_POST['delete_user'])) {
-        handleDeleteUser();
-    }
-}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
+    $message = 'Invalid form submission. Please try again.';
+    $messageType = 'error';
+} else if (isset($_POST['create_user'])) handleCreateUser(); else if (isset($_POST['update_user'])) handleUpdateUser(); else if (isset($_POST['reset_password'])) handleResetPassword(); else if (isset($_POST['delete_user'])) handleDeleteUser();
 
 // Handle edit, reset, or delete requests
 if (isset($_GET['action'], $_GET['user_id'])) {
@@ -57,11 +47,9 @@ if (isset($_GET['action'], $_GET['user_id'])) {
 // Get all users and apply role filter if specified
 $users = getAllUsers();
 $roleFilter = $_GET['role'] ?? 'all';
-if ($roleFilter !== 'all') {
-    $users = array_filter($users, static function ($user) use ($roleFilter) {
-        return strtolower($user['role_name']) === strtolower($roleFilter);
-    });
-}
+if ($roleFilter !== 'all') $users = array_filter($users, static function ($user) use ($roleFilter) {
+    return strtolower($user['role_name']) === strtolower($roleFilter);
+});
 
 // Generate CSRF token
 $csrfToken = ''; // Initialize with default value
@@ -103,11 +91,8 @@ function handleCreateUser(): void
             $messageType = 'error';
             return;
         }
-    } elseif ($userData['role_id'] === ROLE_TEACHER) {
-        $userData['teacher_subjects'] = $_POST['teacher_subjects'] ?? [];
-    } elseif ($userData['role_id'] === ROLE_PARENT) {
-        $userData['student_ids'] = $_POST['parent_children'] ?? [];
-    }
+    } elseif ($userData['role_id'] === ROLE_TEACHER) $userData['teacher_subjects'] = $_POST['teacher_subjects'] ?? [];
+    elseif ($userData['role_id'] === ROLE_PARENT) $userData['student_ids'] = $_POST['parent_children'] ?? [];
 
     // Validate and create user
     $validationResult = validateUserForm($userData);
@@ -149,11 +134,8 @@ function handleUpdateUser(): void
             $messageType = 'error';
             return;
         }
-    } elseif ($userData['role_id'] === ROLE_TEACHER) {
-        $userData['teacher_subjects'] = $_POST['teacher_subjects'] ?? [];
-    } elseif ($userData['role_id'] === ROLE_PARENT) {
-        $userData['student_ids'] = $_POST['parent_children'] ?? [];
-    }
+    } elseif ($userData['role_id'] === ROLE_TEACHER) $userData['teacher_subjects'] = $_POST['teacher_subjects'] ?? [];
+    elseif ($userData['role_id'] === ROLE_PARENT) $userData['student_ids'] = $_POST['parent_children'] ?? [];
 
     // Validate and update user
     $validationResult = validateUserForm($userData);

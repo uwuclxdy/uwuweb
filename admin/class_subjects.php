@@ -24,80 +24,76 @@ $messageType = '';
 $assignmentDetails = null;
 
 // Process form submissions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
-        $message = 'Neveljavna oddaja obrazca. Poskusite znova.';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
+    $message = 'Neveljavna oddaja obrazca. Poskusite znova.';
+    $messageType = 'error';
+    error_log("CSRF token validation failed for user ID: " . ($_SESSION['user_id'] ?? 'Unknown'));
+} else if (isset($_POST['create_assignment'])) {
+    // Create new class-subject assignment
+    $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
+    $subjectId = filter_input(INPUT_POST, 'subject_id', FILTER_VALIDATE_INT);
+    $teacherId = filter_input(INPUT_POST, 'teacher_id', FILTER_VALIDATE_INT);
+    $schedule = trim($_POST['schedule'] ?? '');
+
+    if (!$classId || !$subjectId || !$teacherId) {
+        $message = 'Razred, predmet in učitelj so obvezni.';
         $messageType = 'error';
-        error_log("CSRF token validation failed for user ID: " . ($_SESSION['user_id'] ?? 'Unknown'));
-    } else if (isset($_POST['create_assignment'])) {
-        // Create new class-subject assignment
-        $classId = filter_input(INPUT_POST, 'class_id', FILTER_VALIDATE_INT);
-        $subjectId = filter_input(INPUT_POST, 'subject_id', FILTER_VALIDATE_INT);
-        $teacherId = filter_input(INPUT_POST, 'teacher_id', FILTER_VALIDATE_INT);
-        $schedule = trim($_POST['schedule'] ?? '');
+    } else {
+        $assignmentData = [
+            'class_id' => $classId,
+            'subject_id' => $subjectId,
+            'teacher_id' => $teacherId,
+            'schedule' => $schedule
+        ];
 
-        if (!$classId || !$subjectId || !$teacherId) {
-            $message = 'Razred, predmet in učitelj so obvezni.';
-            $messageType = 'error';
-        } else {
-            $assignmentData = [
-                'class_id' => $classId,
-                'subject_id' => $subjectId,
-                'teacher_id' => $teacherId,
-                'schedule' => $schedule
-            ];
-
-            $result = assignSubjectToClass($assignmentData);
-            if ($result) {
-                $message = 'Dodelitev predmeta razredu je bila uspešno ustvarjena.';
-                $messageType = 'success';
-            } else {
-                $message = 'Napaka pri ustvarjanju dodelitve. Ta predmet je morda že dodeljen temu razredu.';
-                $messageType = 'error';
-            }
-        }
-    } elseif (isset($_POST['update_assignment'])) {
-        // Update existing class-subject assignment
-        $assignmentId = filter_input(INPUT_POST, 'assignment_id', FILTER_VALIDATE_INT);
-        $teacherId = filter_input(INPUT_POST, 'teacher_id', FILTER_VALIDATE_INT);
-
-        if (!$assignmentId || !$teacherId) {
-            $message = 'Neveljavna dodelitev ali izbran učitelj.';
-            $messageType = 'error';
-        } else {
-            $assignmentData = [
-                'teacher_id' => $teacherId
-            ];
-
-            if (updateClassSubjectAssignment($assignmentId, $assignmentData)) {
-                $message = 'Dodelitev je bila uspešno posodobljena.';
-                $messageType = 'success';
-            } else {
-                $message = 'Napaka pri posodabljanju dodelitve.';
-                $messageType = 'error';
-            }
-        }
-    } elseif (isset($_POST['delete_assignment'])) {
-        // Delete class-subject assignment
-        $assignmentId = filter_input(INPUT_POST, 'assignment_id', FILTER_VALIDATE_INT);
-
-        if (!$assignmentId) {
-            $message = 'Neveljavna dodelitev izbrana za brisanje.';
-            $messageType = 'error';
-        } elseif (removeSubjectFromClass($assignmentId)) {
-            $message = 'Dodelitev je bila uspešno izbrisana.';
+        $result = assignSubjectToClass($assignmentData);
+        if ($result) {
+            $message = 'Dodelitev predmeta razredu je bila uspešno ustvarjena.';
             $messageType = 'success';
         } else {
-            $message = 'Napaka pri brisanju dodelitve. Morda ima povezane ocene ali obveznosti.';
+            $message = 'Napaka pri ustvarjanju dodelitve. Ta predmet je morda že dodeljen temu razredu.';
             $messageType = 'error';
         }
+    }
+} elseif (isset($_POST['update_assignment'])) {
+    // Update existing class-subject assignment
+    $assignmentId = filter_input(INPUT_POST, 'assignment_id', FILTER_VALIDATE_INT);
+    $teacherId = filter_input(INPUT_POST, 'teacher_id', FILTER_VALIDATE_INT);
+
+    if (!$assignmentId || !$teacherId) {
+        $message = 'Neveljavna dodelitev ali izbran učitelj.';
+        $messageType = 'error';
+    } else {
+        $assignmentData = [
+            'teacher_id' => $teacherId
+        ];
+
+        if (updateClassSubjectAssignment($assignmentId, $assignmentData)) {
+            $message = 'Dodelitev je bila uspešno posodobljena.';
+            $messageType = 'success';
+        } else {
+            $message = 'Napaka pri posodabljanju dodelitve.';
+            $messageType = 'error';
+        }
+    }
+} elseif (isset($_POST['delete_assignment'])) {
+    // Delete class-subject assignment
+    $assignmentId = filter_input(INPUT_POST, 'assignment_id', FILTER_VALIDATE_INT);
+
+    if (!$assignmentId) {
+        $message = 'Neveljavna dodelitev izbrana za brisanje.';
+        $messageType = 'error';
+    } elseif (removeSubjectFromClass($assignmentId)) {
+        $message = 'Dodelitev je bila uspešno izbrisana.';
+        $messageType = 'success';
+    } else {
+        $message = 'Napaka pri brisanju dodelitve. Morda ima povezane ocene ali obveznosti.';
+        $messageType = 'error';
     }
 }
 
 // Check if editing an existing assignment
-if (isset($_GET['assignment_id'])) {
-    $assignmentId = filter_input(INPUT_GET, 'assignment_id', FILTER_VALIDATE_INT);
-}
+if (isset($_GET['assignment_id'])) $assignmentId = filter_input(INPUT_GET, 'assignment_id', FILTER_VALIDATE_INT);
 
 // Get data for dropdowns
 $classes = getAllClasses();
