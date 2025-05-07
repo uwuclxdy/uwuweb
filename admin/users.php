@@ -82,6 +82,13 @@ function handleCreateUser(): void
         'role_id' => (int)($_POST['role_id'] ?? 0)
     ];
 
+    // Validate password length
+    if (strlen($userData['password']) < 6) {
+        $message = 'Password must be at least 6 characters long.';
+        $messageType = 'error';
+        return;
+    }
+
     // Add role-specific fields
     if ($userData['role_id'] === ROLE_STUDENT) {
         $userData['class_code'] = $_POST['student_class'] ?? '';
@@ -165,6 +172,9 @@ function handleResetPassword(): void
 
     if ($newPassword !== $confirmPassword) {
         $message = 'Passwords do not match. Please try again.';
+        $messageType = 'error';
+    } else if (strlen($newPassword) < 6) {
+        $message = 'Password must be at least 6 characters long.';
         $messageType = 'error';
     } else if (resetUserPassword($userId, $newPassword)) {
         $message = 'Password reset successfully.';
@@ -346,6 +356,21 @@ function handleDeleteUser(): void
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                 <input type="hidden" name="create_user" value="1">
 
+                <div id="create_nameFields" class="row" style="display: none;">
+                    <div class="col col-md-6">
+                        <div class="form-group">
+                            <label class="form-label" for="create_first_name">First Name:</label>
+                            <input type="text" id="create_first_name" name="first_name" class="form-input">
+                        </div>
+                    </div>
+                    <div class="col col-md-6">
+                        <div class="form-group">
+                            <label class="form-label" for="create_last_name">Last Name:</label>
+                            <input type="text" id="create_last_name" name="last_name" class="form-input">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label" for="create_username">Username:</label>
                     <input type="text" id="create_username" name="username" class="form-input" required>
@@ -353,27 +378,14 @@ function handleDeleteUser(): void
 
                 <div class="form-group">
                     <label class="form-label" for="create_password">Password:</label>
-                    <input type="password" id="create_password" name="password" class="form-input" required>
+                    <input type="password" id="create_password" name="password" class="form-input" required
+                           minlength="6">
+                    <small class="text-secondary d-block mt-xs">Password must be at least 6 characters.</small>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="create_email">Email:</label>
                     <input type="email" id="create_email" name="email" class="form-input" required>
-                </div>
-
-                <div class="row">
-                    <div class="col col-md-6">
-                        <div class="form-group">
-                            <label class="form-label" for="create_first_name">First Name:</label>
-                            <input type="text" id="create_first_name" name="first_name" class="form-input" required>
-                        </div>
-                    </div>
-                    <div class="col col-md-6">
-                        <div class="form-group">
-                            <label class="form-label" for="create_last_name">Last Name:</label>
-                            <input type="text" id="create_last_name" name="last_name" class="form-input" required>
-                        </div>
-                    </div>
                 </div>
 
                 <div class="form-group">
@@ -562,12 +574,15 @@ function handleDeleteUser(): void
 
                 <div class="form-group">
                     <label class="form-label" for="new_password">New Password:</label>
-                    <input type="password" id="new_password" name="new_password" class="form-input" required>
+                    <input type="password" id="new_password" name="new_password" class="form-input" required
+                           minlength="6">
+                    <small class="text-secondary d-block mt-xs">Password must be at least 6 characters.</small>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" for="confirm_password">Confirm Password:</label>
-                    <input type="password" id="confirm_password" name="confirm_password" class="form-input" required>
+                    <input type="password" id="confirm_password" name="confirm_password" class="form-input" required
+                           minlength="6">
                     <div id="password_match_error" class="feedback-text feedback-error mt-xs" style="display: none;">
                         Passwords do not match!
                     </div>
@@ -615,6 +630,7 @@ function handleDeleteUser(): void
     </div>
 </div>
 
+<!--suppress JSUnresolvedReference -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // --- Constants ---
@@ -676,17 +692,23 @@ function handleDeleteUser(): void
             const teacherFields = document.getElementById(`${prefix}_teacherFields`);
             const studentFields = document.getElementById(`${prefix}_studentFields`);
             const parentFields = document.getElementById(`${prefix}_parentFields`);
+            const nameFieldsRow = document.getElementById(`${prefix}_nameFields`);
 
-            teacherFields.display = (roleId === ROLE_TEACHER) ? 'block' : 'none';
-            studentFields.display = (roleId === ROLE_STUDENT) ? 'block' : 'none';
-            parentFields.display = (roleId === ROLE_PARENT) ? 'block' : 'none';
+            if (teacherFields) teacherFields.style.display = (roleId === ROLE_TEACHER) ? 'block' : 'none';
+            if (studentFields) studentFields.style.display = (roleId === ROLE_STUDENT) ? 'block' : 'none';
+            if (parentFields) parentFields.style.display = (roleId === ROLE_PARENT) ? 'block' : 'none';
+            if (nameFieldsRow) nameFieldsRow.style.display = (roleId === ROLE_STUDENT) ? 'flex' : 'none';
 
             // Update required attributes
             const studentClass = document.getElementById(`${prefix}_student_class`);
             const dob = document.getElementById(`${prefix}_dob`);
+            const firstName = document.getElementById(`${prefix}_first_name`);
+            const lastName = document.getElementById(`${prefix}_last_name`);
 
             if (studentClass) studentClass.required = (roleId === ROLE_STUDENT);
             if (dob) dob.required = (roleId === ROLE_STUDENT);
+            if (firstName) firstName.required = (roleId === ROLE_STUDENT);
+            if (lastName) lastName.required = (roleId === ROLE_STUDENT);
         };
 
         // --- Search Functionality ---
@@ -899,19 +921,30 @@ function handleDeleteUser(): void
 
             if (!newPwd || !confirmPwd || !errorMsg || !submitBtn) return;
 
-            const newPwdValue = newPwd.textContent || '';
-            const confirmPwdValue = confirmPwd.textContent || '';
+            const newPwdValue = newPwd.value || '';
+            const confirmPwdValue = confirmPwd.value || '';
 
+            // Check password length - require minimum 6 characters
+            const minLength = 6;
+            if (newPwdValue.length < minLength) {
+                errorMsg.textContent = `Password must be at least ${minLength} characters.`;
+                errorMsg.style.display = 'block';
+                submitBtn.disabled = true;
+                return;
+            }
+
+            // Check if passwords match
             if (newPwdValue && confirmPwdValue) {
                 if (newPwdValue !== confirmPwdValue) {
-                    errorMsg.display = 'block';
+                    errorMsg.textContent = 'Passwords do not match!';
+                    errorMsg.style.display = 'block';
                     submitBtn.disabled = true;
                 } else {
-                    errorMsg.display = 'none';
+                    errorMsg.style.display = 'none';
                     submitBtn.disabled = false;
                 }
             } else {
-                errorMsg.display = 'none';
+                errorMsg.style.display = 'none';
                 submitBtn.disabled = true;
             }
         };

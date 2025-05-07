@@ -1436,8 +1436,7 @@ function validateUserForm(array $userData): bool|string
     if (!isset($userData['user_id']) && empty($userData['password'])) return 'Geslo je obvezno za nove uporabnike.';
 
     if (!isset($userData['user_id']) && !empty($userData['password'])) {
-        if (strlen($userData['password']) < 8) return 'Geslo mora biti dolgo vsaj 8 znakov.';
-        if (!preg_match('/[A-Za-z]/', $userData['password']) || !preg_match('/\d/', $userData['password'])) return 'Geslo mora vsebovati vsaj eno črko in eno številko.';
+        if (strlen($userData['password']) < 6) return 'Geslo mora biti dolgo vsaj 6 znakov.';
     }
 
     switch ($userData['role_id']) {

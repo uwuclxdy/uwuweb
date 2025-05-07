@@ -48,36 +48,47 @@ function initMobileNavigation() {
  * Specific modal actions are handled in their respective page scripts
  */
 function initModals() {
+    // Open modal triggers
+    document.querySelectorAll('[data-open-modal]').forEach(trigger => {
+        trigger.addEventListener('click', function () {
+            const modalId = this.getAttribute('data-open-modal');
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('open');
+            }
+        });
+    });
+
     // Generic modal functionality
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', function () {
             // Find the parent modal
             const modal = this.closest('.modal');
             if (modal) {
-                modal.style.display = 'none';
+                modal.classList.remove('open');
             }
         });
     });
 
     // Close buttons
-    document.querySelectorAll('.btn-close').forEach(button => {
+    document.querySelectorAll('.btn-close, [data-close-modal]').forEach(button => {
         button.addEventListener('click', function () {
             // Find the parent modal
             const modal = this.closest('.modal');
             if (modal) {
-                modal.style.display = 'none';
+                modal.classList.remove('open');
             }
         });
     });
 
     // Cancel buttons
-    document.querySelectorAll('.modal .btn').forEach(button => {
+    document.querySelectorAll('.modal .btn-secondary').forEach(button => {
         if (button.textContent.trim() === 'Cancel') {
             button.addEventListener('click', function () {
                 // Find the parent modal
                 const modal = this.closest('.modal');
                 if (modal) {
-                    modal.style.display = 'none';
+                    modal.classList.remove('open');
                 }
             });
         }
@@ -86,10 +97,8 @@ function initModals() {
     // Escape key closes modal
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
-            document.querySelectorAll('.modal').forEach(modal => {
-                if (modal.style.display === 'flex') {
-                    modal.style.display = 'none';
-                }
+            document.querySelectorAll('.modal.open').forEach(modal => {
+                modal.classList.remove('open');
             });
         }
     });
@@ -234,6 +243,49 @@ function initFormValidation() {
     // Password confirmation validation
     const passwordInputs = document.querySelectorAll('input[type="password"]');
     passwordInputs.forEach(input => {
+        // Add validation for password length
+        if (!input.id.includes('confirm')) {
+            input.addEventListener('input', function () {
+                const minLength = 6;
+
+                if (this.value.length > 0 && this.value.length < minLength) {
+                    this.classList.add('is-invalid');
+
+                    // Check if we already have a feedback element
+                    let feedbackElement = this.nextElementSibling;
+                    while (feedbackElement && !feedbackElement.classList.contains('feedback-text')) {
+                        feedbackElement = feedbackElement.nextElementSibling;
+                    }
+
+                    // Create feedback message if it doesn't exist
+                    if (!feedbackElement || !feedbackElement.classList.contains('feedback-text')) {
+                        feedbackElement = document.createElement('div');
+                        feedbackElement.className = 'feedback-text feedback-invalid mt-xs';
+                        feedbackElement.textContent = `Password must be at least ${minLength} characters`;
+
+                        // Find the small hint element, if it exists, and insert after it
+                        const smallHint = this.nextElementSibling;
+                        if (smallHint && smallHint.tagName === 'SMALL') {
+                            smallHint.parentNode.insertBefore(feedbackElement, smallHint.nextSibling);
+                        } else {
+                            this.parentNode.insertBefore(feedbackElement, this.nextSibling);
+                        }
+                    }
+                } else {
+                    this.classList.remove('is-invalid');
+
+                    // Remove feedback message if it exists
+                    const feedbackElements = this.parentNode.querySelectorAll('.feedback-invalid');
+                    feedbackElements.forEach(element => {
+                        if (element.textContent.includes('at least')) {
+                            element.remove();
+                        }
+                    });
+                }
+            });
+        }
+
+        // Existing password match validation
         if (input.id.includes('confirm')) {
             const passwordField = document.getElementById(input.id.replace('confirm_', ''));
 

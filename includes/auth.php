@@ -149,11 +149,13 @@ const ROLE_PARENT = 4;
 /**
  * Returns the name of a role by ID
  *
- * @param int $roleId The role ID to lookup
+ * @param int|null $roleId The role ID to lookup
  * @return string The name of the role or 'Unknown' if not found
  */
-function getRoleName(int $roleId): string
+function getRoleName(?int $roleId): string
 {
+    if ($roleId === null) return 'Gost';
+
     $roleNames = [
         ROLE_ADMIN => 'Administrator',
         ROLE_TEACHER => 'Teacher',
