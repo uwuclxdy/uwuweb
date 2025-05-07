@@ -4,6 +4,8 @@
  *
  * Centralized library of functions used by teacher module pages
  *
+ * File path: /teacher/teacher_functions.php
+ *
  * Teacher Information Functions:
  * - getTeacherId(?int $userId = null): ?int - Retrieves teacher_id from user_id
  * - getTeacherClasses(int $teacherId): array - Gets classes taught by a teacher
@@ -29,7 +31,12 @@
  * - getJustificationById(int $absenceId): ?array - Gets details about a specific justification
  * - approveJustification(int $absenceId): bool - Approves a justification
  * - rejectJustification(int $absenceId, string $reason): bool - Rejects a justification with reason
- * - getJustificationFileInfo(int $absenceId): ?string - Gets info about a justification file
+ *
+ * Dashboard Widget Functions:
+ * - renderTeacherClassOverviewWidget(): string - Renders class overview widget for teachers
+ * - renderTeacherAttendanceWidget(): string - Renders daily attendance widget for teachers
+ * - renderTeacherPendingJustificationsWidget(): string - Renders pending justifications widget
+ * - renderTeacherClassAveragesWidget(): string - Renders class averages widget for teacher's classes
  */
 
 require_once __DIR__ . '/../includes/db.php';
@@ -821,33 +828,429 @@ function rejectJustification(int $absenceId, string $reason): bool
 }
 
 /**
- * Get information about a saved justification file
+ * Gets attendance records for a student on a specific date
  *
- * @param int $absenceId Attendance record ID
- * @return string|null Filename or null if no file exists
+ * @param int $studentId Student ID
+ * @param string $date Date in YYYY-MM-DD format
+ * @return array Array of attendance records
  */
-function getJustificationFileInfo(int $absenceId): ?string
+function getStudentAttendanceByDate(int $studentId, string $date): array
 {
     try {
-        $pdo = safeGetDBConnection('getJustificationFileInfo');
+        $pdo = safeGetDBConnection('getStudentAttendanceByDate');
 
         if ($pdo === null) {
-            logDBError("Failed to establish database connection in getJustificationFileInfo");
-            return null;
+            logDBError("Failed to establish database connection in getStudentAttendanceByDate");
+            return [];
         }
 
-        $stmt = $pdo->prepare("
-            SELECT justification_file
-            FROM attendance
-            WHERE att_id = ?
-        ");
-        $stmt->execute([$absenceId]);
+        $query = "
+            SELECT a.att_id, a.status, a.notes, 
+                   p.period_date as date, p.period_label,
+                   s.name as subject_name
+            FROM attendance a
+            JOIN periods p ON a.period_id = p.period_id
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+            JOIN subjects s ON cs.subject_id = s.subject_id
+            WHERE e.student_id = ?
+            AND DATE(p.period_date) = ?
+            ORDER BY p.period_date, p.period_label
+        ";
 
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$studentId, $date]);
 
-        return $result && isset($result['justification_file']) && $result['justification_file'] ? $result['justification_file'] : null;
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        logDBError("Error in getJustificationFileInfo: " . $e->getMessage());
-        return null;
+        logDBError("Error in getStudentAttendanceByDate: " . $e->getMessage());
+        return [];
     }
+}
+
+/**
+ * Creates the HTML for the teacher's class overview dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderTeacherClassOverviewWidget(): string
+{
+    try {
+        $teacherId = getTeacherId();
+        if (!$teacherId) return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
+
+        $db = getDBConnection();
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
+
+        $query = "SELECT cs.class_subject_id, c.class_id, c.class_code, c.title as class_title,
+                         s.subject_id, s.name as subject_name,
+                         COUNT(DISTINCT e.student_id) as student_count
+                  FROM class_subjects cs
+                  JOIN classes c ON cs.class_id = c.class_id
+                  JOIN subjects s ON cs.subject_id = s.subject_id
+                  LEFT JOIN enrollments e ON c.class_id = e.class_id
+                  WHERE cs.teacher_id = :teacher_id
+                  GROUP BY cs.class_subject_id, c.class_id, c.class_code, c.title, s.subject_id, s.name
+                  ORDER BY c.title, s.name";
+
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
+        $stmt->execute();
+        $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($classes)) return renderPlaceholderWidget('Trenutno ne poučujete nobenega razreda.');
+
+        $output = '<div class="teacher-class-overview card card__content p-0">';
+        $output .= '<ul class="class-list list-unstyled p-0 m-0">';
+
+        foreach ($classes as $class) {
+            $output .= '<li class="class-item p-md border-bottom">';
+
+            $output .= '<div class="class-header d-flex justify-between items-center mb-sm">';
+            $output .= '<span class="class-name font-medium">' . htmlspecialchars($class['class_title']) . '</span>';
+            $output .= '<span class="class-code badge badge-secondary">' . htmlspecialchars($class['class_code']) . '</span>';
+            $output .= '</div>';
+
+            $output .= '<div class="class-details d-flex justify-between items-center text-sm text-secondary mb-md">';
+            $output .= '<span class="subject">' . htmlspecialchars($class['subject_name']) . '</span>';
+            $output .= '<span class="student-count d-flex items-center gap-xs">
+                           <span class="material-icons-outlined text-sm">group</span> ' .
+                htmlspecialchars($class['student_count']) . ' dijakov
+                        </span>';
+            $output .= '</div>';
+
+            $output .= '<div class="class-actions d-flex gap-sm justify-end">';
+            $output .= '<a href="/uwuweb/teacher/gradebook.php?class_subject_id=' . urlencode($class['class_subject_id']) . '" class="btn btn-sm btn-primary d-flex items-center gap-xs">
+                           <span class="material-icons-outlined text-sm">grade</span> Redovalnica
+                        </a>';
+            $output .= '<a href="/uwuweb/teacher/attendance.php?class_subject_id=' . urlencode($class['class_subject_id']) . '" class="btn btn-sm btn-secondary d-flex items-center gap-xs">
+                           <span class="material-icons-outlined text-sm">event_available</span> Prisotnost
+                        </a>';
+            $output .= '</div>';
+
+            $output .= '</li>';
+        }
+
+        $output .= '</ul>';
+        $output .= '</div>';
+
+        return $output;
+    } catch (PDOException $e) {
+        error_log("Error in renderTeacherClassOverviewWidget: " . $e->getMessage());
+        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o razredih.');
+    }
+}
+
+/**
+ * Shows attendance status for today's classes taught by the teacher
+ *
+ * @return string HTML content for the widget
+ */
+function renderTeacherAttendanceWidget(): string
+{
+    try {
+        $teacherId = getTeacherId();
+        if (!$teacherId) return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
+
+        $db = getDBConnection();
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
+
+        $todayQuery = "SELECT p.period_id, p.period_label, c.class_code, s.name as subject_name,
+                             cs.class_subject_id,
+                             (SELECT COUNT(*) FROM enrollments WHERE class_id = c.class_id) as total_students,
+                             (SELECT COUNT(*) FROM attendance WHERE period_id = p.period_id) as recorded_attendance
+                      FROM periods p
+                      JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+                      JOIN classes c ON cs.class_id = c.class_id
+                      JOIN subjects s ON cs.subject_id = s.subject_id
+                      WHERE cs.teacher_id = :teacher_id
+                      AND DATE(p.period_date) = CURRENT_DATE()
+                      ORDER BY p.period_label";
+
+        $stmt = $db->prepare($todayQuery);
+        $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
+        $stmt->execute();
+        $todayClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($todayClasses)) return renderPlaceholderWidget('Danes nimate načrtovanega pouka.');
+
+        $output = '<div class="teacher-today-attendance card card__content p-0">';
+        $output .= '<div class="table-responsive">';
+        $output .= '<table class="attendance-table data-table w-100">';
+        $output .= '<thead><tr>
+                      <th>Ura</th>
+                      <th>Razred</th>
+                      <th>Predmet</th>
+                      <th class="text-center">Status</th>
+                      <th class="text-right">Akcija</th>
+                    </tr></thead>';
+        $output .= '<tbody>';
+
+        foreach ($todayClasses as $class) {
+            $recorded = (int)$class['recorded_attendance'];
+            $total = (int)$class['total_students'];
+            $completionPercent = $total > 0 ? round(($recorded / $total) * 100) : 0;
+
+            $statusClass = 'badge-error';
+            $statusText = 'Ne vneseno';
+            $statusIcon = 'edit';
+
+            if ($recorded > 0 && $recorded < $total) {
+                $statusClass = 'badge-warning';
+                $statusText = 'Delno (' . $completionPercent . '%)';
+            } elseif ($recorded >= $total && $total > 0) {
+                $statusClass = 'badge-success';
+                $statusText = 'Zabeleženo';
+                $statusIcon = 'check_circle';
+            } elseif ($total == 0) {
+                $statusClass = 'badge-secondary';
+                $statusText = 'Ni dijakov';
+                $statusIcon = 'info';
+            }
+
+            $output .= '<tr>';
+            $output .= '<td>' . htmlspecialchars($class['period_label']) . '. ura</td>';
+            $output .= '<td>' . htmlspecialchars($class['class_code']) . '</td>';
+            $output .= '<td>' . htmlspecialchars($class['subject_name']) . '</td>';
+            $output .= '<td class="text-center"><span class="attendance-status badge ' . $statusClass . '">' . $statusText . '</span></td>';
+            $output .= '<td class="text-right">
+                           <a href="/uwuweb/teacher/attendance.php?class_subject_id=' . urlencode($class['class_subject_id']) . '&period_id=' . urlencode($class['period_id']) . '"
+                              class="btn btn-sm ' . ($statusIcon == 'check_circle' ? 'btn-secondary' : 'btn-primary') . ' d-inline-flex items-center gap-xs"
+                              title="' . ($statusIcon == 'check_circle' ? 'Preglej' : 'Vnesi') . ' prisotnost">
+                              <span class="material-icons-outlined text-sm">' . $statusIcon . '</span>
+                           </a>
+                        </td>';
+            $output .= '</tr>';
+        }
+
+        $output .= '</tbody>';
+        $output .= '</table>';
+        $output .= '</div>';
+
+        $output .= '<div class="widget-footer mt-md text-right p-md border-top pt-md">';
+        $output .= '<a href="/uwuweb/teacher/attendance.php" class="btn btn-secondary btn-sm">Pojdi na stran Prisotnost</a>';
+        $output .= '</div>';
+
+        $output .= '</div>';
+
+        return $output;
+    } catch (PDOException $e) {
+        error_log("Error in renderTeacherAttendanceWidget: " . $e->getMessage());
+        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o današnji prisotnosti.');
+    }
+}
+
+/**
+ * Shows absence justifications waiting for teacher approval
+ *
+ * @return string HTML content for the widget
+ */
+function renderTeacherPendingJustificationsWidget(): string
+{
+    try {
+        $teacherId = getTeacherId();
+        if (!$teacherId) return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
+
+        $db = getDBConnection();
+        if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
+
+        $limit = 5;
+
+        $query = "SELECT a.att_id, s.first_name, s.last_name, c.class_code, c.title as class_title,
+                         p.period_date, p.period_label, a.status, a.justification, a.justification_file,
+                         subj.name as subject_name
+                  FROM attendance a
+                  JOIN enrollments e ON a.enroll_id = e.enroll_id
+                  JOIN students s ON e.student_id = s.student_id
+                  JOIN periods p ON a.period_id = p.period_id
+                  JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+                  JOIN classes c ON cs.class_id = c.class_id
+                  JOIN subjects subj ON cs.subject_id = subj.subject_id
+                  WHERE cs.teacher_id = :teacher_id
+                  AND a.status = 'A'
+                  AND a.justification IS NOT NULL
+                  AND a.approved IS NULL
+                  ORDER BY p.period_date DESC, s.last_name, s.first_name
+                  LIMIT :limit";
+
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
+        $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        $justifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $countQuery = "SELECT COUNT(*) as total
+                      FROM attendance a
+                      JOIN periods p ON a.period_id = p.period_id
+                      JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+                      WHERE cs.teacher_id = :teacher_id
+                      AND a.status = 'A'
+                      AND a.justification IS NOT NULL
+                      AND a.approved IS NULL";
+
+        $countStmt = $db->prepare($countQuery);
+        $countStmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
+        $countStmt->execute();
+        $totalPending = $countStmt->fetch(PDO::FETCH_ASSOC)['total'] ?? 0;
+
+        if ($totalPending == 0) return renderPlaceholderWidget('Trenutno ni čakajočih opravičil.');
+
+        $output = '<div class="pending-justifications card card__content p-0">';
+
+        $output .= '<div class="justifications-header d-flex justify-between items-center p-md border-bottom">';
+        $output .= '<h5 class="m-0 font-medium">Čakajoča opravičila</h5>';
+        $output .= '<span class="badge badge-warning">' . htmlspecialchars($totalPending) . '</span>';
+        $output .= '</div>';
+
+        $output .= '<ul class="justification-list list-unstyled p-0 m-0">';
+
+        foreach ($justifications as $just) {
+            $output .= '<li class="justification-item p-md border-bottom">';
+
+            $output .= '<div class="student-info d-flex justify-between items-center mb-sm">';
+            $output .= '<strong class="font-medium">' . htmlspecialchars($just['first_name'] . ' ' . $just['last_name']) . '</strong>';
+            $output .= '<span class="class-code badge badge-secondary">' . htmlspecialchars($just['class_code']) . '</span>';
+            $output .= '</div>';
+
+            $formattedDate = date('d.m.Y', strtotime($just['period_date']));
+            $output .= '<div class="absence-info d-flex justify-between flex-wrap gap-sm text-sm text-secondary mb-sm">';
+            $output .= '<span class="d-flex items-center gap-xs"><span class="material-icons-outlined text-sm">calendar_today</span> ' . htmlspecialchars($formattedDate) . '</span>';
+            $output .= '<span class="d-flex items-center gap-xs"><span class="material-icons-outlined text-sm">schedule</span> ' . htmlspecialchars($just['period_label']) . '. ura</span>';
+            $output .= '<span class="d-flex items-center gap-xs"><span class="material-icons-outlined text-sm">book</span> ' . htmlspecialchars($just['subject_name']) . '</span>';
+            $output .= '</div>';
+
+            if (!empty($just['justification'])) {
+                $justificationExcerpt = mb_strimwidth($just['justification'], 0, 80, '...');
+                $output .= '<div class="justification-text text-sm mb-sm fst-italic bg-tertiary p-sm rounded">"' . htmlspecialchars($justificationExcerpt) . '"</div>';
+            }
+
+            if (!empty($just['justification_file'])) $output .= '<div class="attachment-indicator text-sm text-secondary d-flex items-center gap-xs mb-md">
+                            <span class="material-icons-outlined text-sm">attachment</span> Priloga
+                         </div>';
+
+            $output .= '<div class="justification-actions d-flex gap-sm justify-end">';
+            $output .= '<a href="/uwuweb/teacher/justifications.php?action=view&id=' . urlencode($just['att_id']) . '" class="btn btn-sm btn-secondary d-flex items-center gap-xs" title="Podrobnosti">
+                           <span class="material-icons-outlined text-sm">visibility</span>
+                        </a>';
+            $output .= '<a href="/uwuweb/teacher/justifications.php?action=approve&id=' . urlencode($just['att_id']) . '" class="btn btn-sm btn-success d-flex items-center gap-xs" title="Odobri">
+                           <span class="material-icons-outlined text-sm">check</span>
+                        </a>';
+            $output .= '<a href="/uwuweb/teacher/justifications.php?action=reject&id=' . urlencode($just['att_id']) . '" class="btn btn-sm btn-error d-flex items-center gap-xs" title="Zavrni">
+                           <span class="material-icons-outlined text-sm">close</span>
+                        </a>';
+            $output .= '</div>';
+
+            $output .= '</li>';
+        }
+
+        $output .= '</ul>';
+
+        if ($totalPending > $limit) {
+            $output .= '<div class="more-link mt-md text-center border-top pt-md p-md">';
+            $output .= '<a href="/uwuweb/teacher/justifications.php" class="btn btn-sm btn-secondary">Prikaži vsa opravičila (' . $totalPending . ')</a>';
+            $output .= '</div>';
+        }
+
+        $output .= '</div>';
+
+        return $output;
+    } catch (PDOException $e) {
+        error_log("Error in renderTeacherPendingJustificationsWidget: " . $e->getMessage());
+        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o opravičilih.');
+    }
+}
+
+/**
+ * Creates the HTML for the teacher's class averages dashboard widget
+ *
+ * @return string HTML content for the widget
+ */
+function renderTeacherClassAveragesWidget(): string
+{
+    $teacherId = getTeacherId();
+
+    if (!$teacherId) return renderPlaceholderWidget('Za prikaz povprečij razredov se morate identificirati kot učitelj.');
+
+    $db = getDBConnection();
+    if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
+
+    try {
+        $query = "SELECT
+                    cs.class_subject_id,
+                    c.class_id,
+                    c.title AS class_title,
+                    s.subject_id,
+                    s.name AS subject_name,
+                    COUNT(DISTINCT e.student_id) AS student_count,
+                    (SELECT AVG(CASE WHEN gi.max_points > 0 THEN (g.points / gi.max_points) * 100 END)
+                     FROM grades g
+                     JOIN grade_items gi ON g.item_id = gi.item_id
+                     WHERE gi.class_subject_id = cs.class_subject_id) AS avg_score
+                  FROM class_subjects cs
+                  JOIN classes c ON cs.class_id = c.class_id
+                  JOIN subjects s ON cs.subject_id = s.subject_id
+                  LEFT JOIN enrollments e ON c.class_id = e.class_id
+                  WHERE cs.teacher_id = :teacher_id
+                  GROUP BY cs.class_subject_id, c.class_id, c.title, s.subject_id, s.name
+                  ORDER BY s.name, c.title";
+
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
+        $stmt->execute();
+        $classAverages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Database error in renderTeacherClassAveragesWidget: " . $e->getMessage());
+        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o razrednih povprečjih.');
+    }
+
+    $html = '<div class="widget-content">';
+
+    if (empty($classAverages)) $html .= '<div class="card card__content text-center p-md"><p class="m-0">Nimate razredov z ocenami.</p></div>'; else {
+        $html .= '<div class="row">';
+
+        foreach ($classAverages as $class) {
+            $avgScoreFormatted = $class['avg_score'] !== null ? number_format($class['avg_score'], 1) : 'N/A';
+            $scoreClass = 'text-secondary';
+
+            if ($class['avg_score'] !== null) if ($class['avg_score'] >= 80) $scoreClass = 'grade-high'; elseif ($class['avg_score'] >= 60) $scoreClass = 'grade-medium';
+            else $scoreClass = 'grade-low';
+
+            $html .= '<div class="col-12 col-md-6 col-lg-4 mb-md">';
+            $html .= '<div class="card class-average-card h-100 d-flex flex-column">';
+
+            $html .= '<div class="card__header d-flex justify-between items-center p-md">';
+            $html .= '<h5 class="card__title m-0 font-medium">' . htmlspecialchars($class['subject_name']) . '</h5>';
+            $html .= '<span class="badge badge-secondary">' . htmlspecialchars($class['class_title']) . '</span>';
+            $html .= '</div>';
+
+            $html .= '<div class="card__content p-md flex-grow-1">';
+            $html .= '<div class="average-stats d-flex flex-column items-center text-center gap-md">';
+
+            $html .= '<div class="average-score ' . $scoreClass . '">';
+            $html .= '<span class="score-value d-block font-size-xl font-bold">' . $avgScoreFormatted . ($avgScoreFormatted !== 'N/A' ? '%' : '') . '</span>';
+            $html .= '<span class="text-sm text-secondary">Povprečje razreda</span>';
+            $html .= '</div>';
+
+            $html .= '<div class="stat-item">';
+            $html .= '<div class="stat-value font-medium">' . (int)$class['student_count'] . '</div>';
+            $html .= '<div class="stat-label text-sm text-secondary">Dijakov</div>';
+            $html .= '</div>';
+
+            $html .= '</div>';
+            $html .= '</div>';
+
+            $html .= '<div class="card__footer p-md mt-auto text-right border-top pt-md">';
+            $html .= '<a href="/uwuweb/teacher/gradebook.php?class_subject_id=' . (int)$class['class_subject_id'] . '" class="btn btn-sm btn-primary">Ogled redovalnice</a>';
+            $html .= '</div>';
+
+            $html .= '</div>';
+            $html .= '</div>';
+        }
+
+        $html .= '</div>';
+    }
+
+    $html .= '</div>';
+
+    return $html;
 }
