@@ -2,41 +2,43 @@
 /**
  * Teacher Functions Library
  *
- * Centralized library of functions used by teacher module pages
+ * Centralized functions for teacher operations including grade management, attendance
+ * tracking, and justification processing.
  *
  * File path: /teacher/teacher_functions.php
  *
  * Teacher Information Functions:
- * - getTeacherId(?int $userId = null): ?int - Retrieves teacher_id from user_id
- * - getTeacherClasses(int $teacherId): array - Gets classes taught by a teacher
- * - teacherHasAccessToClassSubject(int $classSubjectId, ?int $teacherId = null): bool - Checks if teacher has access to a class-subject
+ * - getTeacherId(?int $userId = null): ?int - Gets teacher_id from user_id or current session user if null
+ * - getTeacherClasses(int $teacherId): array - Returns classes taught by teacher with code, title and subject info
+ * - teacherHasAccessToClassSubject(int $classSubjectId, ?int $teacherId = null): bool - Verifies teacher access to class-subject. Uses current teacher if $teacherId null
  *
  * Class & Student Management:
- * - getClassStudents(int $classId): array - Gets students enrolled in a specific class
- * - getClassPeriods(int $classSubjectId): array - Gets periods for a class-subject
+ * - getClassStudents(int $classId): array - Returns students enrolled in a class
+ * - getClassPeriods(int $classSubjectId): array - Returns periods for a class-subject
  *
  * Attendance Management:
- * - getPeriodAttendance(int $periodId): array - Gets attendance records for a period
- * - addPeriod(int $classSubjectId, string $periodDate, string $periodLabel): bool|int - Adds a new period to a class
- * - saveAttendance(int $enrollId, int $periodId, string $status): bool - Saves attendance status for a student
+ * - getPeriodAttendance(int $periodId): array - Returns attendance records for a period
+ * - addPeriod(int $classSubjectId, string $periodDate, string $periodLabel): bool|int - Creates new period for class. Returns period_id or false
+ * - saveAttendance(int $enrollId, int $periodId, string $status): bool - Records student attendance status
+ * - getStudentAttendanceByDate(int $studentId, string $date): array - Gets attendance records for a student on a specific date
  *
  * Grade Management:
- * - getGradeItems(int $classSubjectId): array - Gets grade items for a class-subject
- * - getClassGrades(int $classSubjectId): array - Gets all grades for students in a class
- * - addGradeItem(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): bool|int - Adds a new grade item
- * - saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool - Saves a grade for a student
+ * - getGradeItems(int $classSubjectId): array - Returns grade items for class-subject after permission check
+ * - getClassGrades(int $classSubjectId): array - Returns all grades for students in a class
+ * - addGradeItem(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): bool|int - Creates grade item. Returns item_id or false
+ * - saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool - Creates or updates student grade
  *
  * Justification Management:
- * - getPendingJustifications(?int $teacherId = null): array - Gets pending absence justifications
- * - getJustificationById(int $absenceId): ?array - Gets details about a specific justification
- * - approveJustification(int $absenceId): bool - Approves a justification
- * - rejectJustification(int $absenceId, string $reason): bool - Rejects a justification with reason
+ * - getPendingJustifications(?int $teacherId = null): array - Returns pending justifications for teacher or all if admin
+ * - getJustificationById(int $absenceId): ?array - Returns justification details with student info and attachments
+ * - approveJustification(int $absenceId): bool - Approves justification and updates attendance
+ * - rejectJustification(int $absenceId, string $reason): bool - Rejects justification with reason
  *
  * Dashboard Widget Functions:
- * - renderTeacherClassOverviewWidget(): string - Renders class overview widget for teachers
- * - renderTeacherAttendanceWidget(): string - Renders daily attendance widget for teachers
- * - renderTeacherPendingJustificationsWidget(): string - Renders pending justifications widget
- * - renderTeacherClassAveragesWidget(): string - Renders class averages widget for teacher's classes
+ * - renderTeacherClassOverviewWidget(): string - Displays teacher's assigned classes with subject and student count information
+ * - renderTeacherAttendanceWidget(): string - Shows today's classes with attendance recording status and quick action links
+ * - renderTeacherPendingJustificationsWidget(): string - Lists pending absence justifications awaiting teacher approval
+ * - renderTeacherClassAveragesWidget(): string - Visualizes academic performance averages across teacher's classes
  */
 
 require_once __DIR__ . '/../includes/db.php';

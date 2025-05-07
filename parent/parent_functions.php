@@ -696,6 +696,7 @@ function renderParentAttendanceWidget(): string
 
 /**
  * Creates the HTML for the parent's view of their child's class averages
+ * Shows academic performance for each child compared to class averages
  *
  * @return string HTML content for the widget
  */

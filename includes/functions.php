@@ -10,11 +10,15 @@
  *
  * Functions:
  * User and Role Management:
- * - getUserInfo(int $userId): ?array - Retrieves user profile information by user ID
+ * - getUserInfo(int $userId): ?array - Retrieves comprehensive user profile with role-specific data (teacher_id, student details, parent_id with children)
  *
  * Security Functions:
  * - sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never - Sends a standardized JSON error response and exits
  * - validateDate(string $date): bool - Validates date format (YYYY-MM-DD)
+ *
+ * Formatting Functions:
+ * - formatDateDisplay(string $date): string - Formats date from YYYY-MM-DD to DD.MM.YYYY
+ * - formatDateTimeDisplay(string $datetime): string - Formats datetime to DD.MM.YYYY
  *
  * Navigation and Widgets:
  * - getNavItemsByRole(int $role): array - Returns navigation items based on user role
@@ -24,22 +28,19 @@
  * Activity Widgets:
  * - renderRecentActivityWidget(): string - Renders the recent activity widget
  *
- * Attendance and Grade Utilities:
+ * Attendance Utilities:
  * - getAttendanceStatusLabel(string $status): string - Translates attendance status code to readable label
  * - calculateAttendanceStats(array $attendance): array - Calculates attendance statistics from a set of records
  * - calculateClassAverage(array $grades): float - Calculates overall grade average for a class
  * - getGradeLetter(float $percentage): string - Converts numerical percentage to letter grade
  * - getJustificationFileInfo(int $absenceId): ?string - Gets info about a justification file
- *
- * Formatting Functions:
- * - formatDateDisplay(string $date): string - Formats date from YYYY-MM-DD to DD.MM.YYYY
- * - formatDateTimeDisplay(string $datetime): string - Formats datetime to DD.MM.YYYY
  */
 
 require_once __DIR__ . '/auth.php';
 
 /**
- * Retrieves user profile information including username, role, and role name
+ * Retrieves comprehensive user profile with role-specific data (teacher_id, student
+ * details, parent_id with children)
  *
  * @param int $userId The user ID to look up
  * @return array|null User information array or null if not found
@@ -308,7 +309,7 @@ function getWidgetsByRole(int $role): array
 }
 
 /**
- * Creates a simple placeholder for widgets that don't have data or aren't implemented
+ * Creates a simple placeholder card for widgets without data
  *
  * @param string $message Optional message to display in the placeholder
  * @return string HTML content for the placeholder widget

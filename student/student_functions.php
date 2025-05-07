@@ -23,7 +23,7 @@
  * Absence Justifications:
  * - uploadJustification(int $absenceId, string $justification): bool - Stores absence explanation text
  * - validateJustificationFile(array $file): bool - Checks justification file validity
- * - saveJustificationFile(array $file, int $absenceId): bool - Stores justification file securely
+ * - saveJustificationFile(array $file, int $absenceId): bool|string - Stores justification file securely
  * - getJustificationFileInfo(int $absenceId): ?string - Returns justification file metadata
  *
  * Dashboard Widgets:
