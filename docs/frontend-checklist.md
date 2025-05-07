@@ -43,12 +43,14 @@
 - [x] `/parent/attendance.php` - Child attendance view
 
 ## Implementation Order Recommendation
+
 1. Start with core CSS and JS files
 2. Implement common components (header, footer)
 3. Create the dashboard layout and widgets
 4. Build role-specific pages
 
 ## Key Requirements
+
 - Follow all the instructions from project-outline.md
 - Mobile-first responsive design
 - Only HTML, CSS, and vanilla JavaScript

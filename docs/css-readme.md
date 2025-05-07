@@ -2,7 +2,9 @@
 
 ## Overview
 
-This stylesheet provides a comprehensive design system for the uwuweb Grade Management System. It's built with a dark theme and includes responsive components, utility classes, and role-based styling for all user types (admin, teacher, student, parent).
+This stylesheet provides a comprehensive design system for the uwuweb Grade Management System. It's built with a dark
+theme and includes responsive components, utility classes, and role-based styling for all user types (admin, teacher,
+student, parent).
 
 ## Table of Contents
 
@@ -14,16 +16,16 @@ This stylesheet provides a comprehensive design system for the uwuweb Grade Mana
 6. [Status & State Indicators](#status--indicators)
 7. [Animations](#animations)
 8. [Utility Classes]()
-   - [Spacing Utilities](#spacing-utilities)
-   - [Display Utilities](#display-utilities)
-   - [Flex Utilities](#flex-utilities)
-   - [Text Utilities](#text-utilities)
-   - [Visual Utilities](#visual-utilities)
+  - [Spacing Utilities](#spacing-utilities)
+  - [Display Utilities](#display-utilities)
+  - [Flex Utilities](#flex-utilities)
+  - [Text Utilities](#text-utilities)
+  - [Visual Utilities](#visual-utilities)
 9. [Additional UI Elements]()
-   - [Alerts](#alerts)
-   - [Modals](#modals)
-   - [Badges](#badges)
-   - [Dark Mode Toggle]()
+  - [Alerts](#alerts)
+  - [Modals](#modals)
+  - [Badges](#badges)
+  - [Dark Mode Toggle]()
 10. [Responsive Design](#responsive-design)
 11. [Accessibility](#accessibility)
 12. [Print Styles](#print-styles)
@@ -35,14 +37,16 @@ The stylesheet uses CSS variables for consistent theming. Key variable categorie
 ### Colors
 
 - **Backgrounds**: `--bg-primary` (dark charcoal), `--bg-secondary` (rich gray), `--bg-tertiary` (medium gray)
-- **Accent Colors**: `--accent-primary` (vibrant blue), `--accent-secondary` (soft slate), `--accent-tertiary` (lighter blue), `--accent-warning` (amber)
+- **Accent Colors**: `--accent-primary` (vibrant blue), `--accent-secondary` (soft slate), `--accent-tertiary` (lighter
+  blue), `--accent-warning` (amber)
 - **Text Colors**: `--text-primary`, `--text-secondary`, `--text-disabled`
 - **Borders**: `--border-color-light`, `--border-color-medium`, `--border-color-focus`
 
 ### Typography
 
 - **Font Family**: `--font-primary` (Quicksand)
-- **Font Sizes**: `--font-size-xs` (12px), `--font-size-sm` (14px), `--font-size-md` (16px), `--font-size-lg` (20px), `--font-size-xl` (24px), `--font-size-xxl` (32px)
+- **Font Sizes**: `--font-size-xs` (12px), `--font-size-sm` (14px), `--font-size-md` (16px), `--font-size-lg` (20px),
+  `--font-size-xl` (24px), `--font-size-xxl` (32px)
 - **Font Weights**: `--font-weight-normal` (400), `--font-weight-medium` (500), `--font-weight-bold` (600)
 
 ### Spacing
@@ -92,7 +96,7 @@ Basic styling is applied to HTML elements without classes:
 - `.card`: Base card with shadow and hover effects
 - `.card::before`: Top border highlight on hover (automatic)
 - `.card__title`: Card header
-- `.card__content`: Card body 
+- `.card__content`: Card body
 - `.card__footer`: Card footer with top border
 
 ### Buttons
@@ -278,18 +282,18 @@ Classes specifically for different user roles:
   - `.d-inline-flex`: Display as inline flex container
   - `.d-grid`: Display as grid container
   - `.d-none`: Hide element
-  
+
 - **Responsive Display** (applied at specific breakpoints):
   - Small devices:
     - `.d-sm-block`: Display as block on small devices
-  
+
   - Medium devices (768px and up):
     - `.d-md-block`: Display as block
     - `.d-md-inline-block`: Display as inline-block
     - `.d-md-flex`: Display as flex container
     - `.d-md-grid`: Display as grid container
     - `.d-md-none`: Hide element
-  
+
   - Large devices (1024px and up):
     - `.d-lg-block`: Display as block
     - `.d-lg-inline-block`: Display as inline-block
@@ -299,20 +303,21 @@ Classes specifically for different user roles:
 
 ## Flex Utilities
 
-- **Direction**: 
+- **Direction**:
   - `.flex-row`, `.flex-row-reverse`
   - `.flex-column`, `.flex-column-reverse`
-  
+
 - **Wrapping**:
   - `.flex-wrap`, `.flex-nowrap`
-  
+
 - **Growth/Shrink**:
   - `.flex-grow-1`, `.flex-shrink-0`
-  
+
 - **Alignment**:
   - Vertical: `.items-start`, `.items-end`, `.items-center`, `.items-baseline`, `.items-stretch`
-  - Horizontal: `.justify-start`, `.justify-end`, `.justify-center`, `.justify-between`, `.justify-around`, `.justify-evenly`
-  
+  - Horizontal: `.justify-start`, `.justify-end`, `.justify-center`, `.justify-between`, `.justify-around`,
+    `.justify-evenly`
+
 - **Spacing**:
   - `.gap-xs`, `.gap-sm`, `.gap-md`, `.gap-lg`, `.gap-xl`
 
@@ -320,17 +325,17 @@ Classes specifically for different user roles:
 
 - **Alignment**:
   - `.text-left`, `.text-center`, `.text-right`
-  
+
 - **Color**:
   - `.text-primary`, `.text-secondary`, `.text-disabled`
   - `.text-accent`, `.text-warning`, `.text-success`, `.text-error`
-  
+
 - **Size**:
   - `.text-xs`, `.text-sm`, `.text-md`, `.text-lg`, `.text-xl`
-  
+
 - **Weight**:
   - `.font-normal`, `.font-medium`, `.font-bold`
-  
+
 - **Formatting**:
   - `.text-uppercase`
   - `.text-nowrap`
@@ -342,13 +347,13 @@ Classes specifically for different user roles:
   - `.rounded`: Button-radius border radius
   - `.rounded-lg`: Card-radius border radius
   - `.rounded-full`: Circular/pill shape (9999px)
-  
+
 - **Shadows**:
   - `.shadow-sm`: Small shadow
   - `.shadow`: Medium shadow
   - `.shadow-lg`: Large shadow
   - `.shadow-none`: No shadow
-  
+
 - **Opacity**:
   - `.opacity-75`: 75% opacity
   - `.opacity-50`: 50% opacity
@@ -376,7 +381,8 @@ The stylesheet uses a mobile-first approach with breakpoints:
 - `.col-md-*`: Applied at 768px and up (tablet)
   - Available classes: `.col-md-3`, `.col-md-4`, `.col-md-6`, `.col-md-8`, `.col-md-9`, `.col-md-12`
 - `.col-lg-*`: Applied at 1024px and up (desktop)
-  - Available classes: `.col-lg-2`, `.col-lg-3`, `.col-lg-4`, `.col-lg-6`, `.col-lg-8`, `.col-lg-9`, `.col-lg-10`, `.col-lg-12`
+  - Available classes: `.col-lg-2`, `.col-lg-3`, `.col-lg-4`, `.col-lg-6`, `.col-lg-8`, `.col-lg-9`, `.col-lg-10`,
+    `.col-lg-12`
 
 ### Responsive Display Utilities
 

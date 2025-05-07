@@ -5,7 +5,7 @@
  * Provides common functionality across all pages
  */
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Mobile navigation toggle
     initMobileNavigation();
 
@@ -30,12 +30,12 @@ function initMobileNavigation() {
     const navMenu = document.getElementById('navMenu');
 
     if (navToggle && navMenu) {
-        navToggle.addEventListener('click', function() {
+        navToggle.addEventListener('click', function () {
             navMenu.classList.toggle('open');
         });
 
         // Close menu when clicking outside
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', function (event) {
             if (!navToggle.contains(event.target) && !navMenu.contains(event.target)) {
                 navMenu.classList.remove('open');
             }
@@ -50,7 +50,7 @@ function initMobileNavigation() {
 function initModals() {
     // Generic modal functionality
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
-        overlay.addEventListener('click', function() {
+        overlay.addEventListener('click', function () {
             // Find the parent modal
             const modal = this.closest('.modal');
             if (modal) {
@@ -61,7 +61,7 @@ function initModals() {
 
     // Close buttons
     document.querySelectorAll('.btn-close').forEach(button => {
-        button.addEventListener('click', function() {
+        button.addEventListener('click', function () {
             // Find the parent modal
             const modal = this.closest('.modal');
             if (modal) {
@@ -73,7 +73,7 @@ function initModals() {
     // Cancel buttons
     document.querySelectorAll('.modal .btn').forEach(button => {
         if (button.textContent.trim() === 'Cancel') {
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function () {
                 // Find the parent modal
                 const modal = this.closest('.modal');
                 if (modal) {
@@ -84,7 +84,7 @@ function initModals() {
     });
 
     // Escape key closes modal
-    document.addEventListener('keydown', function(event) {
+    document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
             document.querySelectorAll('.modal').forEach(modal => {
                 if (modal.style.display === 'flex') {
@@ -146,7 +146,7 @@ function initTabs() {
     const tabLinks = document.querySelectorAll('.tab-link');
 
     tabLinks.forEach(tabLink => {
-        tabLink.addEventListener('click', function(e) {
+        tabLink.addEventListener('click', function (e) {
             e.preventDefault();
 
             const tabId = this.getAttribute('data-tab');
@@ -183,7 +183,7 @@ function initFormValidation() {
     forms.forEach(form => {
         const requiredInputs = form.querySelectorAll('input[required], select[required], textarea[required]');
 
-        form.addEventListener('submit', function(event) {
+        form.addEventListener('submit', function (event) {
             let isValid = true;
 
             requiredInputs.forEach(input => {
@@ -217,7 +217,7 @@ function initFormValidation() {
 
         // Remove validation styling when user starts typing
         requiredInputs.forEach(input => {
-            input.addEventListener('input', function() {
+            input.addEventListener('input', function () {
                 if (this.value.trim()) {
                     this.classList.remove('is-invalid');
 
@@ -238,7 +238,7 @@ function initFormValidation() {
             const passwordField = document.getElementById(input.id.replace('confirm_', ''));
 
             if (passwordField) {
-                input.addEventListener('input', function() {
+                input.addEventListener('input', function () {
                     if (this.value && this.value !== passwordField.value) {
                         this.classList.add('is-invalid');
 

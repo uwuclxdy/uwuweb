@@ -62,6 +62,7 @@ sudo nano /opt/lampp/htdocs/uwuweb/includes/db.php
 ```
 
 Default config (usually works with standard XAMPP):
+
 ```php
 $db_config = [
     'host' => 'localhost',
