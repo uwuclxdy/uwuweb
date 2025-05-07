@@ -64,7 +64,7 @@ function getAllUsers(): array
     try {
         $pdo = safeGetDBConnection('getAllUsers');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllUsers", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getAllUsers", 500, "admin_functions.php");
 
         $query = "SELECT u.*, r.name as role_name,
                     CASE
@@ -80,7 +80,7 @@ function getAllUsers(): array
 
         return $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        logDBError("Error retrieving users: " . $e->getMessage());
+        logDBError("Napaka pri pridobivanju uporabnikov: " . $e->getMessage());
         return [];
     }
 }
@@ -142,7 +142,7 @@ function getUserDetails(int $userId): ?array
     try {
         $pdo = safeGetDBConnection('getUserDetails');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getUserDetails", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getUserDetails", 500, "admin_functions.php");
 
         $query = "SELECT u.*, r.name as role_name
                 FROM users u
@@ -193,7 +193,7 @@ function getUserDetails(int $userId): ?array
 
         return $user;
     } catch (PDOException $e) {
-        logDBError("Error retrieving user details: " . $e->getMessage());
+        logDBError("Napaka pri pridobivanju podatkov o uporabniku: " . $e->getMessage());
         return null;
     }
 }
@@ -211,7 +211,7 @@ function createNewUser(array $userData): bool|int
     try {
         $pdo = safeGetDBConnection('createNewUser');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in createNewUser", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija createNewUser", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -273,7 +273,7 @@ function createNewUser(array $userData): bool|int
         return $userId;
     } catch (PDOException $e) {
         if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
-        logDBError("Error creating new user: " . $e->getMessage());
+        logDBError("Napaka pri ustvarjanju novega uporabnika: " . $e->getMessage());
         return false;
     }
 }
@@ -292,7 +292,7 @@ function updateUser(int $userId, array $userData): bool
     try {
         $pdo = safeGetDBConnection('updateUser');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in updateUser", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija updateUser", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -385,7 +385,7 @@ function updateUser(int $userId, array $userData): bool
         return true;
     } catch (PDOException $e) {
         if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
-        logDBError("Error updating user: " . $e->getMessage());
+        logDBError("Napaka pri posodabljanju uporabnika: " . $e->getMessage());
         return false;
     }
 }
@@ -404,7 +404,7 @@ function resetUserPassword(int $userId, string $newPassword): bool
     try {
         $pdo = safeGetDBConnection('resetUserPassword');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in resetUserPassword", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija resetUserPassword", 500, "admin_functions.php");
 
         $passHash = password_hash($newPassword, PASSWORD_DEFAULT);
 
@@ -413,7 +413,7 @@ function resetUserPassword(int $userId, string $newPassword): bool
 
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
-        logDBError("Error resetting user password: " . $e->getMessage());
+        logDBError("Napaka pri ponastavitvi gesla uporabnika: " . $e->getMessage());
         return false;
     }
 }
@@ -429,7 +429,7 @@ function deleteUser(int $userId): bool
     try {
         $pdo = safeGetDBConnection('deleteUser');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in deleteUser", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija deleteUser", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -530,7 +530,7 @@ function deleteUser(int $userId): bool
         return true;
     } catch (PDOException $e) {
         if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
-        logDBError("Error deleting user: " . $e->getMessage());
+        logDBError("Napaka pri brisanju uporabnika: " . $e->getMessage());
         return false;
     }
 }
@@ -547,13 +547,13 @@ function getAllSubjects(): array
     try {
         $pdo = safeGetDBConnection('getAllSubjects');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllSubjects", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getAllSubjects", 500, "admin_functions.php");
 
         $query = "SELECT * FROM subjects ORDER BY name";
 
         return $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        logDBError("Error retrieving subjects: " . $e->getMessage());
+        logDBError("Napaka pri pridobivanju predmetov: " . $e->getMessage());
         return [];
     }
 }
@@ -608,7 +608,7 @@ function getSubjectDetails(int $subjectId): ?array
     try {
         $pdo = safeGetDBConnection('getSubjectDetails');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getSubjectDetails", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getSubjectDetails", 500, "admin_functions.php");
 
         $query = "SELECT * FROM subjects WHERE subject_id = ?";
 
@@ -633,7 +633,7 @@ function getSubjectDetails(int $subjectId): ?array
 
         return $subject;
     } catch (PDOException $e) {
-        logDBError("Error retrieving subject details: " . $e->getMessage());
+        logDBError("Napaka pri pridobivanju podatkov o predmetu: " . $e->getMessage());
         return null;
     }
 }
@@ -651,14 +651,14 @@ function createSubject(array $subjectData): bool|int
     try {
         $pdo = safeGetDBConnection('createSubject');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in createSubject", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija createSubject", 500, "admin_functions.php");
 
         $stmt = $pdo->prepare("INSERT INTO subjects (name) VALUES (?)");
         $stmt->execute([$subjectData['name']]);
 
         return $pdo->lastInsertId();
     } catch (PDOException $e) {
-        logDBError("Error creating subject: " . $e->getMessage());
+        logDBError("Napaka pri ustvarjanju predmeta: " . $e->getMessage());
         return false;
     }
 }
@@ -677,14 +677,14 @@ function updateSubject(int $subjectId, array $subjectData): bool
     try {
         $pdo = safeGetDBConnection('updateSubject');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in updateSubject", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija updateSubject", 500, "admin_functions.php");
 
         $stmt = $pdo->prepare("UPDATE subjects SET name = ? WHERE subject_id = ?");
         $stmt->execute([$subjectData['name'], $subjectId]);
 
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
-        logDBError("Error updating subject: " . $e->getMessage());
+        logDBError("Napaka pri posodabljanju predmeta: " . $e->getMessage());
         return false;
     }
 }
@@ -700,7 +700,7 @@ function deleteSubject(int $subjectId): bool
     try {
         $pdo = safeGetDBConnection('deleteSubject');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in deleteSubject", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija deleteSubject", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -733,7 +733,7 @@ function deleteSubject(int $subjectId): bool
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
         if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
-        logDBError("Error deleting subject: " . $e->getMessage());
+        logDBError("Napaka pri brisanju predmeta: " . $e->getMessage());
         return false;
     }
 }
@@ -750,7 +750,7 @@ function getAllClasses(): array
     try {
         $pdo = safeGetDBConnection('getAllClasses');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllClasses", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getAllClasses", 500, "admin_functions.php");
 
         $query = "
             SELECT c.*, t.teacher_id, u.username as homeroom_teacher_name
@@ -762,7 +762,7 @@ function getAllClasses(): array
 
         return $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        logDBError("Error retrieving classes: " . $e->getMessage());
+        logDBError("Napaka pri pridobivanju razredov: " . $e->getMessage());
         return [];
     }
 }
@@ -819,7 +819,7 @@ function getClassDetails(int $classId): ?array
     try {
         $pdo = safeGetDBConnection('getClassDetails');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getClassDetails", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getClassDetails", 500, "admin_functions.php");
 
         $query = "
             SELECT c.*, t.teacher_id, u.username as homeroom_teacher_name
@@ -859,7 +859,7 @@ function getClassDetails(int $classId): ?array
 
         return $class;
     } catch (PDOException $e) {
-        logDBError("Error retrieving class details: " . $e->getMessage());
+        logDBError("Napaka pri pridobivanju podatkov o razredu: " . $e->getMessage());
         return null;
     }
 }
@@ -877,7 +877,7 @@ function createClass(array $classData): bool|int
     try {
         $pdo = safeGetDBConnection('createClass');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in createClass", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija createClass", 500, "admin_functions.php");
 
         $stmt = $pdo->prepare("INSERT INTO classes (class_code, title, homeroom_teacher_id) VALUES (?, ?, ?)");
         $stmt->execute([
@@ -888,7 +888,7 @@ function createClass(array $classData): bool|int
 
         return $pdo->lastInsertId();
     } catch (PDOException $e) {
-        logDBError("Error creating class: " . $e->getMessage());
+        logDBError("Napaka pri ustvarjanju razreda: " . $e->getMessage());
         return false;
     }
 }
@@ -907,7 +907,7 @@ function updateClass(int $classId, array $classData): bool
     try {
         $pdo = safeGetDBConnection('updateClass');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in updateClass", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija updateClass", 500, "admin_functions.php");
 
         $updates = [];
         $params = [];
@@ -937,7 +937,7 @@ function updateClass(int $classId, array $classData): bool
 
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
-        logDBError("Error updating class: " . $e->getMessage());
+        logDBError("Napaka pri posodabljanju razreda: " . $e->getMessage());
         return false;
     }
 }
@@ -953,7 +953,7 @@ function deleteClass(int $classId): bool
     try {
         $pdo = safeGetDBConnection('deleteClass');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in deleteClass", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija deleteClass", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -982,7 +982,7 @@ function deleteClass(int $classId): bool
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
         if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
-        logDBError("Error deleting class: " . $e->getMessage());
+        logDBError("Napaka pri brisanju razreda: " . $e->getMessage());
         return false;
     }
 }
@@ -1002,7 +1002,7 @@ function assignSubjectToClass(array $assignmentData): bool|int
     try {
         $pdo = safeGetDBConnection('assignSubjectToClass');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in assignSubjectToClass", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija assignSubjectToClass", 500, "admin_functions.php");
 
         $stmt = $pdo->prepare("SELECT class_subject_id FROM class_subjects WHERE class_id = ? AND subject_id = ?");
         $stmt->execute([$assignmentData['class_id'], $assignmentData['subject_id']]);
@@ -1018,7 +1018,7 @@ function assignSubjectToClass(array $assignmentData): bool|int
 
         return $pdo->lastInsertId();
     } catch (PDOException $e) {
-        logDBError("Error assigning subject to class: " . $e->getMessage());
+        logDBError("Napaka pri dodeljevanju predmeta razredu: " . $e->getMessage());
         return false;
     }
 }
@@ -1037,14 +1037,14 @@ function updateClassSubjectAssignment(int $assignmentId, array $assignmentData):
     try {
         $pdo = safeGetDBConnection('updateClassSubjectAssignment');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in updateClassSubjectAssignment", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija updateClassSubjectAssignment", 500, "admin_functions.php");
 
         $stmt = $pdo->prepare("UPDATE class_subjects SET teacher_id = ? WHERE class_subject_id = ?");
         $stmt->execute([$assignmentData['teacher_id'], $assignmentId]);
 
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
-        logDBError("Error updating class-subject assignment: " . $e->getMessage());
+        logDBError("Napaka pri posodabljanju dodelitve predmeta razredu: " . $e->getMessage());
         return false;
     }
 }
@@ -1060,7 +1060,7 @@ function removeSubjectFromClass(int $assignmentId): bool
     try {
         $pdo = safeGetDBConnection('removeSubjectFromClass');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in removeSubjectFromClass", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija removeSubjectFromClass", 500, "admin_functions.php");
 
         $pdo->beginTransaction();
 
@@ -1091,7 +1091,7 @@ function removeSubjectFromClass(int $assignmentId): bool
         return $stmt->rowCount() > 0;
     } catch (PDOException $e) {
         if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
-        logDBError("Error removing subject from class: " . $e->getMessage());
+        logDBError("Napaka pri odstranjevanju predmeta iz razreda: " . $e->getMessage());
         return false;
     }
 }
@@ -1106,7 +1106,7 @@ function getAllClassSubjectAssignments(): array
     try {
         $pdo = safeGetDBConnection('getAllClassSubjectAssignments');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllClassSubjectAssignments", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getAllClassSubjectAssignments", 500, "admin_functions.php");
 
         $query = "
             SELECT cs.class_subject_id, c.class_id, c.class_code, c.title as class_title,
@@ -1122,7 +1122,7 @@ function getAllClassSubjectAssignments(): array
 
         return $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        logDBError("Error getting class-subject assignments: " . $e->getMessage());
+        logDBError("Napaka pri pridobivanju dodelitev predmetov razredom: " . $e->getMessage());
         return [];
     }
 }
@@ -1137,7 +1137,7 @@ function getAllTeachers(): array
     try {
         $pdo = safeGetDBConnection('getAllTeachers');
 
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllTeachers", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getAllTeachers", 500, "admin_functions.php");
 
         $query = "
             SELECT t.teacher_id, u.user_id, u.username
@@ -1152,7 +1152,7 @@ function getAllTeachers(): array
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        logDBError("Error getting teachers: " . $e->getMessage());
+        logDBError("Napaka pri pridobivanju učiteljev: " . $e->getMessage());
         return [];
     }
 }
@@ -1166,7 +1166,7 @@ function getAllStudentsBasicInfo(): array
 {
     try {
         $pdo = safeGetDBConnection('getAllStudentsBasicInfo');
-        if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in getAllStudentsBasicInfo", 500, "admin_functions.php");
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getAllStudentsBasicInfo", 500, "admin_functions.php");
 
         $query = "SELECT s.student_id, s.user_id, s.first_name, s.last_name, s.class_code, u.username
                  FROM students s
@@ -1175,7 +1175,7 @@ function getAllStudentsBasicInfo(): array
 
         return $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
-        logDBError("Error retrieving students basic info: " . $e->getMessage());
+        logDBError("Napaka pri pridobivanju osnovnih podatkov o dijakih: " . $e->getMessage());
         return [];
     }
 }
@@ -1188,46 +1188,46 @@ function getAllStudentsBasicInfo(): array
  */
 function validateUserForm(array $userData): bool|string
 {
-    if (empty($userData['username'])) return 'Username is required.';
+    if (empty($userData['username'])) return 'Uporabniško ime je obvezno.';
 
-    if (!preg_match('/^\w+$/', $userData['username'])) return 'Username must contain only letters, numbers and underscores.';
+    if (!preg_match('/^\w+$/', $userData['username'])) return 'Uporabniško ime lahko vsebuje samo črke, številke in podčrtaje.';
 
-    if (strlen($userData['username']) < 3 || strlen($userData['username']) > 50) return 'Username must be between 3 and 50 characters.';
+    if (strlen($userData['username']) < 3 || strlen($userData['username']) > 50) return 'Uporabniško ime mora biti dolgo med 3 in 50 znakov.';
 
-    if (!isset($userData['user_id']) && usernameExists($userData['username'])) return 'Username is already taken.';
+    if (!isset($userData['user_id']) && usernameExists($userData['username'])) return 'Uporabniško ime je že zasedeno.';
     // Check if username exists when updating, excluding self
-    if (isset($userData['user_id']) && usernameExists($userData['username'], $userData['user_id'])) return 'Username is already taken.';
+    if (isset($userData['user_id']) && usernameExists($userData['username'], $userData['user_id'])) return 'Uporabniško ime je že zasedeno.';
 
-    if (empty($userData['role_id']) || !in_array($userData['role_id'], [ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT, ROLE_PARENT], true)) return 'Invalid role selected.';
+    if (empty($userData['role_id']) || !in_array($userData['role_id'], [ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT, ROLE_PARENT], true)) return 'Izbrana je neveljavna vloga.';
 
-    if (!isset($userData['user_id']) && empty($userData['password'])) return 'Password is required for new users.';
+    if (!isset($userData['user_id']) && empty($userData['password'])) return 'Geslo je obvezno za nove uporabnike.';
 
     if (!isset($userData['user_id']) && !empty($userData['password'])) {
-        if (strlen($userData['password']) < 8) return 'Password must be at least 8 characters long.';
-        if (!preg_match('/[A-Za-z]/', $userData['password']) || !preg_match('/\d/', $userData['password'])) return 'Password must contain at least one letter and one number.';
+        if (strlen($userData['password']) < 8) return 'Geslo mora biti dolgo vsaj 8 znakov.';
+        if (!preg_match('/[A-Za-z]/', $userData['password']) || !preg_match('/\d/', $userData['password'])) return 'Geslo mora vsebovati vsaj eno črko in eno številko.';
     }
 
     switch ($userData['role_id']) {
         case ROLE_STUDENT:
-            if (empty($userData['first_name'])) return 'First name is required for students.';
+            if (empty($userData['first_name'])) return 'Ime je obvezno za dijake.';
 
-            if (empty($userData['last_name'])) return 'Last name is required for students.';
+            if (empty($userData['last_name'])) return 'Priimek je obvezen za dijake.';
 
-            if (empty($userData['class_code'])) return 'Class is required for students.';
+            if (empty($userData['class_code'])) return 'Razred je obvezen za dijake.';
 
-            if (empty($userData['dob'])) return 'Date of birth is required for students.';
+            if (empty($userData['dob'])) return 'Datum rojstva je obvezen za dijake.';
 
-            if (!validateDate($userData['dob'])) return 'Invalid date of birth format (YYYY-MM-DD).';
+            if (!validateDate($userData['dob'])) return 'Neveljaven format datuma rojstva (LLLL-MM-DD).';
 
-            if (!classCodeExists($userData['class_code'])) return 'Selected class does not exist.';
+            if (!classCodeExists($userData['class_code'])) return 'Izbrani razred ne obstaja.';
             break;
 
         case ROLE_TEACHER:
-            if (!empty($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) foreach ($userData['teacher_subjects'] as $subjectId) if (!subjectExists($subjectId)) return 'One or more selected subjects do not exist.';
+            if (!empty($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) foreach ($userData['teacher_subjects'] as $subjectId) if (!subjectExists($subjectId)) return 'Eden ali več izbranih predmetov ne obstaja.';
             break;
 
         case ROLE_PARENT:
-            if (!empty($userData['student_ids']) && is_array($userData['student_ids'])) foreach ($userData['student_ids'] as $studentId) if (!studentExists($studentId)) return 'One or more selected students do not exist.';
+            if (!empty($userData['student_ids']) && is_array($userData['student_ids'])) foreach ($userData['student_ids'] as $studentId) if (!studentExists($studentId)) return 'Eden ali več izbranih dijakov ne obstaja.';
             break;
     }
 
@@ -1244,7 +1244,7 @@ function validateUserForm(array $userData): bool|string
 function usernameExists(string $username, ?int $excludeUserId = null): bool
 {
     $pdo = safeGetDBConnection('usernameExists');
-    if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in usernameExists", 500, "admin_functions.php");
+    if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija usernameExists", 500, "admin_functions.php");
 
     $sql = "SELECT COUNT(*) FROM users WHERE username = :username";
     $params = ['username' => $username];
@@ -1281,7 +1281,7 @@ function validateDate(string $date): bool
 function classCodeExists(string $classCode): bool
 {
     $pdo = safeGetDBConnection('classCodeExists');
-    if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in classCodeExists", 500, "admin_functions.php");
+    if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija classCodeExists", 500, "admin_functions.php");
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM classes WHERE class_code = :class_code");
     $stmt->execute(['class_code' => $classCode]);
@@ -1298,7 +1298,7 @@ function classCodeExists(string $classCode): bool
 function subjectExists(int $subjectId): bool
 {
     $pdo = safeGetDBConnection('subjectExists');
-    if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in subjectExists", 500, "admin_functions.php");
+    if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija subjectExists", 500, "admin_functions.php");
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM subjects WHERE subject_id = :subject_id");
     $stmt->execute(['subject_id' => $subjectId]);
@@ -1315,7 +1315,7 @@ function subjectExists(int $subjectId): bool
 function studentExists(int $studentId): bool
 {
     $pdo = safeGetDBConnection('studentExists');
-    if ($pdo === null) sendJsonErrorResponse("Failed to establish database connection in studentExists", 500, "admin_functions.php");
+    if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija studentExists", 500, "admin_functions.php");
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM students WHERE student_id = :student_id");
     $stmt->execute(['student_id' => $studentId]);

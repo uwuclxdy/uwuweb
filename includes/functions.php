@@ -159,7 +159,7 @@ function getNavItemsByRole(int $role): array
     $items = [];
 
     $items[] = [
-        'title' => 'Dashboard',
+        'title' => 'Nadzorna plošča',
         'url' => '/uwuweb/dashboard.php',
         'icon' => 'dashboard'
     ];
