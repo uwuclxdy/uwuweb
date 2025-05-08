@@ -1,6 +1,7 @@
 # Modal Implementation Guidelines for uwuweb
 
 This document provides standardized guidelines for implementing modals (popup dialogs) across the uwuweb application.
+You must read this file (367 lines) in full!!!
 
 ## 1. HTML Structure
 
