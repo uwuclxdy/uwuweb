@@ -1,117 +1,155 @@
 <?php
 /**
- * Login Page
- *
- * Handles user authentication and redirects to the dashboard
- *
+ * Purpose: Handles user login, authentication, and redirection to the appropriate dashboard.
+ * Path: /uwuweb/index.php
  */
 
 require_once 'includes/auth.php';
 require_once 'includes/db.php';
 
-// If already logged in, redirect to dashboard
 if (isLoggedIn()) {
     header('Location: dashboard.php');
     exit;
 }
 
-// Comment out standard header inclusion for custom login page
-// include 'includes/header.php';
-
 $error = '';
 $username = '';
 
-// Handle login form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    // Simple validation
-    if (empty($username) || empty($password)) {
-        $error = 'Username and password are required';
-    } else {
-        // Attempt to authenticate
-        try {
-            $pdo = getDBConnection();
-            if (!$pdo) {
-                error_log("Database connection failed in index.php login");
-                $error = 'System error: Unable to connect to database. Please try again later.';
-            } else {
-                $stmt = $pdo->prepare("SELECT user_id, username, pass_hash, role_id FROM users WHERE username = :username");
-                $stmt->execute(['username' => $username]);
-                $user = $stmt->fetch();
+    if (empty($username) || empty($password)) $error = 'Uporabniško ime in geslo sta obvezna.'; else try {
+        $pdo = getDBConnection();
+        if (!$pdo) {
+            error_log("Database connection failed in index.php login");
+            $error = 'Sistemska napaka: Povezava z bazo podatkov ni uspela. Poskusite znova kasneje.';
+        } else {
+            $stmt = $pdo->prepare("SELECT user_id, username, pass_hash, role_id FROM users WHERE username = :username");
+            $stmt->execute(['username' => $username]);
+            $user = $stmt->fetch();
 
-                if ($user && password_verify($password, $user['pass_hash'])) {
-                    // Authentication successful
-                    $_SESSION['user_id'] = $user['user_id'];
-                    $_SESSION['username'] = $user['username'];
-                    $_SESSION['role_id'] = $user['role_id'];
+            if ($user && password_verify($password, $user['pass_hash'])) {
+                $_SESSION['user_id'] = $user['user_id'];
+                $_SESSION['username'] = $user['username'];
+                $_SESSION['role_id'] = $user['role_id'];
+                $_SESSION['last_activity'] = time();
 
-                    // Redirect to dashboard or saved redirect URL
-                    $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard.php';
-                    unset($_SESSION['redirect_after_login']);
-                    header("Location: $redirect");
-                    exit;
-                }
-
-                $error = 'Invalid username or password';
+                $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard.php';
+                unset($_SESSION['redirect_after_login']);
+                header("Location: /uwuweb/$redirect");
+                exit;
             }
-        } catch (PDOException $e) {
-            $error = 'Database error: ' . $e->getMessage();
+
+            $error = 'Neveljavno uporabniško ime ali geslo.';
         }
+    } catch (PDOException $e) {
+        error_log("Database error during login: " . $e->getMessage());
+        $error = 'Napaka pri prijavi. Poskusite znova.';
     }
 }
 ?>
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Login - uwuweb Grade Management</title>
-    <link rel="stylesheet" href="../uwuweb/assets/css/style.css">
+    <title>Prijava - uwuweb</title>
+    <link rel="stylesheet" href="/uwuweb/assets/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
-<body class="bg-primary">
+<body class="bg-primary text-primary quicksand-font">
 
 <div class="d-flex justify-center items-center" style="min-height: 100vh;">
-    <div class="card card-entrance" style="width: 100%; max-width: 400px;">
+    <div class="card card-entrance shadow-lg p-lg w-full" style="max-width: 400px;">
         <div class="text-center mb-lg">
-            <h1 class="mb-sm">uwuweb</h1>
-            <p class="text-secondary">Grade Management System</p>
+            <img src="/uwuweb/design/uwuweb-logo.png" width="100" height="100" alt="uwuweb Logo"
+                 class="d-block mx-auto">
+            <h1 class="text-xxl font-bold text-accent mb-sm">uwuweb</h1>
+            <p class="text-secondary">Sistem za upravljanje ocen</p>
         </div>
 
         <?php if (!empty($error)): ?>
             <div class="alert status-error mb-md">
-                <?= htmlspecialchars($error) ?>
+                <div class="alert-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                </div>
+                <div class="alert-content">
+                    <?= htmlspecialchars($error) ?>
+                </div>
             </div>
         <?php endif; ?>
 
         <?php if (isset($_GET['msg']) && $_GET['msg'] === 'logged_out'): ?>
             <div class="alert status-success mb-md">
-                You have been successfully logged out.
+                <div class="alert-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                </div>
+                <div class="alert-content">
+                    Uspešno ste se odjavili.
+                </div>
             </div>
         <?php endif; ?>
 
-        <form method="POST" action="index.php">
-            <div class="form-group">
-                <label for="username" class="form-label">Username</label>
+        <?php if (isset($_GET['msg']) && $_GET['msg'] === 'session_expired'): ?>
+            <div class="alert status-warning mb-md">
+                <div class="alert-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <div class="alert-content">
+                    Vaša seja je potekla zaradi neaktivnosti. Prosimo, prijavite se znova.
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <form method="POST" action="/uwuweb/index.php" class="mt-md">
+            <div class="form-group mb-md">
+                <label for="username" class="form-label mb-xs d-block">Uporabniško ime</label>
                 <input type="text" id="username" name="username" class="form-input"
-                    value="<?= htmlspecialchars($username) ?>" required autocomplete="username">
+                       value="<?= htmlspecialchars($username) ?>" required autocomplete="username" autofocus>
             </div>
 
-            <div class="form-group">
-                <label for="password" class="form-label">Password</label>
+            <div class="form-group mb-lg">
+                <label for="password" class="form-label mb-xs d-block">Geslo</label>
                 <input type="password" id="password" name="password" class="form-input"
-                    required autocomplete="current-password">
+                       required autocomplete="current-password">
             </div>
 
             <div class="form-group mt-lg">
-                <button type="submit" class="btn btn-primary" style="width: 100%;">Log In</button>
+                <button type="submit" class="btn btn-primary btn-lg w-full">
+                    <span class="btn-icon mr-sm">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                            <polyline points="10 17 15 12 10 7"></polyline>
+                            <line x1="15" y1="12" x2="3" y2="12"></line>
+                        </svg>
+                    </span>
+                    Prijava
+                </button>
             </div>
         </form>
+        <p class="text-center text-secondary text-sm mt-lg mb-0">© <?= date('Y') ?> uwuweb</p>
     </div>
 </div>
 
-<script src="../uwuweb/assets/js/main.js"></script>
+<script src="/assets/js/main.js"></script>
 </body>
 </html>
