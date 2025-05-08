@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $redirect = $_SESSION['redirect_after_login'] ?? 'dashboard.php';
                 unset($_SESSION['redirect_after_login']);
-                header("Location: /uwuweb/$redirect");
+                header("Location: $redirect");
                 exit;
             }
 
