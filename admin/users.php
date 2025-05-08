@@ -251,8 +251,19 @@ function handleDeleteUser(): void
 
     <!-- Status Message -->
     <?php if (!empty($message)): ?>
-        <div class="alert status-<?= $messageType ?> mb-lg">
-            <?= htmlspecialchars($message) ?>
+        <div class="alert status-<?= $messageType ?> page-transition mb-lg"
+             role="<?= $messageType === 'error' ? 'alert' : 'status' ?>"
+             aria-live="<?= $messageType === 'error' ? 'assertive' : 'polite' ?>">
+            <div class="alert-icon">
+                <?php if ($messageType === 'success'): ?>✓
+                <?php elseif ($messageType === 'warning'): ?>⚠
+                <?php elseif ($messageType === 'error'): ?>✕
+                <?php else: ?>ℹ
+                <?php endif; ?>
+            </div>
+            <div class="alert-content">
+                <?= htmlspecialchars($message) ?>
+            </div>
         </div>
     <?php endif; ?>
 
@@ -628,11 +639,17 @@ function handleDeleteUser(): void
             <h3 class="modal-title" id="deleteUserModalTitle">Delete User</h3>
         </div>
         <div class="modal-body">
-            <div class="alert status-warning mb-md">
-                <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
+            <div class="alert status-warning pulse mb-md" role="status" aria-live="polite">
+                <div class="alert-icon">⚠</div>
+                <div class="alert-content">
+                    <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
+                </div>
             </div>
-            <div class="alert status-error font-bold">
-                <p>This action cannot be undone.</p>
+            <div class="alert status-error pulse mb-md" role="alert" aria-live="assertive">
+                <div class="alert-icon">✕</div>
+                <div class="alert-content">
+                    <p>This action cannot be undone.</p>
+                </div>
             </div>
             <input type="hidden" id="delete_user_id" value="">
         </div>

@@ -1535,6 +1535,7 @@ img {
 
 /* Alert Component - Enhanced */
 .alert {
+    align-items: center;
     padding: var(--space-sm) var(--space-lg);
     border-radius: var(--button-radius);
     margin-bottom: var(--space-lg);
@@ -1543,16 +1544,15 @@ img {
     transition: opacity var(--transition-normal);
     opacity: 1;
     display: flex;
-    align-items: flex-start; /* Align icon to top */
     border-left: 4px solid transparent; /* Left accent border */
 }
 
 .alert-icon { /* Dedicated element for icon */
     flex-shrink: 0;
-    width: 16px;
+    width: 24px;
     height: 24px;
-    margin-right: var(--space-sm);
-    transform: translate(0, -20%);
+    margin-right: var(--space-md);
+    margin-top: 2px; /* Fine-tune vertical alignment */
     fill: currentColor; /* Use text color for SVG fill */
 }
 
@@ -1606,6 +1606,7 @@ img {
     background-color: rgba(239, 68, 68, 0.12);
     color: #ef4444;
     border-left-color: #ef4444;
+    font-weight: 800;
 }
 
 .alert.status-error .alert-icon svg {
@@ -1737,13 +1738,13 @@ img {
     cursor: pointer;
     color: var(--text-secondary);
     padding: var(--space-xs); /* Padding around icon */
-    width: 36px;
-    height: 22px;
+    width: 28px;
+    height: 55%;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: color var(--transition-fast), background-color var(--transition-fast);
-    border-radius: 50%;
+    border-radius: 25%;
     margin-left: auto; /* Push close button to the right in header */
 }
 
