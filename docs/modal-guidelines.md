@@ -13,7 +13,6 @@ Use the following HTML structure for all modals:
    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="uniqueModalTitleId">
         <div class="modal-header">
            <h3 class="modal-title" id="uniqueModalTitleId">Modal Title</h3>
-           <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
       <!-- For forms: -->
       <form id="uniqueFormId" method="POST" action="targetPage.php">
@@ -296,6 +295,11 @@ For confirming actions like deletion:
 7. **CSS Transitions**:
    - The stylesheet includes modal animations - no additional CSS needed
 
+8. **Modal Closing**:
+   - Do NOT use the × close button (`<button class="btn-close">×</button>`)
+   - Instead provide a "Cancel" or "Close" button in the modal footer
+   - Rely on the overlay click and Escape key for additional dismissal options
+
 ## 6. Delete Confirmation Pattern
 
 For delete confirmations, follow this simpler pattern instead of requiring users to type "DELETE":
@@ -310,7 +314,6 @@ For delete confirmations, follow this simpler pattern instead of requiring users
    <div class="modal-container" role="dialog" aria-modal="true">
       <div class="modal-header">
          <h3 class="modal-title">Potrditev izbrisa</h3>
-         <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
       </div>
       <div class="modal-body">
          <div class="alert status-warning mb-md">
@@ -372,7 +375,6 @@ For delete confirmations, follow this simpler pattern instead of requiring users
    <div class="modal-container" role="dialog" aria-modal="true">
       <div class="modal-header">
          <h3 class="modal-title">Add New Grade Item</h3>
-         <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
       </div>
       <form id="addGradeItemForm" method="POST">
          <div class="modal-body">
