@@ -65,11 +65,14 @@ $currentPage = basename($_SERVER['PHP_SELF']);
             <?php if ($currentRole === ROLE_ADMIN): ?>
                 <a href="/uwuweb/admin/users.php"
                    class="navbar-link <?= $currentPage === 'users.php' ? 'active' : '' ?>">Uporabniki</a>
-                <a href="/uwuweb/admin/settings.php"
-                   class="navbar-link <?= $currentPage === 'settings.php' ? 'active' : '' ?>">Nastavitve</a>
-                <a href="/uwuweb/admin/class_subjects.php"
-                   class="navbar-link <?= $currentPage === 'class_subjects.php' ? 'active' : '' ?>">Predmeti
-                    razredov</a>
+                <a href="/uwuweb/admin/manage_classes.php"
+                   class="navbar-link <?= $currentPage === 'manage_classes.php' ? 'active' : '' ?>">Razredi</a>
+                <a href="/uwuweb/admin/manage_subjects.php"
+                   class="navbar-link <?= $currentPage === 'manage_subjects.php' ? 'active' : '' ?>">Predmeti</a>
+                <a href="/uwuweb/admin/manage_assignments.php"
+                   class="navbar-link <?= $currentPage === 'manage_assignments.php' ? 'active' : '' ?>">Dodelitve</a>
+                <a href="/uwuweb/admin/system_settings.php"
+                   class="navbar-link <?= $currentPage === 'system_settings.php' ? 'active' : '' ?>">Nastavitve</a>
             <?php elseif ($currentRole === ROLE_TEACHER): ?>
                 <a href="/uwuweb/teacher/gradebook.php"
                    class="navbar-link <?= $currentPage === 'gradebook.php' ? 'active' : '' ?>">Redovalnica</a>
