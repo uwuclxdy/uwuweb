@@ -643,8 +643,8 @@ img {
 }
 
 .role-admin {
-    background-color: rgba(59, 130, 246, 0.15);
-    color: var(--accent-primary);
+    background-color: rgba(112, 246, 59, 0.15);
+    color: rgba(111, 245, 59, 0.75);
 }
 
 .role-teacher {
