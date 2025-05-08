@@ -194,6 +194,14 @@ img {
     font-style: normal;
 }
 
+.w-full {
+    width: 100%;
+}
+
+.w-half {
+    width: 50%;
+}
+
 /* ======================================
    3. Layout Components
    ====================================== */
@@ -281,6 +289,16 @@ img {
     font-size: var(--font-size-lg);
     color: var(--accent-tertiary);
     font-weight: var(--font-weight-bold);
+}
+
+.card-subtitle {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-normal);
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-decoration-color: var(--accent-primary);
+    text-underline-offset: 4px;
+    color: var(--font-primary); /* Ensure title uses primary text color */
 }
 
 .card__content {
@@ -1682,6 +1700,9 @@ img {
 .modal-title {
     font-size: var(--font-size-lg);
     font-weight: var(--font-weight-bold);
+    text-decoration: underline;
+    text-decoration-color: var(--accent-primary);
+    text-underline-offset: 4px;
     margin: 0;
     color: var(--text-primary); /* Ensure title uses primary text color */
 }
