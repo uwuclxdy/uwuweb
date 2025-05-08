@@ -110,10 +110,11 @@ $pdo = getDBConnection();
     </div>
 
     <?php if (!empty($message)): ?>
-        <div class="alert status-<?= $messageType === 'success' ? 'success' : 'error' ?> mb-lg d-flex items-center gap-sm">
-             <span class="alert-icon text-lg">
+        <div class="alert status-<?= $messageType === 'success' ? 'success' : 'error' ?> page-transition mb-lg"
+             role="alert" aria-live="polite">
+            <div class="alert-icon">
                 <?= $messageType === 'success' ? '✓' : '⚠' ?>
-            </span>
+            </div>
             <div class="alert-content">
                 <?= htmlspecialchars($message) ?>
             </div>
@@ -239,14 +240,15 @@ $pdo = getDBConnection();
         </div>
         <div class="modal-body">
             <div class="alert status-warning mb-md">
-                <p>Ali ste prepričani, da želite izbrisati razred <strong id="deleteClassModal_name">ta razred</strong>?
-                </p>
+                <p>Ali ste prepričani, da želite izbrisati razred <strong id="deleteClassModal_name"></strong>?</p>
             </div>
             <div class="alert status-error font-bold">
-                <p>Tega dejanja ni mogoče razveljaviti.</p>
+                <p>Tega dejanja ni mogoče razveljaviti. </p>
             </div>
             <input type="hidden" id="deleteClassModal_id" value="">
         </div>
+        <p class="text-disabled ml-xl mr-xl">Razred bo mogoče izbrisati le, če nima dodeljenih učencev ali
+            predmetov.</p>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
             <button type="button" class="btn btn-error" id="confirmDeleteBtn">Izbriši</button>

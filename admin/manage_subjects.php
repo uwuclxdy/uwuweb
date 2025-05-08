@@ -217,8 +217,6 @@ $pdo = getDBConnection();
     </div>
 </div>
 
-<!-- Modals and JS -->
-
 <!-- Create Subject Modal -->
 <div class="modal" id="createSubjectModal">
     <div class="modal-overlay" aria-hidden="true"></div>
@@ -279,8 +277,7 @@ $pdo = getDBConnection();
         </div>
         <div class="modal-body">
             <div class="alert status-warning mb-md">
-                <p>Ali ste prepričani, da želite izbrisati predmet <strong id="deleteSubjectModal_name">ta
-                        predmet</strong>?</p>
+                <p>Ali ste prepričani, da želite izbrisati predmet <strong id="deleteSubjectModal_name"></strong>?</p>
             </div>
             <div class="alert status-error font-bold">
                 <p>Tega dejanja ni mogoče razveljaviti.</p>

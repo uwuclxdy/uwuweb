@@ -639,20 +639,15 @@ function handleDeleteUser(): void
             <h3 class="modal-title" id="deleteUserModalTitle">Delete User</h3>
         </div>
         <div class="modal-body">
-            <div class="alert status-warning pulse mb-md" role="status" aria-live="polite">
-                <div class="alert-icon">⚠</div>
-                <div class="alert-content">
-                    <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
-                </div>
+            <div class="alert status-warning mb-md">
+                <p>Ali ste prepričani, da želite uporabnika <strong id="deleteClassModal_name"></strong>?</p>
             </div>
-            <div class="alert status-error pulse mb-md" role="alert" aria-live="assertive">
-                <div class="alert-icon">✕</div>
-                <div class="alert-content">
-                    <p>This action cannot be undone.</p>
-                </div>
+            <div class="alert status-error font-bold">
+                <p>Tega dejanja ni mogoče razveljaviti.</p>
             </div>
             <input type="hidden" id="delete_user_id" value="">
         </div>
+        <p class="text-disabled ml-xl">Izbris bo mogoče le, če uporabnik ni v nobeni povezavi.</p>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
             <button type="button" class="btn btn-error" id="confirmDeleteBtn">Delete</button>
