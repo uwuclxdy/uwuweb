@@ -1535,7 +1535,7 @@ img {
 
 /* Alert Component - Enhanced */
 .alert {
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-sm) var(--space-lg);
     border-radius: var(--button-radius);
     margin-bottom: var(--space-lg);
     position: relative;
@@ -1554,6 +1554,10 @@ img {
     margin-right: var(--space-md);
     margin-top: 2px; /* Fine-tune vertical alignment */
     fill: currentColor; /* Use text color for SVG fill */
+}
+
+.alert p {
+    transform: translate(0, 30%);
 }
 
 .alert-content {

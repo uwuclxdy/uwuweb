@@ -1,349 +1,438 @@
-# uwuweb Modal Implementation Guidelines
+# Modal Implementation Guidelines for uwuweb
 
-## Overview
+This document provides standardized guidelines for implementing modals (popup dialogs) across the uwuweb application.
 
-Modals are used for creating, editing, and confirming actions without leaving the current page. All modals should follow
-these guidelines to maintain consistency throughout the application.
+## 1. HTML Structure
 
-## HTML Structure
+Use the following HTML structure for all modals:
 
 ```html
 
-<div id="[action]-[entity]-modal" class="modal">
-    <div class="modal-overlay"></div>
-    <div class="modal-container">
+<div class="modal" id="uniqueModalId">
+   <div class="modal-overlay" aria-hidden="true"></div>
+   <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="uniqueModalTitleId">
         <div class="modal-header">
-            <h3 class="modal-title">[Action] [Entity]</h3>
-            <button type="button" class="btn-close" aria-label="Zapri">&times;</button>
+           <h3 class="modal-title" id="uniqueModalTitleId">Modal Title</h3>
+           <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
-        <div class="modal-body">
-            <form id="[action]-[entity]-form" method="post">
-                <!-- CSRF token -->
-                <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-
-                <!-- Hidden fields (for edit modals) -->
-                <input type="hidden" name="[entity]_id" id="[entity]_id">
-
-                <!-- Form fields -->
-                <div class="form-group">
-                    <label for="field_name" class="form-label">Field Label</label>
-                    <input type="text" id="field_name" name="field_name" class="form-input" required>
-                </div>
-
-                <!-- More form groups as needed -->
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary modal-close">Prekliči</button>
-            <button type="submit" form="[action]-[entity]-form" class="btn btn-primary">Potrdi</button>
-        </div>
+      <!-- For forms: -->
+      <form id="uniqueFormId" method="POST" action="targetPage.php">
+         <div class="modal-body">
+            <!-- Form content goes here -->
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+            <input type="hidden" name="action_type" value="specific_action">
+            <!-- Additional form fields -->
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Submit</button>
+         </div>
+      </form>
+      <!-- For non-forms: -->
+      <!--
+      <div class="modal-body">
+          Content goes here
+      </div>
+      <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+          <button type="button" class="btn btn-primary" id="confirmButton">Confirm</button>
+      </div>
+      -->
     </div>
 </div>
 ```
 
-## CSS Implementation
+## 2. CSS Classes
 
-The CSS is already defined in style.css with the following classes:
+Use these standardized CSS classes from the uwuweb stylesheet:
 
-- `.modal`: Modal container (hidden by default)
+- `.modal`: The main modal container
 - `.modal-overlay`: Semi-transparent background overlay
-- `.modal-container`: Content container with fixed width
-- `.modal-header`, `.modal-body`, `.modal-footer`: Modal sections
-- `.modal-title`: Modal title styling
-- `.modal.open`: Visible state
-- `.modal.closing`: Closing animation state
-- `.btn-close`: Close button styling
+- `.modal-container`: Container for modal content
+- `.modal-header`: Contains the title and close button
+- `.modal-title`: Modal title text
+- `.modal-body`: Main content area
+- `.modal-footer`: Action buttons area
+- `.modal.open`: Applied to show the modal (added via JavaScript)
 
-## JavaScript Implementation
+## 3. JavaScript Implementation
 
-Add the following JavaScript functions to your page or include them from main.js:
+Include this standard JavaScript in your page to handle modals:
 
 ```javascript
-// 1. Modal open function
-function openModal(modalId, entityData = null) {
-    const modal = document.getElementById(modalId);
+document.addEventListener('DOMContentLoaded', function () {
+   // --- Modal Management Functions ---
+   const openModal = (modalId) => {
+      const modal = document.getElementById(modalId);
+      if (modal) {
+         modal.classList.add('open');
+         // Focus the first focusable element
+         const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
+         if (firstFocusable) firstFocusable.focus();
+      }
+   };
 
-    // Reset form if it exists
-    const form = modal.querySelector('form');
-    if (form) form.reset();
+   const closeModal = (modal) => {
+      if (typeof modal === 'string') {
+         modal = document.getElementById(modal);
+      }
 
-    // Fill form with data if editing
-    if (entityData) {
-        Object.keys(entityData).forEach(key => {
-            const field = form.querySelector(`[name="${key}"]`);
-            if (field) field.value = entityData[key];
-        });
-    }
+      if (modal) {
+         modal.classList.remove('open');
+         // Reset forms if present
+         const form = modal.querySelector('form');
+         if (form) form.reset();
 
-    // Show modal with animation
-    modal.classList.add('open');
-
-    // Prevent page scrolling when modal is open
-    document.body.style.overflow = 'hidden';
-}
-
-// 2. Modal close function
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-
-    // Add closing animation
-    modal.classList.add('closing');
-
-    // Remove classes after animation completes
-    setTimeout(() => {
-        modal.classList.remove('open', 'closing');
-        document.body.style.overflow = '';
-    }, 300); // Match the CSS transition duration
-}
-
-// 3. Setup modal event listeners
-function setupModalListeners() {
-    // Setup all modals on the page
-    document.querySelectorAll('.modal').forEach(modal => {
-        const modalId = modal.id;
-
-        // Close on overlay click
-        modal.querySelector('.modal-overlay').addEventListener('click', () => {
-            closeModal(modalId);
-        });
-
-        // Close on close button click
-        modal.querySelector('.btn-close').addEventListener('click', () => {
-            closeModal(modalId);
-        });
-
-        // Close on cancel button click
-        const cancelBtn = modal.querySelector('.modal-close');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => {
-                closeModal(modalId);
-            });
-        }
-
-        // Form submission handling (using fetch API)
-        const form = modal.querySelector('form');
-        if (form) {
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-
-                try {
-                    const formData = new FormData(form);
-                    const response = await fetch(form.action || window.location.href, {
-                        method: form.method || 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        // Close modal
-                        closeModal(modalId);
-
-                        // Refresh data or show success message
-                        if (typeof refreshDataTable === 'function') {
-                            refreshDataTable();
-                        }
-
-                        // Show success alert
-                        showAlert('success', result.message);
-                    } else {
-                        // Show error message
-                        showAlert('error', result.message);
-                    }
-                } catch (error) {
-                    console.error('Error submitting form:', error);
-                    showAlert('error', 'Prišlo je do napake pri obdelavi zahteve.');
-                }
-            });
-        }
-    });
-}
-
-// 4. Helper function to show alerts
-function showAlert(type, message) {
-    const alertContainer = document.getElementById('alert-container') || createAlertContainer();
-
-    const alert = document.createElement('div');
-    alert.className = `alert status-${type}`;
-    alert.innerHTML = `
-    <div class="alert-icon"></div>
-    <div class="alert-content">${message}</div>
-  `;
-
-    alertContainer.appendChild(alert);
-
-    // Auto-remove after 5 seconds
-    setTimeout(() => {
-        alert.style.opacity = '0';
-        setTimeout(() => alert.remove(), 300);
-    }, 5000);
-}
-
-// Create alert container if it doesn't exist
-function createAlertContainer() {
-    const container = document.createElement('div');
-    container.id = 'alert-container';
-    container.className = 'alert-container';
-    document.body.appendChild(container);
-    return container;
-}
-
-// Initialize all modals when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    setupModalListeners();
-
-    // Setup buttons that open modals
-    document.querySelectorAll('[data-modal]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const modalId = btn.dataset.modal;
-            const entityId = btn.dataset.id || null;
-
-            if (entityId) {
-                // For edit modals, fetch entity data
-                fetchEntityData(entityId, modalId);
-            } else {
-                // For create modals, just open
-                openModal(modalId);
+         // Clear any error messages
+         const errorMsgs = modal.querySelectorAll('.feedback-error');
+         errorMsgs.forEach(msg => {
+            if (msg && msg.style) {
+               msg.style.display = 'none';
             }
-        });
-    });
+         });
+      }
+   };
+
+   // --- Event Listeners ---
+
+   // Open modal buttons
+   document.querySelectorAll('[data-open-modal]').forEach(btn => {
+      btn.addEventListener('click', function () {
+         const modalId = this.dataset.openModal;
+         openModal(modalId);
+
+         // If the button has additional data attributes, process them
+         // Example: data-id, data-name, etc.
+         const dataId = this.dataset.id;
+         const dataName = this.dataset.name;
+
+         if (dataId) {
+            // Handle ID data (e.g., fill hidden form field)
+            const idField = document.getElementById(`${modalId}_id`);
+            if (idField) idField.value = dataId;
+         }
+
+         if (dataName) {
+            // Handle name data (e.g., show in confirmation text)
+            const nameDisplay = document.getElementById(`${modalId}_name`);
+            if (nameDisplay) nameDisplay.textContent = dataName;
+         }
+      });
+   });
+
+   // Close modal buttons
+   document.querySelectorAll('[data-close-modal]').forEach(btn => {
+      btn.addEventListener('click', function () {
+         closeModal(this.closest('.modal'));
+      });
+   });
+
+   // Close modals when clicking the overlay
+   document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', function () {
+         closeModal(this.closest('.modal'));
+      });
+   });
+
+   // Close modals with Escape key
+   document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+         document.querySelectorAll('.modal.open').forEach(modal => {
+            closeModal(modal);
+         });
+      }
+   });
 });
-
-// 5. Fetch entity data for edit modals
-async function fetchEntityData(entityId, modalId) {
-    try {
-        // Extract entity type from modal ID
-        const entityType = modalId.split('-')[1]; // Assumes format: edit-[entity]-modal
-
-        // API endpoint based on entity type
-        const endpoint = `/api/${entityType}.php`;
-
-        const response = await fetch(`${endpoint}?action=get&id=${entityId}`);
-        const data = await response.json();
-
-        if (data.success) {
-            openModal(modalId, data.entity);
-        } else {
-            showAlert('error', data.message || 'Podatki niso na voljo.');
-        }
-    } catch (error) {
-        console.error('Error fetching entity data:', error);
-        showAlert('error', 'Prišlo je do napake pri pridobivanju podatkov.');
-    }
-}
 ```
 
-## PHP Implementation
+## 4. Modal Types and Usage Patterns
 
-On the server-side, implement these handler functions:
+### 4.1 Create/Add Modal
 
-```php
-/**
- * Handles AJAX request to get entity by ID
- * 
- * @return void Sends JSON response
- */
-function handleGetEntity(): void {
-    // Validate request
-    if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
-        sendJsonErrorResponse('Neveljaven ID', 400, 'handleGetEntity');
-    }
-    
-    $entityId = (int)$_GET['id'];
-    
-    // Get entity data based on current file/context
-    // Example for user:
-    $entity = getUserDetails($entityId);
-    
-    if (!$entity) {
-        sendJsonErrorResponse('Entiteta ne obstaja', 404, 'handleGetEntity');
-    }
-    
-    // Send success response
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => true,
-        'entity' => $entity
-    ]);
-    exit;
-}
-
-/**
- * Handles AJAX request to create or update entity
- * 
- * @return void Sends JSON response
- */
-function handleSaveEntity(): void {
-    // Validate CSRF token
-    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
-        sendJsonErrorResponse('Neveljaven varnostni žeton', 403, 'handleSaveEntity');
-    }
-    
-    // Prepare data array from POST
-    $data = []; // Populate from $_POST
-    
-    // Determine if create or update
-    $entityId = isset($_POST['entity_id']) && !empty($_POST['entity_id']) 
-        ? (int)$_POST['entity_id'] 
-        : null;
-    
-    if ($entityId) {
-        // Update existing entity
-        $success = updateEntity($entityId, $data);
-        $message = 'Uspešno posodobljeno.';
-    } else {
-        // Create new entity
-        $result = createEntity($data);
-        $success = $result !== false;
-        $message = 'Uspešno ustvarjeno.';
-    }
-    
-    // Send response
-    header('Content-Type: application/json');
-    if ($success) {
-        echo json_encode(['success' => true, 'message' => $message]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Napaka pri shranjevanju.']);
-    }
-    exit;
-}
-```
-
-## Integration Example
-
-To implement a "Create User" button and modal:
+For adding new items:
 
 ```html
-<!-- Button to open modal -->
-<button type="button" class="btn btn-primary" data-modal="create-user-modal">
-    <i class="icon-plus"></i> Dodaj uporabnika
+
+<button data-open-modal="createItemModal" class="btn btn-primary">
+   <span class="btn-icon"><!-- SVG icon --></span>
+   Create New Item
 </button>
 
-<!-- Edit buttons in a data table -->
-<button type="button" class="btn btn-sm" data-modal="edit-user-modal" data-id="<?php echo $user['user_id']; ?>">
-    <i class="icon-edit"></i> Uredi
-</button>
+<div class="modal" id="createItemModal">
+   <!-- Standard modal structure -->
+   <form method="POST" action="current-page.php">
+      <!-- Form fields -->
+      <input type="hidden" name="create_item" value="1">
+   </form>
+</div>
 ```
 
-## Usage Guidelines
+### 4.2 Edit Modal
 
-1. **Naming Convention**:
-    - Modal IDs should follow the pattern `[action]-[entity]-modal` (e.g., `create-user-modal`, `edit-class-modal`)
-    - Form IDs should follow the pattern `[action]-[entity]-form`
+For editing existing items:
 
-2. **Required Attributes**:
-    - Add `data-modal="modal-id"` to buttons that open modals
-    - Add `data-id="entity-id"` to edit buttons
+```html
 
-3. **Form Submission**:
-    - All forms should be submitted via AJAX using the provided JavaScript
-    - Server responses should be JSON with `success` boolean and `message` string
+<button data-open-modal="editItemModal" data-id="123" class="btn btn-secondary">Edit</button>
 
-4. **Animation**:
-    - Use the provided CSS classes for animations
-    - Match JavaScript timeouts with CSS transition durations
+<div class="modal" id="editItemModal">
+   <!-- Standard modal structure -->
+   <form method="POST" action="current-page.php">
+      <input type="hidden" id="editItemModal_id" name="item_id" value="">
+      <input type="hidden" name="update_item" value="1">
+      <!-- Form fields -->
+   </form>
+</div>
+```
 
-5. **Accessibility**:
-    - Include proper ARIA labels on close buttons
-    - Ensure focus management within the modal
-    - Trap focus in modal while open
+### 4.3 Confirmation Modal
+
+For confirming actions like deletion:
+
+```html
+
+<button data-open-modal="deleteItemModal" data-id="123" data-name="Item Name" class="btn btn-error">Delete</button>
+
+<div class="modal" id="deleteItemModal">
+   <!-- Standard modal structure -->
+   <div class="modal-body">
+      <div class="alert status-warning mb-md">
+         <p>Are you sure you want to delete <strong id="deleteConfirmModal_name">this item</strong>?</p>
+      </div>
+      <div class="alert status-error font-bold">
+         <p>This action cannot be undone.</p>
+      </div>
+   </div>
+   <div class="modal-footer">
+      <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+      <button type="button" class="btn btn-error" id="confirmDeleteBtn">Delete</button>
+   </div>
+</div>
+
+<script>
+   // Add this after the standard modal JS
+   document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+      const itemId = document.getElementById('deleteItemModal_id').textContent;
+
+      // Either submit a form:
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = 'current-page.php';
+
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrf_token';
+      csrfInput.value = '<?= htmlspecialchars($csrfToken) ?>';
+
+      const actionInput = document.createElement('input');
+      actionInput.type = 'hidden';
+      actionInput.name = 'delete_item';
+      actionInput.value = '1';
+
+      const idInput = document.createElement('input');
+      idInput.type = 'hidden';
+      idInput.name = 'item_id';
+      idInput.value = itemId;
+
+      form.appendChild(csrfInput);
+      form.appendChild(actionInput);
+      form.appendChild(idInput);
+      document.body.appendChild(form);
+      form.submit();
+
+      // Or use fetch for AJAX:
+      /*
+      fetch('api/items.php', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+              action: 'delete',
+              csrf_token: '<?= htmlspecialchars($csrfToken) ?>',
+              item_id: itemId
+          })
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.success) {
+              // Handle success (e.g., remove item from DOM, show message)
+              closeModal('deleteItemModal');
+          } else {
+              // Handle error
+              alert(data.message || 'Error deleting item');
+          }
+      });
+      */
+   });
+</script>
+```
+
+## 5. Best Practices
+
+1. **Use Semantic IDs**: Name modals and their components descriptively (e.g., `createUserModal`, `editGradeModal`).
+
+2. **Data Attributes**: Use `data-*` attributes to pass information to modals:
+   - `data-open-modal="modalId"` for triggering buttons
+   - `data-id`, `data-name`, etc. for entity-specific information
+
+3. **Accessibility**:
+   - Include proper ARIA attributes (`aria-modal`, `aria-labelledby`)
+   - Ensure keyboard navigation works (focus management)
+   - Provide visible focus states
+
+4. **Form Validation**:
+   - Use HTML5 validation attributes (`required`, `pattern`, etc.)
+   - Add custom validation with visual feedback (`.is-valid`, `.is-invalid` classes)
+
+5. **Error Handling**:
+   - Display validation errors close to the relevant fields
+   - Show a general error message at the top for server-side errors
+
+6. **Reuse Existing Functions**:
+   - Always check `functions.php` and role-specific function files before implementing new functionality
+   - Use established helpers like `sendJsonErrorResponse()`, `validateDate()`, etc.
+
+7. **CSS Transitions**:
+   - The stylesheet includes modal animations - no additional CSS needed
+
+## 6. Delete Confirmation Pattern
+
+For delete confirmations, follow this simpler pattern instead of requiring users to type "DELETE":
+
+```html
+
+<button data-open-modal="deleteConfirmModal" data-id="123" data-name="Item Name" class="btn btn-error btn-sm">Delete
+</button>
+
+<div class="modal" id="deleteConfirmModal">
+   <div class="modal-overlay" aria-hidden="true"></div>
+   <div class="modal-container" role="dialog" aria-modal="true">
+      <div class="modal-header">
+         <h3 class="modal-title">Potrditev izbrisa</h3>
+         <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
+      </div>
+      <div class="modal-body">
+         <div class="alert status-warning mb-md">
+            <p>Ali ste prepričani, da želite izbrisati <strong id="deleteConfirmModal_name">ta element</strong>?</p>
+         </div>
+         <div class="alert status-error font-bold">
+            <p>Tega dejanja ni mogoče razveljaviti.</p>
+         </div>
+         <input type="hidden" id="deleteConfirmModal_id" value="">
+      </div>
+      <div class="modal-footer">
+         <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+         <button type="button" class="btn btn-error" id="confirmDeleteBtn">Izbriši</button>
+      </div>
+   </div>
+</div>
+
+<script>
+   document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+      const itemId = document.getElementById('deleteConfirmModal_id').value;
+
+      // Create and submit form
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = window.location.href;
+
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'csrf_token';
+      csrfInput.value = '<?= htmlspecialchars($csrfToken) ?>';
+
+      const actionInput = document.createElement('input');
+      actionInput.type = 'hidden';
+      actionInput.name = 'delete_item';
+      actionInput.value = '1';
+
+      const idInput = document.createElement('input');
+      idInput.type = 'hidden';
+      idInput.name = 'item_id';
+      idInput.value = itemId;
+
+      form.appendChild(csrfInput);
+      form.appendChild(actionInput);
+      form.appendChild(idInput);
+      document.body.appendChild(form);
+      form.submit();
+   });
+</script>
+```
+
+## 7. Example: Adding Grade Item Modal
+
+```html
+
+<button data-open-modal="addGradeItemModal" class="btn btn-primary">Add Grade Item</button>
+
+<div class="modal" id="addGradeItemModal">
+   <div class="modal-overlay" aria-hidden="true"></div>
+   <div class="modal-container" role="dialog" aria-modal="true">
+      <div class="modal-header">
+         <h3 class="modal-title">Add New Grade Item</h3>
+         <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
+      </div>
+      <form id="addGradeItemForm" method="POST">
+         <div class="modal-body">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+            <input type="hidden" name="class_subject_id" value="<?= $classSubjectId ?>">
+
+            <div class="form-group">
+               <label class="form-label" for="grade_item_name">Name:</label>
+               <input type="text" id="grade_item_name" name="name" class="form-input" required>
+            </div>
+
+            <div class="row">
+               <div class="col col-md-6">
+                  <div class="form-group">
+                     <label class="form-label" for="grade_item_max_points">Maximum Points:</label>
+                     <input type="number" id="grade_item_max_points" name="max_points" class="form-input" required
+                            min="1" step="0.01">
+                  </div>
+               </div>
+               <div class="col col-md-6">
+                  <div class="form-group">
+                     <label class="form-label" for="grade_item_weight">Weight:</label>
+                     <input type="number" id="grade_item_weight" name="weight" class="form-input" value="1.00"
+                            min="0.01" max="3.00" step="0.01">
+                  </div>
+               </div>
+            </div>
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+            <button type="submit" class="btn btn-primary">Add Item</button>
+         </div>
+      </form>
+   </div>
+</div>
+
+<script>
+   document.getElementById('addGradeItemForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      // Use the existing addGradeItem function from the API
+      const formData = new FormData(this);
+
+      fetch('api/grades.php', {
+         method: 'POST',
+         body: formData
+      })
+              .then(response => response.json())
+              .then(data => {
+                 if (data.success) {
+                    // Show success message and reload or update UI
+                    location.reload();
+                 } else {
+                    // Show error message
+                    alert(data.message || 'Error adding grade item');
+                 }
+              })
+              .catch(error => {
+                 console.error('Error:', error);
+              });
+   });
+</script>
+```
