@@ -4,13 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="implement manage_subjects.php">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="add notif docs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/admin/users.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/users.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/footer.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/footer.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/header.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/header.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/assets/css/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/migrate_system_settings.sh" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/parent/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/attendance.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parent/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/grades.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/student/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/attendance.php" afterDir="false" />
@@ -195,63 +193,7 @@
       <workItem from="1746677292128" duration="4452000" />
       <workItem from="1746707841429" duration="439000" />
       <workItem from="1746708290674" duration="13338000" />
-      <workItem from="1746721640860" duration="13700000" />
-    </task>
-    <task id="LOCAL-00012" summary="update documentation for functions.php">
-      <option name="closed" value="true" />
-      <created>1746462675366</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1746462675366</updated>
-    </task>
-    <task id="LOCAL-00013" summary="update admin_functions.php">
-      <option name="closed" value="true" />
-      <created>1746462768807</created>
-      <option name="number" value="00013" />
-      <option name="presentableId" value="LOCAL-00013" />
-      <option name="project" value="LOCAL" />
-      <updated>1746462768807</updated>
-    </task>
-    <task id="LOCAL-00014" summary="update admin_functions.php">
-      <option name="closed" value="true" />
-      <created>1746462807539</created>
-      <option name="number" value="00014" />
-      <option name="presentableId" value="LOCAL-00014" />
-      <option name="project" value="LOCAL" />
-      <updated>1746462807539</updated>
-    </task>
-    <task id="LOCAL-00015" summary="refactor">
-      <option name="closed" value="true" />
-      <created>1746463226557</created>
-      <option name="number" value="00015" />
-      <option name="presentableId" value="LOCAL-00015" />
-      <option name="project" value="LOCAL" />
-      <updated>1746463226557</updated>
-    </task>
-    <task id="LOCAL-00016" summary="update users.php (still has errors)">
-      <option name="closed" value="true" />
-      <created>1746467174043</created>
-      <option name="number" value="00016" />
-      <option name="presentableId" value="LOCAL-00016" />
-      <option name="project" value="LOCAL" />
-      <updated>1746467174043</updated>
-    </task>
-    <task id="LOCAL-00017" summary="add logo">
-      <option name="closed" value="true" />
-      <created>1746467200192</created>
-      <option name="number" value="00017" />
-      <option name="presentableId" value="LOCAL-00017" />
-      <option name="project" value="LOCAL" />
-      <updated>1746467200192</updated>
-    </task>
-    <task id="LOCAL-00018" summary="copilot instructions">
-      <option name="closed" value="true" />
-      <created>1746467219306</created>
-      <option name="number" value="00018" />
-      <option name="presentableId" value="LOCAL-00018" />
-      <option name="project" value="LOCAL" />
-      <updated>1746467219306</updated>
+      <workItem from="1746721640860" duration="18161000" />
     </task>
     <task id="LOCAL-00019" summary="update md files">
       <option name="closed" value="true" />
@@ -589,7 +531,63 @@
       <option name="project" value="LOCAL" />
       <updated>1746735303409</updated>
     </task>
-    <option name="localTasksCounter" value="61" />
+    <task id="LOCAL-00061" summary="modal update">
+      <option name="closed" value="true" />
+      <created>1746735426803</created>
+      <option name="number" value="00061" />
+      <option name="presentableId" value="LOCAL-00061" />
+      <option name="project" value="LOCAL" />
+      <updated>1746735426803</updated>
+    </task>
+    <task id="LOCAL-00062" summary="update ide files">
+      <option name="closed" value="true" />
+      <created>1746735438150</created>
+      <option name="number" value="00062" />
+      <option name="presentableId" value="LOCAL-00062" />
+      <option name="project" value="LOCAL" />
+      <updated>1746735438150</updated>
+    </task>
+    <task id="LOCAL-00063" summary="update css">
+      <option name="closed" value="true" />
+      <created>1746736400018</created>
+      <option name="number" value="00063" />
+      <option name="presentableId" value="LOCAL-00063" />
+      <option name="project" value="LOCAL" />
+      <updated>1746736400018</updated>
+    </task>
+    <task id="LOCAL-00064" summary="update footer">
+      <option name="closed" value="true" />
+      <created>1746736880147</created>
+      <option name="number" value="00064" />
+      <option name="presentableId" value="LOCAL-00064" />
+      <option name="project" value="LOCAL" />
+      <updated>1746736880147</updated>
+    </task>
+    <task id="LOCAL-00065" summary="update header - admin page complete">
+      <option name="closed" value="true" />
+      <created>1746736919538</created>
+      <option name="number" value="00065" />
+      <option name="presentableId" value="LOCAL-00065" />
+      <option name="project" value="LOCAL" />
+      <updated>1746736919538</updated>
+    </task>
+    <task id="LOCAL-00066" summary="add notif docs">
+      <option name="closed" value="true" />
+      <created>1746739147152</created>
+      <option name="number" value="00066" />
+      <option name="presentableId" value="LOCAL-00066" />
+      <option name="project" value="LOCAL" />
+      <updated>1746739147152</updated>
+    </task>
+    <task id="LOCAL-00067" summary="fix ts fucking link finally">
+      <option name="closed" value="true" />
+      <created>1746739574694</created>
+      <option name="number" value="00067" />
+      <option name="presentableId" value="LOCAL-00067" />
+      <option name="project" value="LOCAL" />
+      <updated>1746739574694</updated>
+    </task>
+    <option name="localTasksCounter" value="68" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -609,13 +607,6 @@
   <component name="VcsManagerConfiguration">
     <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN" value="false" />
-    <MESSAGE value="update attendance.php" />
-    <MESSAGE value="update grades.php" />
-    <MESSAGE value="update justifications.php" />
-    <MESSAGE value="update functions.php" />
-    <MESSAGE value="refactor and translate" />
-    <MESSAGE value="update" />
-    <MESSAGE value="refactor functions and update docs" />
     <MESSAGE value="refactor" />
     <MESSAGE value="small docs change" />
     <MESSAGE value="fix admin users page" />
@@ -634,7 +625,14 @@
     <MESSAGE value="manage_classes.php fully functional" />
     <MESSAGE value="update sql" />
     <MESSAGE value="implement manage_subjects.php" />
-    <option name="LAST_COMMIT_MESSAGE" value="implement manage_subjects.php" />
+    <MESSAGE value="modal update" />
+    <MESSAGE value="update ide files" />
+    <MESSAGE value="update css" />
+    <MESSAGE value="update footer" />
+    <MESSAGE value="update header - admin page complete" />
+    <MESSAGE value="add notif docs" />
+    <MESSAGE value="fix ts fucking link finally" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix ts fucking link finally" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
