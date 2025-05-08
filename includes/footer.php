@@ -7,7 +7,7 @@
  *
  */
 ?>
-<footer class="mt-xl p-lg bg-secondary rounded shadow-sm">
+<footer class="mt-xl p-lg rounded shadow-lg card__footer">
     <div class="container">
         <p class="text-center text-secondary mb-0">© <?= date('Y') ?> uwuweb - Grade Management System</p>
     </div>
