@@ -197,12 +197,14 @@ For confirming actions like deletion:
    <!-- Standard modal structure -->
    <div class="modal-body">
       <div class="alert status-warning mb-md">
-         <p>Are you sure you want to delete <strong id="deleteConfirmModal_name">this item</strong>?</p>
+         <p>Are you sure you want to delete <strong id="deleteConfirmModal_name"></strong>?</p>
       </div>
       <div class="alert status-error font-bold">
          <p>This action cannot be undone.</p>
       </div>
    </div>
+   <!-- optional info message -->
+   <p class="text-disabled ml-xl mr-xl">Izbris bo mogoče le, če ...</p>
    <div class="modal-footer">
       <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
       <button type="button" class="btn btn-error" id="confirmDeleteBtn">Delete</button>
@@ -318,13 +320,15 @@ For delete confirmations, follow this simpler pattern instead of requiring users
       </div>
       <div class="modal-body">
          <div class="alert status-warning mb-md">
-            <p>Ali ste prepričani, da želite izbrisati <strong id="deleteConfirmModal_name">ta element</strong>?</p>
+            <p>Ali ste prepričani, da želite izbrisati <strong id="deleteConfirmModal_name"></strong>?</p>
          </div>
          <div class="alert status-error font-bold">
             <p>Tega dejanja ni mogoče razveljaviti.</p>
          </div>
          <input type="hidden" id="deleteConfirmModal_id" value="">
       </div>
+      <!-- optional info message -->
+      <p class="text-disabled ml-xl mr-xl">Izbris bo mogoče le, če ...</p>
       <div class="modal-footer">
          <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
          <button type="button" class="btn btn-error" id="confirmDeleteBtn">Izbriši</button>

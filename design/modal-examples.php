@@ -287,14 +287,15 @@ $gradeItems = [
         </div>
         <div class="modal-body">
             <div class="alert status-warning mb-md">
-                <p>Ali ste prepričani, da želite izbrisati <strong id="deleteConfirmModal_name">ta element
-                    </strong>?</p>
+                <p>Ali ste prepričani, da želite izbrisati <strong id="deleteConfirmModal_name"></strong>?</p>
             </div>
             <div class="alert status-error font-bold">
                 <p>Tega dejanja ni mogoče razveljaviti.</p>
             </div>
             <input type="hidden" id="deleteConfirmModal_id" value="">
         </div>
+        <!-- optional info message -->
+        <p class="text-disabled ml-xl">Izbris bo mogoče le, če uporabnik ni v nobeni povezavi.</p>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
             <button type="button" class="btn btn-primary" id="confirmDeleteBtn">Izbriši</button>
