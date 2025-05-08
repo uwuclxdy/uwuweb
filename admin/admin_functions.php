@@ -1611,7 +1611,7 @@ function validateUserForm(array $userData): bool|string
 {
     if (empty($userData['username'])) return 'Uporabniško ime je obvezno.';
 
-    if (!preg_match('/^\w+$/', $userData['username'])) return 'Uporabniško ime lahko vsebuje samo črke, številke in podčrtaje.';
+    if (!preg_match('/^[\w.]+$/', $userData['username'])) return 'Uporabniško ime lahko vsebuje samo črke, številke, podčrtaje in pike.';
 
     if (strlen($userData['username']) < 3 || strlen($userData['username']) > 50) return 'Uporabniško ime mora biti dolgo med 3 in 50 znakov.';
 
