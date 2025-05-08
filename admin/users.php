@@ -721,7 +721,9 @@ function handleDeleteUser(): void
             if (teacherFields) teacherFields.style.display = (roleId === ROLE_TEACHER) ? 'block' : 'none';
             if (studentFields) studentFields.style.display = (roleId === ROLE_STUDENT) ? 'block' : 'none';
             if (parentFields) parentFields.style.display = (roleId === ROLE_PARENT) ? 'block' : 'none';
-            if (nameFieldsRow) nameFieldsRow.style.display = (roleId === ROLE_STUDENT) ? 'flex' : 'none';
+
+            // Show name fields for teachers, students, and parents (all roles except admin)
+            if (nameFieldsRow) nameFieldsRow.style.display = (roleId === ROLE_TEACHER || roleId === ROLE_STUDENT || roleId === ROLE_PARENT) ? 'flex' : 'none';
 
             // Update required attributes
             const studentClass = document.getElementById(`${prefix}_student_class`);
@@ -731,9 +733,11 @@ function handleDeleteUser(): void
 
             if (studentClass) studentClass.required = (roleId === ROLE_STUDENT);
             if (dob) dob.required = (roleId === ROLE_STUDENT);
-            if (firstName) firstName.required = (roleId === ROLE_STUDENT);
-            if (lastName) lastName.required = (roleId === ROLE_STUDENT);
-        };
+
+            // First name and last name are required for teachers and students
+            if (firstName) firstName.required = (roleId === ROLE_STUDENT || roleId === ROLE_TEACHER);
+            if (lastName) lastName.required = (roleId === ROLE_STUDENT || roleId === ROLE_TEACHER);
+        }
 
         // --- Search Functionality ---
         const searchInput = document.getElementById('searchInput');
