@@ -528,7 +528,6 @@ function getStudentJustifications(int $studentId): array
 function renderParentAttendanceWidget(): string
 {
     $userId = getUserId();
-
     if (!$userId) return renderPlaceholderWidget('Za prikaz prisotnosti otrok se morate prijaviti.');
 
     try {
@@ -536,274 +535,143 @@ function renderParentAttendanceWidget(): string
         if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
         $parentInfo = getUserInfo($userId);
-        if (!$parentInfo || empty($parentInfo['children'])) return renderPlaceholderWidget('Na vaš račun ni povezanih otrok ali podatkov o staršu.');
+        if (!$parentInfo || empty($parentInfo['children'])) return renderPlaceholderWidget('Na vaš račun ni povezanih otrok.');
+
         $children = $parentInfo['children'];
+        $html = '<div class="d-flex flex-column gap-lg" style="overflow-y: auto; max-height: 400px;">'; // Scrollable container for children
 
-        $html = '<div class="widget-content parent-attendance-widget">';
-
-        foreach ($children as $child) {
-            $childStats = [
-                'student_id' => $child['student_id'],
-                'name' => $child['first_name'] . ' ' . $child['last_name'],
-                'class_code' => $child['class_code'],
-                'total' => 0, 'present' => 0, 'absent' => 0, 'late' => 0,
-                'justified' => 0, 'rejected' => 0, 'pending' => 0, 'unjustified' => 0,
-                'attendance_rate' => 0, 'recent_absences' => []
-            ];
-
-            $statsQuery = "SELECT
-                COUNT(*) as total,
-                SUM(IF(status = 'P', 1, 0)) as present,
-                SUM(IF(status = 'A', 1, 0)) as absent,
-                SUM(IF(status = 'L', 1, 0)) as late,
-                SUM(IF(status = 'A' AND approved = 1, 1, 0)) as justified,
-                SUM(IF(status = 'A' AND approved = 0, 1, 0)) as rejected,
-                SUM(IF(status = 'A' AND justification IS NOT NULL AND approved IS NULL, 1, 0)) as pending
-             FROM attendance a
-             JOIN enrollments e ON a.enroll_id = e.enroll_id
-             WHERE e.student_id = :student_id";
-
+        if (empty($children)) $html .= renderPlaceholderWidget('Na vaš račun ni povezanih otrok.'); else foreach ($children as $child) {
+            // Fetch stats (simplified from original for brevity, assuming logic is sound)
+            $statsQuery = "SELECT COUNT(*) as total, SUM(IF(status = 'P', 1, 0)) as present, SUM(IF(status = 'A', 1, 0)) as absent, SUM(IF(status = 'L', 1, 0)) as late, SUM(IF(status = 'A' AND approved = 1, 1, 0)) as justified, SUM(IF(status = 'A' AND justification IS NOT NULL AND approved IS NULL, 1, 0)) as pending, SUM(IF(status = 'A' AND approved = 0, 1, 0)) as rejected FROM attendance a JOIN enrollments e ON a.enroll_id = e.enroll_id WHERE e.student_id = :student_id";
             $statsStmt = $db->prepare($statsQuery);
             $statsStmt->bindParam(':student_id', $child['student_id'], PDO::PARAM_INT);
             $statsStmt->execute();
-            $statsResult = $statsStmt->fetch(PDO::FETCH_ASSOC);
+            $s = $statsStmt->fetch(PDO::FETCH_ASSOC);
+            $s['unjustified'] = ($s['absent'] ?? 0) - ($s['justified'] ?? 0) - ($s['pending'] ?? 0) - ($s['rejected'] ?? 0);
+            $s['attendance_rate'] = ($s['total'] ?? 0) > 0 ? round((($s['present'] ?? 0) + ($s['late'] ?? 0)) / $s['total'] * 100, 1) : 0;
 
-            if ($statsResult) {
-                $childStats['total'] = (int)$statsResult['total'];
-                $childStats['present'] = (int)$statsResult['present'];
-                $childStats['absent'] = (int)$statsResult['absent'];
-                $childStats['late'] = (int)$statsResult['late'];
-                $childStats['justified'] = (int)$statsResult['justified'];
-                $childStats['rejected'] = (int)$statsResult['rejected'];
-                $childStats['pending'] = (int)$statsResult['pending'];
-                $childStats['unjustified'] = $childStats['absent'] - $childStats['justified'] - $childStats['rejected'] - $childStats['pending'];
-
-                if ($childStats['total'] > 0) $childStats['attendance_rate'] = round((($childStats['present'] + $childStats['late']) / $childStats['total']) * 100, 1);
-            }
-
-            $absenceQuery = "SELECT
-                a.att_id, a.status, a.justification, a.approved,
-                p.period_date, p.period_label, s.name as subject_name
-             FROM attendance a
-             JOIN periods p ON a.period_id = p.period_id
-             JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
-             JOIN subjects s ON cs.subject_id = s.subject_id
-             JOIN enrollments e ON a.enroll_id = e.enroll_id
-             WHERE e.student_id = :student_id AND a.status = 'A'
-             ORDER BY p.period_date DESC, p.period_label DESC
-             LIMIT 3";
-
+            $absenceQuery = "SELECT a.att_id, a.status, a.justification, a.approved, p.period_date, p.period_label, subj.name as subject_name FROM attendance a JOIN periods p ON a.period_id = p.period_id JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id JOIN subjects subj ON cs.subject_id = subj.subject_id JOIN enrollments e ON a.enroll_id = e.enroll_id WHERE e.student_id = :student_id AND a.status = 'A' ORDER BY p.period_date DESC LIMIT 3";
             $absenceStmt = $db->prepare($absenceQuery);
             $absenceStmt->bindParam(':student_id', $child['student_id'], PDO::PARAM_INT);
             $absenceStmt->execute();
-            $childStats['recent_absences'] = $absenceStmt->fetchAll(PDO::FETCH_ASSOC);
+            $recentAbsences = $absenceStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $html .= '<div class="child-attendance-summary card mb-lg">';
-            $html .= '<div class="card__header p-md border-bottom d-flex justify-between items-center">';
-            $html .= '<h5 class="card__title m-0 font-medium">' . htmlspecialchars($childStats['name']) . '</h5>';
-            $html .= '<span class="badge badge-secondary">' . htmlspecialchars($childStats['class_code']) . '</span>';
+            $html .= '<div class="rounded p-0 shadow-sm">'; // Child's attendance block
+            $html .= '<div class="d-flex justify-between items-center p-md border-bottom">';
+            $html .= '<h5 class="m-0 font-medium">' . htmlspecialchars($child['first_name'] . ' ' . $child['last_name']) . '</h5>';
+            $html .= '<span class="badge badge-secondary">' . htmlspecialchars($child['class_code']) . '</span>';
             $html .= '</div>';
 
-            $html .= '<div class="card__content p-lg">';
-
-            $html .= '<div class="attendance-stats-row row align-items-center gap-lg mb-lg">';
-            $html .= '<div class="mini-attendance-rate col-12 col-md-3 text-center">';
-            $rateColorClass = match (true) {
-                $childStats['attendance_rate'] >= 95 => 'text-success',
-                $childStats['attendance_rate'] >= 85 => 'text-warning',
-                default => 'text-error'
-            };
-            $html .= '<div class="mini-rate-circle mx-auto" data-percentage="' . $childStats['attendance_rate'] . '" style="width: 80px; height: 80px;">';
-            $html .= '<svg viewBox="0 0 36 36" class="circular-chart mini ' . $rateColorClass . '">';
-            $html .= '<path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>';
-            $html .= '<path class="circle" stroke-dasharray="' . $childStats['attendance_rate'] . ', 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>';
-            $html .= '<text x="18" y="20.35" class="percentage">' . $childStats['attendance_rate'] . '%</text>';
-            $html .= '</svg>';
+            $html .= '<div class="p-md">';
+            // Attendance Rate and Stats
+            $html .= '<div class="row items-center gap-md mb-md">';
+            $html .= '<div class="col-12 col-md-3 text-center">';
+            $rateColor = $s['attendance_rate'] >= 95 ? 'text-success' : ($s['attendance_rate'] >= 85 ? 'text-warning' : 'text-error');
+            $html .= '<div class="font-size-xxl font-bold ' . $rateColor . '">' . $s['attendance_rate'] . '%</div>';
+            $html .= '<div class="text-sm text-secondary">Prisotnost</div>';
             $html .= '</div>';
-            $html .= '<span class="mini-label text-xs text-secondary mt-xs d-block">Prisotnost</span>';
+            $html .= '<div class="col-12 col-md-8">';
+            $html .= '<div class="row text-center text-sm">';
+            $html .= '<div class="col-6 col-lg-3 mb-sm"><span class="d-block font-medium">' . ($s['present'] ?? 0) . '</span><span class="text-secondary">Prisoten</span></div>';
+            $html .= '<div class="col-6 col-lg-3 mb-sm"><span class="d-block font-medium">' . ($s['late'] ?? 0) . '</span><span class="text-secondary">Zamuda</span></div>';
+            $html .= '<div class="col-6 col-lg-3 mb-sm"><span class="d-block font-medium">' . ($s['justified'] ?? 0) . '</span><span class="text-secondary">Opravičeno</span></div>';
+            $html .= '<div class="col-6 col-lg-3 mb-sm"><span class="d-block font-medium">' . (max($s['unjustified'], 0)) . '</span><span class="text-secondary">Neopravičeno</span></div>';
             $html .= '</div>';
-
-            $html .= '<div class="mini-stats col-12 col-md-8">';
-            $html .= '<div class="row">';
-            $html .= '<div class="col-6 col-lg-3 mb-md text-center"><span class="mini-count d-block font-size-md font-medium text-success">' . $childStats['present'] . '</span><span class="mini-label text-xs text-secondary">Prisoten</span></div>';
-            $html .= '<div class="col-6 col-lg-3 mb-md text-center"><span class="mini-count d-block font-size-md font-medium text-warning">' . $childStats['late'] . '</span><span class="mini-label text-xs text-secondary">Zamuda</span></div>';
-            $html .= '<div class="col-6 col-lg-3 mb-md text-center"><span class="mini-count d-block font-size-md font-medium text-info">' . $childStats['justified'] . '</span><span class="mini-label text-xs text-secondary">Opravičeno</span></div>';
-            $html .= '<div class="col-6 col-lg-3 mb-md text-center"><span class="mini-count d-block font-size-md font-medium text-error">' . $childStats['unjustified'] . '</span><span class="mini-label text-xs text-secondary">Neopravičeno</span></div>';
-            $html .= '</div>';
-            if ($childStats['pending'] > 0 || $childStats['rejected'] > 0) {
-                $html .= '<div class="row mt-xs">';
-                if ($childStats['pending'] > 0) $html .= '<div class="col-6 text-center"><span class="text-xs text-secondary">V obdelavi: ' . $childStats['pending'] . '</span></div>';
-                if ($childStats['rejected'] > 0) $html .= '<div class="col-6 text-center"><span class="text-xs text-secondary">Zavrnjeno: ' . $childStats['rejected'] . '</span></div>';
-                $html .= '</div>';
-            }
+            if (($s['pending'] ?? 0) > 0) $html .= '<div class="text-center text-xs text-warning mt-xs">V obdelavi: ' . $s['pending'] . '</div>';
             $html .= '</div>';
             $html .= '</div>';
 
-            if (!empty($childStats['recent_absences'])) {
-                $html .= '<div class="recent-absences border-top pt-lg">';
-                $html .= '<h5 class="mb-md font-medium">Nedavne odsotnosti</h5>';
-                $html .= '<ul class="absence-list list-unstyled p-0 m-0 d-flex flex-column gap-sm">';
-
-                foreach ($childStats['recent_absences'] as $absence) {
-                    $date = date('d.m.Y', strtotime($absence['period_date']));
-
-                    if ($absence['approved'] === 1) {
-                        $justificationStatus = 'Opravičeno';
-                        $statusClass = 'badge-success';
-                    } elseif ($absence['approved'] === 0) {
-                        $justificationStatus = 'Zavrnjeno';
-                        $statusClass = 'badge-error';
-                    } elseif ($absence['justification'] !== null && $absence['approved'] === null) {
-                        $justificationStatus = 'V obdelavi';
-                        $statusClass = 'badge-warning';
-                    } else {
-                        $justificationStatus = 'Neopravičeno';
-                        $statusClass = 'badge-error';
-                    }
-
+            // Recent Absences
+            if (!empty($recentAbsences)) {
+                $html .= '<h6 class="font-medium mb-sm mt-md pt-md border-top">Nedavne odsotnosti</h6>';
+                $html .= '<ul class="list-unstyled m-0 p-0 d-flex flex-column gap-sm">';
+                foreach ($recentAbsences as $absence) {
+                    $statusBadge = getAttendanceStatusLabel($absence['status']); // Helper for badge class + text
+                    $jStatus = $absence['approved'] === 1 ? '<span class="badge badge-success">Opravičeno</span>' : ($absence['approved'] === 0 ? '<span class="badge badge-error">Zavrnjeno</span>' : ($absence['justification'] ? '<span class="badge badge-warning">V obdelavi</span>' : '<span class="badge badge-secondary">Ni oddano</span>'));
                     $html .= '<li class="d-flex justify-between items-center text-sm py-xs border-bottom">';
-                    $html .= '<span class="d-flex items-center gap-xs"><span class="material-icons-outlined text-sm">calendar_today</span>' . htmlspecialchars($date) . '</span>';
-                    $html .= '<span class="text-secondary">' . htmlspecialchars($absence['subject_name']) . ' (' . htmlspecialchars($absence['period_label']) . '. ura)</span>';
-                    $html .= '<span><span class="badge ' . $statusClass . '">' . htmlspecialchars($justificationStatus) . '</span></span>';
+                    $html .= '<span>' . date('d.m.Y', strtotime($absence['period_date'])) . ' - ' . htmlspecialchars($absence['subject_name']) . '</span>';
+                    $html .= $jStatus;
                     $html .= '</li>';
                 }
-
                 $html .= '</ul>';
-                $html .= '</div>';
-            } elseif ($childStats['absent'] > 0) $html .= '<div class="recent-absences border-top pt-lg text-center text-secondary"><p>Ni nedavnih odsotnosti.</p></div>';
+            } elseif (($s['absent'] ?? 0) > 0) $html .= '<p class="text-secondary text-center mt-md pt-md border-top">Ni nedavnih odsotnosti za prikaz.</p>';
+            $html .= '</div>'; // end p-md
 
+            $html .= '<div class="p-md text-right border-top">';
+            $html .= '<a href="/uwuweb/parent/attendance.php?student_id=' . $child['student_id'] . '" class="btn btn-sm btn-secondary">Celotna evidenca</a>';
             $html .= '</div>';
-
-            $html .= '<div class="card__footer p-md text-right border-top pt-md">';
-            $html .= '<a href="/uwuweb/parent/attendance.php?student_id=' . $childStats['student_id'] . '" class="btn btn-sm btn-secondary">Celotna evidenca</a>';
-            $html .= '</div>';
-
-            $html .= '</div>';
+            $html .= '</div>'; // end child block
         }
-
-        $html .= '</div>';
-
+        $html .= '</div>'; // end main flex container
         return $html;
-
     } catch (PDOException $e) {
         error_log("Database error in renderParentAttendanceWidget: " . $e->getMessage());
         return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o prisotnosti otrok.');
-    } catch (Exception $e) {
-        error_log("Error in renderParentAttendanceWidget: " . $e->getMessage());
-        return renderPlaceholderWidget('Prišlo je do napake.');
     }
 }
 
+
 /**
  * Creates the HTML for the parent's view of their child's class averages
- * Shows academic performance for each child compared to class averages
  *
  * @return string HTML content for the widget
  */
 function renderParentChildClassAveragesWidget(): string
 {
     $userId = getUserId();
-    if (!$userId) return renderPlaceholderWidget('Za prikaz povprečij razredov se morate prijaviti.');
+    if (!$userId) return renderPlaceholderWidget('Za prikaz povprečij se morate prijaviti.');
 
     $db = getDBConnection();
     if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
     $parentInfo = getUserInfo($userId);
+    if (!$parentInfo || empty($parentInfo['children'])) return renderPlaceholderWidget('Na vaš račun ni povezanih otrok.');
 
-    if (!$parentInfo || empty($parentInfo['children'])) return renderPlaceholderWidget('Na vaš račun ni povezanih otrok ali podatkov o staršu.');
     $children = $parentInfo['children'];
-
-
-    $html = '<div class="widget-content">';
+    $html = '<div class="d-flex flex-column gap-lg" style="overflow-y: auto; max-height: 400px;">'; // Scrollable container
 
     foreach ($children as $child) {
-        $html .= '<div class="child-grades-section card mb-lg">';
-        $html .= '<div class="card__header p-md border-bottom d-flex justify-between items-center">';
-        $html .= '<h5 class="card__title m-0 font-medium">' . htmlspecialchars($child['first_name'] . ' ' . $child['last_name']) . '</h5>';
+        // Fetch grades (simplified from original, assuming logic is sound)
+        $query = "SELECT s.name AS subject_name, c.title AS class_title, AVG(CASE WHEN gi.max_points > 0 THEN (g.points / gi.max_points) * 100 END) AS student_avg_score, (SELECT AVG(CASE WHEN gi_c.max_points > 0 THEN (g_c.points / gi_c.max_points) * 100 END) FROM enrollments e_c JOIN grades g_c ON e_c.enroll_id = g_c.enroll_id JOIN grade_items gi_c ON g_c.item_id = gi_c.item_id WHERE gi_c.class_subject_id = cs.class_subject_id) AS class_avg_score FROM enrollments e JOIN classes c ON e.class_id = c.class_id JOIN class_subjects cs ON c.class_id = cs.class_id JOIN subjects s ON cs.subject_id = s.subject_id LEFT JOIN grade_items gi ON gi.class_subject_id = cs.class_subject_id LEFT JOIN grades g ON g.item_id = gi.item_id AND e.enroll_id = g.enroll_id WHERE e.student_id = :student_id GROUP BY s.subject_id, s.name, c.class_id, c.title, cs.class_subject_id ORDER BY s.name";
+        $stmt = $db->prepare($query);
+        $stmt->bindParam(':student_id', $child['student_id'], PDO::PARAM_INT);
+        $stmt->execute();
+        $childGrades = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $html .= '<div class="rounded p-0 shadow-sm">'; // Child's grades block
+        $html .= '<div class="d-flex justify-between items-center p-md border-bottom">';
+        $html .= '<h5 class="m-0 font-medium">' . htmlspecialchars($child['first_name'] . ' ' . $child['last_name']) . '</h5>';
         $html .= '<span class="badge badge-secondary">' . htmlspecialchars($child['class_code']) . '</span>';
         $html .= '</div>';
 
-        try {
-            $query = "SELECT
-                        s.subject_id,
-                        s.name AS subject_name,
-                        c.class_id,
-                        c.title AS class_title,
-                        cs.class_subject_id,
-                        AVG(
-                            CASE WHEN g_student.points IS NOT NULL AND gi_student.max_points > 0
-                            THEN (g_student.points / gi_student.max_points) * 100
-                            END
-                        ) AS student_avg_score,
-                        (SELECT AVG(
-                            CASE WHEN gi_class.max_points > 0
-                            THEN (g_class.points / gi_class.max_points) * 100
-                            END
-                        )
-                        FROM enrollments e_class
-                        JOIN grades g_class ON e_class.enroll_id = g_class.enroll_id
-                        JOIN grade_items gi_class ON g_class.item_id = gi_class.item_id
-                        WHERE gi_class.class_subject_id = cs.class_subject_id
-                        ) AS class_avg_score
-                      FROM enrollments e
-                      JOIN classes c ON e.class_id = c.class_id
-                      JOIN class_subjects cs ON c.class_id = cs.class_id
-                      JOIN subjects s ON cs.subject_id = s.subject_id
-                      LEFT JOIN grade_items gi_student ON gi_student.class_subject_id = cs.class_subject_id
-                      LEFT JOIN grades g_student ON g_student.item_id = gi_student.item_id AND e.enroll_id = g_student.enroll_id
-                      WHERE e.student_id = :student_id
-                      GROUP BY s.subject_id, s.name, c.class_id, c.title, cs.class_subject_id
-                      ORDER BY s.name, c.title";
-
-            $stmt = $db->prepare($query);
-            $stmt->bindParam(':student_id', $child['student_id'], PDO::PARAM_INT);
-            $stmt->execute();
-            $childGrades = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            error_log("Database error in renderParentChildClassAveragesWidget (getting grades for child " . $child['student_id'] . "): " . $e->getMessage());
-            $html .= '<div class="card__content p-md"><p class="text-error m-0">Napaka pri pridobivanju podatkov o ocenah.</p></div>';
-            $html .= '</div>';
-            continue;
-        }
-
-        $html .= '<div class="card__content p-0">';
-
-        if (empty($childGrades) || !array_filter($childGrades, static fn($g) => $g['student_avg_score'] !== null)) $html .= '<div class="p-md text-center"><p class="m-0 text-secondary">Za tega otroka ni podatkov o ocenah.</p></div>'; else {
-            $html .= '<div class="child-grades-table table-responsive">';
-            $html .= '<table class="data-table w-100">';
+        $html .= '<div class="p-0">'; // p-0 for table-responsive
+        if (empty($childGrades) || !array_filter($childGrades, static fn($g) => $g['student_avg_score'] !== null)) $html .= '<div class="p-md text-center"><p class="m-0 text-secondary">Ni podatkov o ocenah.</p></div>'; else {
+            $html .= '<div class="table-responsive">';
+            $html .= '<table class="data-table w-100 text-sm">';
             $html .= '<thead><tr><th>Predmet</th><th class="text-center">Povprečje</th><th class="text-center">Povprečje razreda</th></tr></thead>';
             $html .= '<tbody>';
-
             foreach ($childGrades as $grade) {
                 if ($grade['student_avg_score'] === null && $grade['class_avg_score'] === null) continue;
-
-                $studentAvgFormatted = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) . '%' : 'N/A';
-                $classAvgFormatted = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) . '%' : 'N/A';
-
-                $scoreClass = '';
-                if ($grade['student_avg_score'] !== null) if ($grade['student_avg_score'] >= 80) $scoreClass = 'grade-high'; elseif ($grade['student_avg_score'] >= 60) $scoreClass = 'grade-medium';
-                else $scoreClass = 'grade-low';
-
+                $sAvg = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) . '%' : 'N/A';
+                $cAvg = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) . '%' : 'N/A';
+                $sClass = $grade['student_avg_score'] === null ? '' : ($grade['student_avg_score'] >= 80 ? 'grade-high' : ($grade['student_avg_score'] >= 60 ? 'grade-medium' : 'grade-low'));
                 $html .= '<tr>';
                 $html .= '<td>' . htmlspecialchars($grade['subject_name']) . '<br><small class="text-disabled">' . htmlspecialchars($grade['class_title']) . '</small></td>';
-                $html .= '<td class="text-center ' . $scoreClass . '">' . $studentAvgFormatted . '</td>';
-                $html .= '<td class="text-center">' . $classAvgFormatted . '</td>';
+                $html .= '<td class="text-center ' . $sClass . '">' . $sAvg . '</td>';
+                $html .= '<td class="text-center">' . $cAvg . '</td>';
                 $html .= '</tr>';
             }
-
-            $html .= '</tbody>';
-            $html .= '</table>';
-            $html .= '</div>';
+            $html .= '</tbody></table></div>';
         }
-        $html .= '</div>';
+        $html .= '</div>'; // end p-0
 
-        $html .= '<div class="card__footer p-md text-right border-top pt-md">';
-        $html .= '<a href="/uwuweb/parent/grades.php?student_id=' . (int)$child['student_id'] . '" class="btn btn-sm btn-secondary">Ogled vseh ocen</a>';
+        $html .= '<div class="p-md text-right border-top">';
+        $html .= '<a href="/uwuweb/parent/grades.php?student_id=' . (int)$child['student_id'] . '" class="btn btn-sm btn-secondary">Vse ocene</a>';
         $html .= '</div>';
-        $html .= '</div>';
+        $html .= '</div>'; // end child block
     }
+    if (empty($children)) $html .= renderPlaceholderWidget('Na vaš račun ni povezanih otrok.');
 
-    $html .= '</div>';
-
+    $html .= '</div>'; // end main flex container
     return $html;
 }

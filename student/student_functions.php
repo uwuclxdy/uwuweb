@@ -693,322 +693,158 @@ function getStudentJustifications(int $studentId): array
 function renderStudentGradesWidget(): string
 {
     $studentId = getStudentId();
-
-    if (!$studentId) return renderPlaceholderWidget('Za prikaz ocen se morate identificirati kot dijak.');
+    if (!$studentId) return renderPlaceholderWidget('Za prikaz ocen se morate identificirati.');
 
     $db = getDBConnection();
     if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
-    try {
-        $queryRecent = "SELECT
-                    g.grade_id, g.points, gi.max_points, gi.name AS grade_item_name,
-                    s.name AS subject_name, g.comment,
-                    CASE WHEN gi.max_points > 0 THEN ROUND((g.points / gi.max_points) * 100, 1) END AS percentage,
-                    g.grade_id AS date_added
-                  FROM grades g
-                  JOIN grade_items gi ON g.item_id = gi.item_id
-                  JOIN class_subjects cs ON gi.class_subject_id = cs.class_subject_id
-                  JOIN subjects s ON cs.subject_id = s.subject_id
-                  JOIN enrollments e ON g.enroll_id = e.enroll_id
-                  WHERE e.student_id = :student_id
-                  ORDER BY g.grade_id DESC
-                  LIMIT 5";
+    // Fetch data (simplified, assuming original queries are correct)
+    $queryRecent = "SELECT g.points, gi.max_points, gi.name AS grade_item_name, s.name AS subject_name, g.comment, CASE WHEN gi.max_points > 0 THEN ROUND((g.points / gi.max_points) * 100, 1) END AS percentage FROM grades g JOIN grade_items gi ON g.item_id = gi.item_id JOIN class_subjects cs ON gi.class_subject_id = cs.class_subject_id JOIN subjects s ON cs.subject_id = s.subject_id JOIN enrollments e ON g.enroll_id = e.enroll_id WHERE e.student_id = :student_id ORDER BY g.grade_id DESC LIMIT 3";
+    $stmtRecent = $db->prepare($queryRecent);
+    $stmtRecent->bindParam(':student_id', $studentId, PDO::PARAM_INT);
+    $stmtRecent->execute();
+    $recentGrades = $stmtRecent->fetchAll(PDO::FETCH_ASSOC);
 
-        $stmtRecent = $db->prepare($queryRecent);
-        $stmtRecent->bindParam(':student_id', $studentId, PDO::PARAM_INT);
-        $stmtRecent->execute();
-        $recentGrades = $stmtRecent->fetchAll(PDO::FETCH_ASSOC);
+    $queryAvg = "SELECT s.name AS subject_name, AVG(CASE WHEN g.points IS NOT NULL AND gi.max_points > 0 THEN (g.points / gi.max_points) * 100 END) AS avg_score, COUNT(g.grade_id) AS grade_count FROM enrollments e JOIN class_subjects cs ON e.class_id = cs.class_id JOIN subjects s ON cs.subject_id = s.subject_id LEFT JOIN grade_items gi ON gi.class_subject_id = cs.class_subject_id LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id WHERE e.student_id = :student_id GROUP BY s.subject_id, s.name HAVING COUNT(g.grade_id) > 0 ORDER BY avg_score DESC LIMIT 5";
+    $stmtAvg = $db->prepare($queryAvg);
+    $stmtAvg->bindParam(':student_id', $studentId, PDO::PARAM_INT);
+    $stmtAvg->execute();
+    $subjectAverages = $stmtAvg->fetchAll(PDO::FETCH_ASSOC);
 
-        $queryAvg = "SELECT
-                    s.subject_id, s.name AS subject_name,
-                    AVG(CASE WHEN g.points IS NOT NULL AND gi.max_points > 0
-                         THEN (g.points / gi.max_points) * 100
-                         END) AS avg_score,
-                    COUNT(g.grade_id) AS grade_count
-                  FROM enrollments e
-                  JOIN classes c ON e.class_id = c.class_id
-                  JOIN class_subjects cs ON c.class_id = cs.class_id
-                  JOIN subjects s ON cs.subject_id = s.subject_id
-                  LEFT JOIN grade_items gi ON gi.class_subject_id = cs.class_subject_id
-                  LEFT JOIN grades g ON gi.item_id = g.item_id AND e.enroll_id = g.enroll_id
-                  WHERE e.student_id = :student_id
-                  GROUP BY s.subject_id, s.name
-                  HAVING COUNT(g.grade_id) > 0
-                  ORDER BY avg_score DESC";
+    $html = '<div class="d-flex flex-column h-full">'; // Main widget container
 
-        $stmtAvg = $db->prepare($queryAvg);
-        $stmtAvg->bindParam(':student_id', $studentId, PDO::PARAM_INT);
-        $stmtAvg->execute();
-        $subjectAverages = $stmtAvg->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        error_log("Database error in renderStudentGradesWidget: " . $e->getMessage());
-        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o ocenah.');
-    }
+    // Combined section for averages and recent grades, scrollable
+    $html .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
+    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Pregled ocen</h5>';
+    $html .= '<div class="p-md flex-grow-1" style="overflow-y: auto;">'; // Scrollable content
 
-    $html = '<div class="widget-content grades-widget card card__content">';
-
-    $html .= '<div class="row gap-lg">';
-
-    $html .= '<div class="grades-section subject-averages col-12 col-md-5">';
-    $html .= '<h5 class="mb-md font-medium">Povprečja predmetov</h5>';
-
-    if (empty($subjectAverages)) $html .= '<div class="text-center p-md"><p class="m-0 text-secondary">Ni podatkov o povprečjih predmetov.</p></div>'; else {
-        $html .= '<div class="averages-list d-flex flex-column gap-sm">';
-        foreach ($subjectAverages as $subject) {
-            if ($subject['avg_score'] === null) continue;
-
-            $avgScore = number_format($subject['avg_score'], 1);
-            $gradeCount = (int)$subject['grade_count'];
-            $gradeSuffix = match (true) {
-                $gradeCount == 1 => 'ocena',
-                $gradeCount >= 2 && $gradeCount <= 4 => 'oceni',
-                default => 'ocen'
-            };
-
-            $scoreClass = match (true) {
-                $subject['avg_score'] >= 80 => 'grade-high',
-                $subject['avg_score'] >= 60 => 'grade-medium',
-                default => 'grade-low'
-            };
-
-            $html .= '<div class="subject-average-item d-flex justify-between items-center p-sm rounded bg-secondary shadow-sm">';
-            $html .= '<div class="subject-info flex-grow-1">';
-            $html .= '<div class="subject-name font-medium">' . htmlspecialchars($subject['subject_name']) . '</div>';
-            $html .= '<div class="subject-grade-count text-xs text-disabled">' . $gradeCount . ' ' . $gradeSuffix . '</div>';
-            $html .= '</div>';
-            $html .= '<div class="subject-average badge ' . $scoreClass . '">' . $avgScore . '%</div>';
+    // Subject Averages
+    $html .= '<div class="mb-lg">';
+    $html .= '<h6 class="font-medium mb-sm">Povprečja po predmetih</h6>';
+    if (empty($subjectAverages)) $html .= '<p class="text-secondary text-sm">Ni podatkov o povprečjih.</p>'; else {
+        $html .= '<div class="d-flex flex-column gap-sm">';
+        foreach ($subjectAverages as $avg) {
+            if ($avg['avg_score'] === null) continue;
+            $score = number_format($avg['avg_score'], 1);
+            $sClass = $avg['avg_score'] >= 80 ? 'grade-high' : ($avg['avg_score'] >= 60 ? 'grade-medium' : 'grade-low');
+            $html .= '<div class="d-flex justify-between items-center p-sm rounded shadow-sm">';
+            $html .= '<span>' . htmlspecialchars($avg['subject_name']) . ' <small class="text-disabled">(' . $avg['grade_count'] . ' ocen)</small></span>';
+            $html .= '<span class="badge ' . $sClass . '">' . $score . '%</span>';
             $html .= '</div>';
         }
         $html .= '</div>';
     }
     $html .= '</div>';
 
-    $html .= '<div class="grades-section recent-grades col-12 col-md-7">';
-    $html .= '<h5 class="mb-md font-medium">Nedavne ocene</h5>';
-
-    if (empty($recentGrades)) $html .= '<div class="text-center p-md"><p class="m-0 text-secondary">Nimate nedavnih ocen.</p></div>'; else {
-        $html .= '<div class="recent-grades-list d-flex flex-column gap-md">';
+    // Recent Grades
+    $html .= '<div>';
+    $html .= '<h6 class="font-medium mb-sm">Najnovejše ocene</h6>';
+    if (empty($recentGrades)) $html .= '<p class="text-secondary text-sm">Ni nedavnih ocen.</p>'; else {
+        $html .= '<div class="d-flex flex-column gap-md">';
         foreach ($recentGrades as $grade) {
-            $percentage = $grade['percentage'];
-            $scoreClass = 'badge-secondary';
-            if ($percentage !== null) $scoreClass = match (true) {
-                $percentage >= 80 => 'grade-high',
-                $percentage >= 60 => 'grade-medium',
-                default => 'grade-low'
-            };
-            $percentageFormatted = $percentage !== null ? '(' . htmlspecialchars($percentage) . '%)' : '';
-
-            $html .= '<div class="grade-item p-md rounded bg-secondary shadow-sm">';
-            $html .= '<div class="grade-header d-flex justify-between items-center mb-sm">';
-            $html .= '<div class="grade-subject font-medium">' . htmlspecialchars($grade['subject_name']) . '</div>';
-            $html .= '<div class="grade-score badge ' . $scoreClass . '">' .
-                htmlspecialchars($grade['points']) . '/' .
-                htmlspecialchars($grade['max_points']) . ' ' . $percentageFormatted . '</div>';
+            $perc = $grade['percentage'];
+            $sClass = $perc === null ? 'badge-secondary' : ($perc >= 80 ? 'grade-high' : ($perc >= 60 ? 'grade-medium' : 'grade-low'));
+            $percFormatted = $perc !== null ? ' (' . $perc . '%)' : '';
+            $html .= '<div class="p-sm rounded shadow-sm">';
+            $html .= '<div class="d-flex justify-between items-center mb-xs">';
+            $html .= '<span class="font-medium">' . htmlspecialchars($grade['subject_name']) . '</span>';
+            $html .= '<span class="badge ' . $sClass . '">' . htmlspecialchars($grade['points']) . '/' . htmlspecialchars($grade['max_points']) . $percFormatted . '</span>';
             $html .= '</div>';
-
-            $html .= '<div class="grade-details">';
-            $html .= '<div class="grade-name text-sm">' . htmlspecialchars($grade['grade_item_name']) . '</div>';
-            if (!empty($grade['comment'])) $html .= '<div class="grade-comment text-sm text-secondary fst-italic mt-xs">"' . htmlspecialchars($grade['comment']) . '"</div>';
-            $html .= '</div>';
+            $html .= '<div class="text-sm">' . htmlspecialchars($grade['grade_item_name']) . '</div>';
+            if (!empty($grade['comment'])) $html .= '<div class="text-xs text-secondary mt-xs fst-italic">"' . htmlspecialchars($grade['comment']) . '"</div>';
             $html .= '</div>';
         }
         $html .= '</div>';
     }
     $html .= '</div>';
 
-    $html .= '</div>';
+    $html .= '</div>'; // end scrollable content
+    $html .= '</div>'; // end rounded shadow section
 
-    $html .= '<div class="widget-footer mt-lg text-right border-top pt-md">';
-    $html .= '<a href="/uwuweb/student/grades.php" class="btn btn-sm btn-primary">Ogled vseh ocen</a>';
+    $html .= '<div class="mt-auto text-right border-top pt-md p-md">';
+    $html .= '<a href="/uwuweb/student/grades.php" class="btn btn-sm btn-primary">Vse ocene</a>';
     $html .= '</div>';
-
-    $html .= '</div>';
-
+    $html .= '</div>'; // end main widget container
     return $html;
 }
 
+
 /**
- * Creates the HTML for the student's attendance dashboard widget, showing attendance statistics and recent attendance records
+ * Creates the HTML for the student's attendance dashboard widget
  *
  * @return string HTML content for the widget
  */
 function renderStudentAttendanceWidget(): string
 {
     $studentId = getStudentId();
+    if (!$studentId) return renderPlaceholderWidget('Za prikaz prisotnosti se morate identificirati.');
 
-    if (!$studentId) return renderPlaceholderWidget('Za prikaz prisotnosti se morate identificirati kot dijak.');
+    $db = getDBConnection();
+    if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
-    try {
-        $db = getDBConnection();
-        if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
+    // Fetch stats (simplified)
+    $query = "SELECT COUNT(*) as total, SUM(IF(status = 'P', 1, 0)) as present, SUM(IF(status = 'A', 1, 0)) as absent, SUM(IF(status = 'L', 1, 0)) as late, SUM(IF(status = 'A' AND approved = 1, 1, 0)) as justified, SUM(IF(status = 'A' AND justification IS NOT NULL AND approved IS NULL, 1, 0)) as pending, SUM(IF(status = 'A' AND approved = 0, 1, 0)) as rejected, SUM(IF(status = 'A' AND justification IS NULL AND approved IS NULL, 1, 0)) as needs_justification FROM attendance a JOIN enrollments e ON a.enroll_id = e.enroll_id WHERE e.student_id = :student_id";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':student_id', $studentId, PDO::PARAM_INT);
+    $stmt->execute();
+    $s = $stmt->fetch(PDO::FETCH_ASSOC);
+    $s['unjustified'] = ($s['needs_justification'] ?? 0) + ($s['rejected'] ?? 0);
+    $s['attendance_rate'] = ($s['total'] ?? 0) > 0 ? round((($s['present'] ?? 0) + ($s['late'] ?? 0)) / $s['total'] * 100, 1) : 0;
 
-        $stats = [
-            'total' => 0, 'present' => 0, 'late' => 0,
-            'justified' => 0, 'rejected' => 0, 'pending' => 0, 'needs_justification' => 0,
-            'unjustified' => 0, 'attendance_rate' => 0, 'recent' => []
-        ];
+    $recentQuery = "SELECT a.att_id, a.status, a.justification, a.approved, p.period_date, p.period_label, subj.name as subject_name FROM attendance a JOIN periods p ON a.period_id = p.period_id JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id JOIN subjects subj ON cs.subject_id = subj.subject_id JOIN enrollments e ON a.enroll_id = e.enroll_id WHERE e.student_id = :student_id ORDER BY p.period_date DESC, p.period_label DESC LIMIT 5";
+    $stmtRecent = $db->prepare($recentQuery);
+    $stmtRecent->bindParam(':student_id', $studentId, PDO::PARAM_INT);
+    $stmtRecent->execute();
+    $recentRecords = $stmtRecent->fetchAll(PDO::FETCH_ASSOC);
 
-        $query = "SELECT
-            COUNT(*) as total,
-            SUM(IF(status = 'P', 1, 0)) as present,
-            SUM(IF(status = 'A', 1, 0)) as absent,
-            SUM(IF(status = 'L', 1, 0)) as late,
-            SUM(IF(status = 'A' AND approved = 1, 1, 0)) as justified,
-            SUM(IF(status = 'A' AND approved = 0, 1, 0)) as rejected,
-            SUM(IF(status = 'A' AND justification IS NOT NULL AND approved IS NULL, 1, 0)) as pending,
-            SUM(IF(status = 'A' AND justification IS NULL AND approved IS NULL, 1, 0)) as needs_justification
-         FROM attendance a
-         JOIN enrollments e ON a.enroll_id = e.enroll_id
-         WHERE e.student_id = :student_id";
+    $html = '<div class="d-flex flex-column h-full">';
 
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':student_id', $studentId, PDO::PARAM_INT);
-        $stmt->execute();
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Attendance Summary Section
+    $html .= '<div class="rounded p-0 shadow-sm mb-lg">';
+    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Povzetek Prisotnosti</h5>';
+    $html .= '<div class="p-md">';
+    $html .= '<div class="row items-center gap-md">';
+    $html .= '<div class="col-12 col-md-4 text-center mb-md md-mb-0">'; // mb-md for mobile, md-mb-0 for larger
+    $rateColor = $s['attendance_rate'] >= 95 ? 'text-success' : ($s['attendance_rate'] >= 85 ? 'text-warning' : 'text-error');
+    $html .= '<div class="font-size-xxl font-bold ' . $rateColor . '">' . $s['attendance_rate'] . '%</div>';
+    $html .= '<div class="text-sm text-secondary">Skupna prisotnost</div>';
+    $html .= '</div>';
+    $html .= '<div class="col-12 col-md-7">';
+    $html .= '<div class="row text-center text-sm">';
+    $html .= '<div class="col-6 col-lg-3 mb-sm"><span class="d-block font-medium">' . ($s['present'] ?? 0) . '</span><span class="text-secondary">Prisoten</span></div>';
+    $html .= '<div class="col-6 col-lg-3 mb-sm"><span class="d-block font-medium">' . ($s['late'] ?? 0) . '</span><span class="text-secondary">Zamuda</span></div>';
+    $html .= '<div class="col-6 col-lg-3 mb-sm"><span class="d-block font-medium">' . ($s['justified'] ?? 0) . '</span><span class="text-secondary">Opravičeno</span></div>';
+    $html .= '<div class="col-6 col-lg-3 mb-sm"><span class="d-block font-medium">' . (max($s['unjustified'], 0)) . '</span><span class="text-secondary">Neopravičeno</span></div>';
+    $html .= '</div>';
+    if (($s['pending'] ?? 0) > 0) $html .= '<div class="text-center text-xs text-warning mt-xs">V obdelavi: ' . $s['pending'] . '</div>';
+    $html .= '</div></div></div></div>';
 
-        if ($result) {
-            $stats['total'] = (int)$result['total'];
-            $stats['present'] = (int)$result['present'];
-            $stats['late'] = (int)$result['late'];
-            $stats['justified'] = (int)$result['justified'];
-            $stats['rejected'] = (int)$result['rejected'];
-            $stats['pending'] = (int)$result['pending'];
-            $stats['needs_justification'] = (int)$result['needs_justification'];
-            $stats['unjustified'] = $stats['needs_justification'] + $stats['rejected'];
-
-            if ($stats['total'] > 0) $stats['attendance_rate'] = round((($stats['present'] + $stats['late']) / $stats['total']) * 100, 1);
+    // Recent Attendance Section (Expanding)
+    $html .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
+    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Najnovejši vnosi</h5>';
+    $html .= '<div class="p-0 flex-grow-1" style="overflow-y: auto;">'; // p-0 for table-responsive
+    if (empty($recentRecords)) $html .= '<p class="p-md text-secondary text-center">Ni nedavnih vnosov.</p>'; else {
+        $html .= '<div class="table-responsive">';
+        $html .= '<table class="data-table w-100 text-sm">';
+        $html .= '<thead><tr><th>Datum</th><th>Predmet (ura)</th><th class="text-center">Status</th><th class="text-center">Opravičilo</th></tr></thead><tbody>';
+        foreach ($recentRecords as $rec) {
+            $statusBadge = getAttendanceStatusLabel($rec['status']); // This needs to return HTML badge
+            $justHtml = '<span class="text-disabled">-</span>';
+            if ($rec['status'] == 'A') if ($rec['approved'] === 1) $justHtml = '<span class="badge badge-success">Opravičeno</span>';
+            elseif ($rec['approved'] === 0) $justHtml = '<span class="badge badge-error">Zavrnjeno</span>';
+            elseif ($rec['justification'] !== null) $justHtml = '<span class="badge badge-warning">V obdelavi</span>';
+            else $justHtml = '<a href="/uwuweb/student/justification.php?att_id=' . $rec['att_id'] . '" class="btn btn-xs btn-warning d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-xs">edit</span> Oddaj</a>';
+            $html .= '<tr><td>' . date('d.m.Y', strtotime($rec['period_date'])) . '</td><td>' . htmlspecialchars($rec['subject_name']) . ' (' . htmlspecialchars($rec['period_label']) . ')</td><td class="text-center">' . $statusBadge . '</td><td class="text-center">' . $justHtml . '</td></tr>';
         }
-
-        $recentQuery = "SELECT
-            a.att_id,
-            a.status,
-            a.justification,
-            a.approved,
-            p.period_date,
-            p.period_label,
-            s.name as subject_name
-         FROM attendance a
-         JOIN periods p ON a.period_id = p.period_id
-         JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
-         JOIN subjects s ON cs.subject_id = s.subject_id
-         JOIN enrollments e ON a.enroll_id = e.enroll_id
-         WHERE e.student_id = :student_id
-         ORDER BY p.period_date DESC, p.period_label DESC
-         LIMIT 5";
-
-        $stmt = $db->prepare($recentQuery);
-        $stmt->bindParam(':student_id', $studentId, PDO::PARAM_INT);
-        $stmt->execute();
-        $stats['recent'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $html = '<div class="widget-content attendance-widget card card__content">';
-
-        $html .= '<div class="attendance-summary row align-items-center gap-lg mb-lg">';
-
-        $html .= '<div class="attendance-rate col-12 col-md-4 text-center">';
-        $rateColorClass = match (true) {
-            $stats['attendance_rate'] >= 95 => 'text-success',
-            $stats['attendance_rate'] >= 85 => 'text-warning',
-            default => 'text-error'
-        };
-        $html .= '<div class="rate-circle mx-auto" data-percentage="' . $stats['attendance_rate'] . '" style="width: 100px; height: 100px;">';
-        $html .= '<svg viewBox="0 0 36 36" class="circular-chart ' . $rateColorClass . '">';
-        $html .= '<path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>';
-        $html .= '<path class="circle" stroke-dasharray="' . $stats['attendance_rate'] . ', 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>';
-        $html .= '<text x="18" y="20.35" class="percentage">' . $stats['attendance_rate'] . '%</text>';
-        $html .= '</svg>';
-        $html .= '</div>';
-        $html .= '<div class="rate-label text-sm text-secondary mt-sm">Skupna prisotnost</div>';
-        $html .= '</div>';
-
-        $html .= '<div class="attendance-breakdown col-12 col-md-7">';
-        $html .= '<div class="row">';
-        $html .= '<div class="col-6 col-lg-3 mb-md text-center">';
-        $html .= '<span class="count d-block font-size-lg font-medium text-success">' . $stats['present'] . '</span>';
-        $html .= '<span class="label text-sm text-secondary">Prisoten</span>';
-        $html .= '</div>';
-        $html .= '<div class="col-6 col-lg-3 mb-md text-center">';
-        $html .= '<span class="count d-block font-size-lg font-medium text-warning">' . $stats['late'] . '</span>';
-        $html .= '<span class="label text-sm text-secondary">Zamuda</span>';
-        $html .= '</div>';
-        $html .= '<div class="col-6 col-lg-3 mb-md text-center">';
-        $html .= '<span class="count d-block font-size-lg font-medium text-info">' . $stats['justified'] . '</span>';
-        $html .= '<span class="label text-sm text-secondary">Opravičeno</span>';
-        $html .= '</div>';
-        $html .= '<div class="col-6 col-lg-3 mb-md text-center">';
-        $html .= '<span class="count d-block font-size-lg font-medium text-error">' . $stats['unjustified'] . '</span>';
-        $html .= '<span class="label text-sm text-secondary">Neopravičeno</span>';
-        $html .= '</div>';
-        $html .= '</div>';
-        if ($stats['pending'] > 0) {
-            $html .= '<div class="row mt-sm">';
-            $html .= '<div class="col-12 text-center"><span class="text-sm text-secondary">V obdelavi: ' . $stats['pending'] . '</span></div>';
-            $html .= '</div>';
-        }
-        $html .= '</div>';
-
-        $html .= '</div>';
-
-        if (!empty($stats['recent'])) {
-            $html .= '<div class="recent-attendance border-top pt-lg">';
-            $html .= '<h5 class="mb-md font-medium">Nedavna evidenca</h5>';
-            $html .= '<div class="table-responsive">';
-            $html .= '<table class="mini-table data-table w-100 text-sm">';
-            $html .= '<thead><tr><th>Datum</th><th>Predmet</th><th class="text-center">Status</th><th class="text-center">Opravičilo</th></tr></thead>';
-            $html .= '<tbody>';
-
-            foreach ($stats['recent'] as $record) {
-                $date = date('d.m.Y', strtotime($record['period_date']));
-                $classInfo = htmlspecialchars($record['subject_name']) . ' (' . htmlspecialchars($record['period_label']) . '. ura)';
-
-                $statusBadge = '';
-                $justificationHtml = '<span class="text-disabled">-</span>';
-
-                switch ($record['status']) {
-                    case 'P':
-                        $statusBadge = '<span class="badge status-present">Prisoten</span>';
-                        break;
-                    case 'L':
-                        $statusBadge = '<span class="badge status-late">Zamuda</span>';
-                        break;
-                    case 'A':
-                        $statusBadge = '<span class="badge status-absent">Odsoten</span>';
-                        if ($record['approved'] === 1) $justificationHtml = '<span class="badge badge-success">Opravičeno</span>'; elseif ($record['approved'] === 0) $justificationHtml = '<span class="badge badge-error">Zavrnjeno</span>';
-                        elseif ($record['justification'] !== null && $record['approved'] === null) $justificationHtml = '<span class="badge badge-warning">V obdelavi</span>';
-                        else $justificationHtml = '<a href="/uwuweb/student/justification.php?att_id=' . $record['att_id'] . '" class="btn btn-xs btn-warning d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-xs">edit</span> Oddaj</a>';
-                        break;
-                }
-
-                $html .= '<tr>';
-                $html .= '<td>' . htmlspecialchars($date) . '</td>';
-                $html .= '<td>' . $classInfo . '</td>';
-                $html .= '<td class="text-center">' . $statusBadge . '</td>';
-                $html .= '<td class="text-center">' . $justificationHtml . '</td>';
-                $html .= '</tr>';
-            }
-
-            $html .= '</tbody>';
-            $html .= '</table>';
-            $html .= '</div>';
-            $html .= '</div>';
-        }
-
-        $html .= '<div class="widget-footer d-flex justify-between items-center mt-lg border-top pt-md">';
-        $html .= '<a href="/uwuweb/student/attendance.php" class="btn btn-sm btn-secondary">Celotna evidenca</a>';
-        if ($stats['needs_justification'] > 0) $html .= '<a href="/uwuweb/student/justification.php" class="btn btn-sm btn-primary">Oddaj opravičilo (' . $stats['needs_justification'] . ')</a>';
-        $html .= '</div>';
-
-        $html .= '</div>';
-
-        return $html;
-
-    } catch (PDOException $e) {
-        error_log("Database error in renderStudentAttendanceWidget: " . $e->getMessage());
-        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o prisotnosti.');
-    } catch (Exception $e) {
-        error_log("Error in renderStudentAttendanceWidget: " . $e->getMessage());
-        return renderPlaceholderWidget('Prišlo je do napake.');
+        $html .= '</tbody></table></div>';
     }
+    $html .= '</div></div>';
+
+    $html .= '<div class="d-flex justify-between items-center mt-auto border-top pt-md p-md">';
+    $html .= '<a href="/uwuweb/student/attendance.php" class="btn btn-sm btn-secondary">Celotna evidenca</a>';
+    if (($s['needs_justification'] ?? 0) > 0) $html .= '<a href="/uwuweb/student/justification.php" class="btn btn-sm btn-primary">Oddaj opravičilo (' . $s['needs_justification'] . ')</a>';
+    $html .= '</div></div>';
+    return $html;
 }
 
 /**
@@ -1019,111 +855,61 @@ function renderStudentAttendanceWidget(): string
 function renderStudentClassAveragesWidget(): string
 {
     $studentId = getStudentId();
-
-    if (!$studentId) return renderPlaceholderWidget('Za prikaz povprečij razredov se morate identificirati kot dijak.');
+    if (!$studentId) return renderPlaceholderWidget('Za prikaz povprečij se morate identificirati.');
 
     $db = getDBConnection();
     if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
-    try {
-        $query = "SELECT
-                    s.subject_id,
-                    s.name AS subject_name,
-                    c.class_id,
-                    c.title AS class_title,
-                    cs.class_subject_id,
-                    AVG(
-                        CASE WHEN g_student.points IS NOT NULL AND gi_student.max_points > 0
-                        THEN (g_student.points / gi_student.max_points) * 100
-                        END
-                    ) AS student_avg_score,
-                    (SELECT AVG(
-                        CASE WHEN gi_class.max_points > 0
-                        THEN (g_class.points / gi_class.max_points) * 100
-                        END
-                    )
-                    FROM enrollments e_class
-                    JOIN grades g_class ON e_class.enroll_id = g_class.enroll_id
-                    JOIN grade_items gi_class ON g_class.item_id = gi_class.item_id
-                    WHERE gi_class.class_subject_id = cs.class_subject_id
-                    ) AS class_avg_score
-                  FROM students st
-                  JOIN enrollments e ON st.student_id = e.student_id AND e.student_id = :student_id
-                  JOIN classes c ON e.class_id = c.class_id
-                  JOIN class_subjects cs ON c.class_id = cs.class_id
-                  JOIN subjects s ON cs.subject_id = s.subject_id
-                  LEFT JOIN grade_items gi_student ON gi_student.class_subject_id = cs.class_subject_id
-                  LEFT JOIN grades g_student ON g_student.item_id = gi_student.item_id AND e.enroll_id = g_student.enroll_id
-                  GROUP BY s.subject_id, s.name, c.class_id, c.title, cs.class_subject_id
-                  ORDER BY s.name, c.title";
+    // Fetch grades (simplified)
+    $query = "SELECT s.name AS subject_name, c.title AS class_title, cs.class_subject_id, AVG(CASE WHEN g_student.points IS NOT NULL AND gi_student.max_points > 0 THEN (g_student.points / gi_student.max_points) * 100 END) AS student_avg_score, (SELECT AVG(CASE WHEN gi_class.max_points > 0 THEN (g_class.points / gi_class.max_points) * 100 END) FROM enrollments e_class JOIN grades g_class ON e_class.enroll_id = g_class.enroll_id JOIN grade_items gi_class ON g_class.item_id = gi_class.item_id WHERE gi_class.class_subject_id = cs.class_subject_id) AS class_avg_score FROM students st JOIN enrollments e ON st.student_id = e.student_id AND e.student_id = :student_id JOIN classes c ON e.class_id = c.class_id JOIN class_subjects cs ON c.class_id = cs.class_id JOIN subjects s ON cs.subject_id = s.subject_id LEFT JOIN grade_items gi_student ON gi_student.class_subject_id = cs.class_subject_id LEFT JOIN grades g_student ON g_student.item_id = gi_student.item_id AND e.enroll_id = g_student.enroll_id GROUP BY s.subject_id, s.name, c.class_id, c.title, cs.class_subject_id ORDER BY s.name";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':student_id', $studentId, PDO::PARAM_INT);
+    $stmt->execute();
+    $grades = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $html = '<div class="d-flex flex-column h-full">';
 
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':student_id', $studentId, PDO::PARAM_INT);
-        $stmt->execute();
-        $studentGrades = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        error_log("Database error in renderStudentClassAveragesWidget: " . $e->getMessage());
-        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o povprečjih.');
-    }
-
-    $html = '<div class="widget-content card card__content p-0">';
-
-    if (empty($studentGrades) || !array_filter($studentGrades, static fn($g) => $g['student_avg_score'] !== null)) $html .= '<div class="text-center p-md"><p class="m-0">Nimate razredov z ocenami.</p></div>'; else {
-        $html .= '<div class="student-averages-table table-responsive">';
-        $html .= '<table class="data-table w-100">';
-        $html .= '<thead><tr><th>Predmet</th><th class="text-center">Vaše povprečje</th><th class="text-center">Povprečje razreda</th><th class="text-center">Primerjava</th></tr></thead>';
-        $html .= '<tbody>';
-
-        foreach ($studentGrades as $grade) {
+    // Table Section (Expanding)
+    $html .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
+    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Primerjava s povprečji razreda</h5>';
+    $html .= '<div class="p-0 flex-grow-1" style="overflow-y: auto;">';
+    if (empty($grades) || !array_filter($grades, static fn($g) => $g['student_avg_score'] !== null)) $html .= '<p class="p-md text-secondary text-center">Nimate razredov z ocenami za primerjavo.</p>'; else {
+        $html .= '<div class="table-responsive">';
+        $html .= '<table class="data-table w-100 text-sm">';
+        $html .= '<thead><tr><th>Predmet (Razred)</th><th class="text-center">Vaše povp.</th><th class="text-center">Povp. razreda</th><th class="text-center">Razlika</th></tr></thead><tbody>';
+        foreach ($grades as $grade) {
             if ($grade['student_avg_score'] === null && $grade['class_avg_score'] === null) continue;
-
-            $studentAvgFormatted = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) . '%' : 'N/A';
-            $classAvgFormatted = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) . '%' : 'N/A';
-
-            $scoreClass = '';
-            $comparisonText = '-';
-            $comparisonClass = 'text-secondary';
-
+            $sAvgF = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) . '%' : 'N/A';
+            $cAvgF = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) . '%' : 'N/A';
+            $sClass = '';
+            $compText = '-';
+            $compClass = 'text-secondary';
             if ($grade['student_avg_score'] !== null) {
-                if ($grade['student_avg_score'] >= 80) $scoreClass = 'grade-high'; elseif ($grade['student_avg_score'] >= 60) $scoreClass = 'grade-medium';
-                else $scoreClass = 'grade-low';
-
+                $sClass = $grade['student_avg_score'] >= 80 ? 'grade-high' : ($grade['student_avg_score'] >= 60 ? 'grade-medium' : 'grade-low');
                 if ($grade['class_avg_score'] !== null) {
                     $diff = $grade['student_avg_score'] - $grade['class_avg_score'];
-                    $diffFormatted = number_format($diff, 1);
-
-                    if ($diff > 5) {
-                        $comparisonText = '+' . $diffFormatted . '%';
-                        $comparisonClass = 'text-success';
-                    } elseif ($diff < -5) {
-                        $comparisonText = $diffFormatted . '%';
-                        $comparisonClass = 'text-error';
-                    } else $comparisonText = '≈';
+                    $diffF = number_format($diff, 1);
+                    if ($diff > 2) {
+                        $compText = '+' . $diffF . '%';
+                        $compClass = 'text-success';
+                    } elseif ($diff < -2) {
+                        $compText = $diffF . '%';
+                        $compClass = 'text-error';
+                    } else $compText = '≈';
                 }
             }
-
-            $html .= '<tr>';
-            $html .= '<td>' . htmlspecialchars($grade['subject_name']) . '<br><small class="text-disabled">' . htmlspecialchars($grade['class_title']) . '</small></td>';
-            $html .= '<td class="text-center ' . $scoreClass . '">' . $studentAvgFormatted . '</td>';
-            $html .= '<td class="text-center">' . $classAvgFormatted . '</td>';
-            $html .= '<td class="text-center ' . $comparisonClass . '">' . $comparisonText . '</td>';
-            $html .= '</tr>';
+            $html .= '<tr><td>' . htmlspecialchars($grade['subject_name']) . '<br><small class="text-disabled">' . htmlspecialchars($grade['class_title']) . '</small></td><td class="text-center ' . $sClass . '">' . $sAvgF . '</td><td class="text-center">' . $cAvgF . '</td><td class="text-center ' . $compClass . '">' . $compText . '</td></tr>';
         }
-
-        $html .= '</tbody>';
-        $html .= '</table>';
-        $html .= '</div>';
+        $html .= '</tbody></table></div>';
     }
+    $html .= '</div></div>';
 
-    $html .= '<div class="widget-footer mt-md text-right border-top pt-md p-md">';
-    $html .= '<a href="/uwuweb/student/grades.php" class="btn btn-sm btn-primary">Ogled vseh ocen</a>';
-    $html .= '</div>';
-
-    $html .= '</div>';
-
+    $html .= '<div class="mt-auto text-right border-top pt-md p-md">';
+    $html .= '<a href="/uwuweb/student/grades.php" class="btn btn-sm btn-primary">Vse ocene</a>';
+    $html .= '</div></div>';
     return $html;
 }
+
 
 /**
  * Creates the HTML for a student's upcoming classes widget
@@ -1133,8 +919,7 @@ function renderStudentClassAveragesWidget(): string
 function renderUpcomingClassesWidget(): string
 {
     $studentId = getStudentId();
-
-    if (!$studentId) return renderPlaceholderWidget('Za prikaz prihajajočih ur se morate identificirati kot dijak.');
+    if (!$studentId) return renderPlaceholderWidget('Za prikaz prihajajočih ur se morate identificirati.');
 
     $db = getDBConnection();
     if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
@@ -1174,58 +959,35 @@ function renderUpcomingClassesWidget(): string
         return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o prihajajočih urah.');
     }
 
-    $html = '<div class="widget-content card card__content p-0">';
+    $html = '<div class="d-flex flex-column h-full">';
+    $html .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
+    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Prihajajoče ure (naslednjih 7 dni)</h5>';
+    $html .= '<div class="p-md flex-grow-1" style="overflow-y: auto;">';
 
-    if (empty($upcomingClasses)) $html .= '<div class="text-center p-md"><p class="m-0">Ni prihajajočih ur v naslednjem tednu.</p></div>'; else {
-        $currentDay = '';
-        $html .= '<div class="upcoming-classes p-md">';
+    if (empty($upcomingClasses)) $html .= '<p class="text-secondary text-center">Ni prihajajočih ur v naslednjem tednu.</p>'; else {
+        $groupedClasses = [];
+        foreach ($upcomingClasses as $class) $groupedClasses[$class['period_date']][] = $class;
+        $slovenianDays = ['Nedelja', 'Ponedeljek', 'Torek', 'Sreda', 'Četrtek', 'Petek', 'Sobota'];
 
-        foreach ($upcomingClasses as $class) {
-            $classDate = date('Y-m-d', strtotime($class['period_date']));
-            $formattedDate = date('d.m.Y', strtotime($class['period_date']));
-            $dayName = match (date('N', strtotime($class['period_date']))) {
-                '1' => 'Ponedeljek',
-                '2' => 'Torek',
-                '3' => 'Sreda',
-                '4' => 'Četrtek',
-                '5' => 'Petek',
-                '6' => 'Sobota',
-                '7' => 'Nedelja',
-                default => ''
-            };
-
-            if ($classDate != $currentDay) {
-                if ($currentDay != '') {
-                    $html .= '</div>';
-                    $html .= '</div>';
-                }
-                $currentDay = $classDate;
-                $html .= '<div class="day-group mb-lg">';
-                $html .= '<div class="day-header border-bottom pb-sm mb-md">';
-                $html .= '<h5 class="m-0 font-medium">' . $dayName . ', ' . $formattedDate . '</h5>';
-                $html .= '</div>';
-                $html .= '<div class="day-classes d-flex flex-column gap-md">';
+        foreach ($groupedClasses as $date => $classesOnDate) {
+            $dayName = $slovenianDays[date('w', strtotime($date))];
+            $html .= '<div class="mb-lg">';
+            $html .= '<div class="day-header border-bottom pb-xs mb-sm">';
+            $html .= '<h6 class="m-0 font-medium">' . $dayName . ', ' . date('d.m.Y', strtotime($date)) . '</h6>';
+            $html .= '</div>';
+            $html .= '<div class="d-flex flex-column gap-md">';
+            foreach ($classesOnDate as $class) {
+                $html .= '<div class="d-flex gap-md p-sm rounded shadow-sm items-center">';
+                $html .= '<div class="class-time font-medium text-center p-sm rounded bg-tertiary" style="min-width: 60px;">' . htmlspecialchars($class['period_label']) . '. ura</div>';
+                $html .= '<div class="class-details flex-grow-1 text-sm">';
+                $html .= '<div class="font-medium">' . htmlspecialchars($class['subject_name']) . '</div>';
+                $html .= '<div class="text-secondary">Prof.: ' . htmlspecialchars($class['teacher_fname'] . ' ' . $class['teacher_lname']) . '</div>';
+                $html .= '<div class="text-secondary">Razred: ' . htmlspecialchars($class['class_title']) . '</div>';
+                $html .= '</div></div>';
             }
-
-            $html .= '<div class="class-item d-flex gap-md p-sm rounded bg-secondary shadow-sm">';
-            $html .= '<div class="class-time font-medium text-center p-sm bg-tertiary rounded" style="min-width: 60px;">' . htmlspecialchars($class['period_label']) . '. ura</div>';
-            $html .= '<div class="class-details flex-grow-1">';
-            $html .= '<div class="class-subject font-medium d-block">' . htmlspecialchars($class['subject_name']) . '</div>';
-            $html .= '<div class="class-teacher text-sm text-secondary">Profesor: ' . htmlspecialchars($class['teacher_name']) . '</div>';
-            $html .= '<div class="class-room text-sm text-secondary">Razred: ' . htmlspecialchars($class['class_title']) . '</div>';
-            $html .= '</div>';
-            $html .= '</div>';
+            $html .= '</div></div>';
         }
-
-        if ($currentDay != '') {
-            $html .= '</div>';
-            $html .= '</div>';
-        }
-
-        $html .= '</div>';
     }
-
-    $html .= '</div>';
-
+    $html .= '</div></div></div>';
     return $html;
 }

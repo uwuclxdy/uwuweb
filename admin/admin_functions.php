@@ -39,6 +39,10 @@
  * - getAllClassSubjectAssignments(): array - Returns all class-subject assignments with related information.
  * - getAllTeachers(): array - Returns all teachers with their basic information.
  *
+ * System Settings Functions:
+ * - getSystemSettings(): array - Retrieves system-wide settings.
+ * - updateSystemSettings(array $settings): bool - Updates system-wide settings. Returns success status.
+ *
  * Dashboard Widget Functions:
  * - renderAdminUserStatsWidget(): string - Displays user statistics by role with counts and recent registrations.
  * - renderAdminSystemStatusWidget(): string - Shows system status including database stats, active sessions, and PHP configuration.
@@ -589,9 +593,9 @@ function displaySubjectsList(): void
         echo '<td>' . htmlspecialchars($subject['name']) . '</td>';
         echo '<td class="actions d-flex gap-sm">'; // Use flex and gap for button spacing
 
-        echo '<a href="/uwuweb/admin/settings.php?action=edit_subject&subject_id=' . $subject['subject_id'] . '" class="btn btn-primary btn-sm">Uredi</a>';
+        echo '<a href="/uwuweb/admin/manage_subjects.php?subject_id=' . $subject['subject_id'] . '" class="btn btn-primary btn-sm">Uredi</a>';
 
-        echo '<a href="/uwuweb/admin/settings.php?action=delete_subject&subject_id=' . $subject['subject_id'] . '" class="btn btn-error btn-sm"
+        echo '<a href="/uwuweb/admin/manage_subjects.php?action=delete_subject&subject_id=' . $subject['subject_id'] . '" class="btn btn-error btn-sm"
                 onclick="return confirm(\'Ali ste prepričani, da želite izbrisati ta predmet?\');">Izbriši</a>';
         echo '</td>';
         echo '</tr>';
@@ -801,8 +805,8 @@ function displayClassesList(): void
         echo '<td>' . htmlspecialchars($class['title']) . '</td>';
         echo '<td>' . ($class['homeroom_teacher_name'] ? htmlspecialchars($class['homeroom_teacher_name']) : '<span class="text-disabled">Ni dodeljen</span>') . '</td>';
         echo '<td class="actions d-flex gap-sm">'; // Use flex and gap for button spacing
-        echo '<a href="/uwuweb/admin/settings.php?action=edit_class&class_id=' . $class['class_id'] . '" class="btn btn-primary btn-sm">Uredi</a>';
-        echo '<a href="/uwuweb/admin/settings.php?action=delete_class&class_id=' . $class['class_id'] . '" class="btn btn-error btn-sm"
+        echo '<a href="/uwuweb/admin/manage_classes.php?class_id=' . $class['class_id'] . '" class="btn btn-primary btn-sm">Uredi</a>';
+        echo '<a href="/uwuweb/admin/manage_classes.php?action=delete_class&class_id=' . $class['class_id'] . '" class="btn btn-error btn-sm"
                 onclick="return confirm(\'Ali ste prepričani, da želite izbrisati ta razred?\');">Izbriši</a>';
         echo '</td>';
         echo '</tr>';
@@ -1162,10 +1166,114 @@ function getAllTeachers(): array
     }
 }
 
+// ===== System Settings Functions =====
+
+/**
+ * Retrieves system-wide settings
+ *
+ * @return array Array containing system settings with defaults if not found
+ */
+function getSystemSettings(): array
+{
+    try {
+        $pdo = safeGetDBConnection('getSystemSettings');
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getSystemSettings", 500, "admin_functions.php");
+
+        $stmt = $pdo->query("SELECT * FROM system_settings LIMIT 1");
+
+        if ($stmt->rowCount() > 0) return $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Default settings if no settings found
+        return [
+            'school_name' => 'ŠCC Celje',
+            'current_year' => '2024/2025',
+            'school_address' => '',
+            'session_timeout' => 30,
+            'grade_scale' => '1-5',
+            'maintenance_mode' => false
+        ];
+    } catch (PDOException $e) {
+        logDBError("Napaka pri pridobivanju sistemskih nastavitev: " . $e->getMessage());
+
+        // Return defaults in case of error
+        return [
+            'school_name' => 'ŠCC Celje',
+            'current_year' => '2024/2025',
+            'school_address' => '',
+            'session_timeout' => 30,
+            'grade_scale' => '1-5',
+            'maintenance_mode' => false
+        ];
+    }
+}
+
+/**
+ * Updates system-wide settings
+ *
+ * @param array $settings Associative array of settings to update
+ * @return bool Returns true on success, false on failure
+ */
+function updateSystemSettings(array $settings): bool
+{
+    try {
+        $pdo = safeGetDBConnection('updateSystemSettings');
+        if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija updateSystemSettings", 500, "admin_functions.php");
+
+        // Check if settings table exists and has records
+        $stmt = $pdo->query("SELECT COUNT(*) FROM system_settings");
+        $settingsExist = (int)$stmt->fetchColumn() > 0;
+
+        if ($settingsExist) {
+            // Update existing settings
+            $sql = "UPDATE system_settings SET 
+                    school_name = :school_name,
+                    current_year = :current_year, 
+                    school_address = :school_address,
+                    session_timeout = :session_timeout,
+                    grade_scale = :grade_scale,
+                    maintenance_mode = :maintenance_mode,
+                    updated_at = NOW()";
+
+            $stmt = $pdo->prepare($sql);
+            return $stmt->execute([
+                'school_name' => $settings['school_name'],
+                'current_year' => $settings['current_year'],
+                'school_address' => $settings['school_address'],
+                'session_timeout' => (int)$settings['session_timeout'],
+                'grade_scale' => $settings['grade_scale'],
+                'maintenance_mode' => $settings['maintenance_mode'] ? 1 : 0
+            ]);
+        }
+
+        // Insert new settings
+        $sql = "INSERT INTO system_settings (
+                school_name, current_year, school_address, 
+                session_timeout, grade_scale, maintenance_mode, 
+                created_at, updated_at) 
+               VALUES (
+                :school_name, :current_year, :school_address, 
+                :session_timeout, :grade_scale, :maintenance_mode, 
+                NOW(), NOW())";
+
+        $stmt = $pdo->prepare($sql);
+        return $stmt->execute([
+            'school_name' => $settings['school_name'],
+            'current_year' => $settings['current_year'],
+            'school_address' => $settings['school_address'],
+            'session_timeout' => (int)$settings['session_timeout'],
+            'grade_scale' => $settings['grade_scale'],
+            'maintenance_mode' => $settings['maintenance_mode'] ? 1 : 0
+        ]);
+    } catch (PDOException $e) {
+        logDBError("Napaka pri posodabljanju sistemskih nastavitev: " . $e->getMessage());
+        return false;
+    }
+}
+
 // ===== Dashboard Widget Functions =====
 
 /**
- * Displays counts of users by role and recent user activity widget
+ * Displays user statistics by role with counts and recent registrations
  *
  * @return string HTML content for the widget
  */
@@ -1176,56 +1284,90 @@ function renderAdminUserStatsWidget(): string
         if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
         $roleQuery = "SELECT r.role_id, r.name, COUNT(u.user_id) as count
-                      FROM roles r
-                      LEFT JOIN users u ON r.role_id = u.role_id
-                      GROUP BY r.role_id, r.name
-                      ORDER BY r.role_id";
+                     FROM roles r
+                     LEFT JOIN users u ON r.role_id = u.role_id
+                     GROUP BY r.role_id, r.name
+                     ORDER BY r.role_id";
         $roleStmt = $db->query($roleQuery);
-        $roleCounts = $roleStmt->fetchAll(PDO::FETCH_ASSOC);
+        $roleStats = $roleStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $recentQuery = "SELECT COUNT(*) as new_users
-                        FROM users
-                        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)";
+        $recentQuery = "SELECT u.user_id, u.username, u.created_at, r.name as role_name
+                       FROM users u
+                       JOIN roles r ON u.role_id = r.role_id
+                       WHERE u.created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)
+                       ORDER BY u.created_at DESC
+                       LIMIT 5";
         $recentStmt = $db->query($recentQuery);
-        $recentUsers = $recentStmt->fetch(PDO::FETCH_ASSOC)['new_users'] ?? 0;
+        $recentUsers = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        $output = '<div class="stats-container card card__content d-flex flex-column gap-lg">';
+        $totalUsers = array_sum(array_column($roleStats, 'count'));
 
-        $totalUsers = array_sum(array_column($roleCounts, 'count'));
-        $output .= '<div class="d-flex justify-around text-center mb-md">';
-        $output .= '<div class="stat-item">';
-        $output .= '<span class="stat-number d-block font-size-xl font-bold">' . htmlspecialchars($totalUsers) . '</span>';
-        $output .= '<span class="stat-label text-sm text-secondary">Skupaj uporabnikov</span>';
-        $output .= '</div>';
-        $output .= '<div class="stat-item">';
-        $output .= '<span class="stat-number d-block font-size-xl font-bold">' . htmlspecialchars($recentUsers) . '</span>';
-        $output .= '<span class="stat-label text-sm text-secondary">Novih (7 dni)</span>';
-        $output .= '</div>';
+        $output = '<div class="d-flex flex-column h-full">'; // Main widget container
+
+        // User stats summary section (expanding)
+        $output .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
+        $output .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Pregled uporabnikov</h5>';
+        $output .= '<div class="p-md flex-grow-1" style="overflow-y: auto;">'; // Content wrapper, scrollable
+
+        // Role statistics
+        $output .= '<div class="mb-lg">';
+        $output .= '<div class="d-flex justify-between items-center py-sm border-bottom">';
+        $output .= '<span class="font-medium">Vsi uporabniki:</span>';
+        $output .= '<span class="badge badge-primary">' . $totalUsers . '</span>';
         $output .= '</div>';
 
-        $output .= '<div class="stat-breakdown border-top pt-md">';
-        $output .= '<h5 class="mb-md text-center font-medium">Uporabniki po vlogah</h5>';
-        $output .= '<ul class="role-list list-unstyled p-0 m-0 d-flex flex-column gap-sm">';
-        foreach ($roleCounts as $role) {
-            $roleClass = match ($role['role_id']) {
-                1 => 'profile-admin',
-                2 => 'profile-teacher',
-                3 => 'profile-student',
-                4 => 'profile-parent',
-                default => 'bg-secondary'
+        foreach ($roleStats as $role) {
+            $roleName = strtolower($role['name']);
+            $roleClass = match ($roleName) {
+                'teacher' => 'role-teacher',
+                'student' => 'role-student',
+                'parent' => 'role-parent',
+                default => 'role-admin', // Assuming 'admin' or other roles
             };
-            $textColor = in_array($roleClass, ['profile-admin', 'profile-teacher', 'profile-student', 'profile-parent']) ? 'text-white' : '';
-            $output .= '<li class="d-flex justify-between items-center p-sm rounded ' . $roleClass . ' ' . $textColor . '">';
-            $output .= '<span class="role-name font-medium">' . htmlspecialchars($role['name']) . '</span>';
-            $output .= '<span class="role-count badge badge-light">' . htmlspecialchars($role['count']) . '</span>';
-            $output .= '</li>';
-        }
-        $output .= '</ul></div>';
 
-        $output .= '</div>';
+            $output .= '<div class="d-flex justify-between items-center py-sm border-bottom">';
+            $output .= '<div class="d-flex items-center">';
+            $output .= '<span class="role-badge ' . $roleClass . ' mr-sm">' . strtoupper(substr($role['name'], 0, 1)) . '</span>';
+            $output .= '<span>' . htmlspecialchars(ucfirst($role['name'])) . ':</span>';
+            $output .= '</div>';
+            $output .= '<span class="badge badge-secondary">' . $role['count'] . '</span>';
+            $output .= '</div>';
+        }
+        $output .= '</div>'; // End role statistics
+
+        // Recent users section if available
+        if (!empty($recentUsers)) {
+            $output .= '<div class="mt-lg">';
+            $output .= '<h6 class="font-medium mb-md">Novi uporabniki (zadnjih 7 dni)</h6>';
+
+            foreach ($recentUsers as $user) {
+                $roleName = strtolower($user['role_name']);
+                $roleClass = match ($roleName) {
+                    'teacher' => 'role-teacher',
+                    'student' => 'role-student',
+                    'parent' => 'role-parent',
+                    default => 'role-admin',
+                };
+
+                $output .= '<div class="d-flex justify-between items-center py-sm border-bottom">';
+                $output .= '<div class="d-flex items-center">';
+                $output .= '<span class="role-badge ' . $roleClass . ' mr-sm">' . strtoupper(substr($user['role_name'], 0, 1)) . '</span>';
+                $output .= '<span>' . htmlspecialchars($user['username']) . '</span>';
+                $output .= '</div>';
+                $output .= '<span class="text-sm text-secondary">' . date('d.m.Y', strtotime($user['created_at'])) . '</span>';
+                $output .= '</div>';
+            }
+            $output .= '</div>'; // End recent users
+        } elseif (empty($roleStats) && empty($recentUsers)) {
+            $output .= '<p class="text-secondary text-center">Ni podatkov o uporabnikih.</p>';
+        }
+
+        $output .= '</div>'; // End content wrapper
+        $output .= '</div>'; // End section
+        $output .= '</div>'; // End flex container
 
         return $output;
-    } catch (PDOException $e) {
+    } catch (Exception $e) {
         error_log("Error in renderAdminUserStatsWidget: " . $e->getMessage());
         return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o uporabnikih.');
     }
@@ -1264,31 +1406,46 @@ function renderAdminSystemStatusWidget(): string
             }
         }
 
-        $output = '<div class="system-status card card__content">';
-        $output .= '<div class="row gap-lg">';
+        $output = '<div class="d-flex flex-column h-full">'; // Main widget container
 
-        $output .= '<div class="status-section col-12 col-md-6">';
-        $output .= '<h5 class="mb-md border-bottom pb-sm font-medium d-flex items-center gap-xs"><span class="material-icons-outlined align-middle">database</span> Podatkovna baza</h5>';
-        $output .= '<ul class="list-unstyled p-0 m-0 d-flex flex-column gap-sm text-sm">';
-        $output .= '<li class="d-flex justify-between"><span>Tabele:</span> <strong class="font-medium">' . htmlspecialchars($tableStats['table_count'] ?? 'N/A') . '</strong></li>';
-        $output .= '<li class="d-flex justify-between"><span>Velikost:</span> <strong class="font-medium">' . htmlspecialchars(round($tableStats['size_mb'] ?? 0, 2)) . ' MB</strong></li>';
-        $output .= '<li class="d-flex justify-between"><span>Tip:</span> <strong class="font-medium">MySQL ' . htmlspecialchars($db->getAttribute(PDO::ATTR_SERVER_VERSION)) . '</strong></li>';
-        $output .= '<li class="d-flex justify-between"><span>Ime:</span> <strong class="font-medium">' . htmlspecialchars($dbName) . '</strong></li>';
-        $output .= '</ul>';
+        // Database status section
+        $output .= '<div class="rounded p-0 shadow-sm mb-lg">';
+        $output .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Podatkovna baza</h5>';
+        $output .= '<div class="p-md">';
+        $dbItems = [
+            ['label' => 'Ime baze:', 'value' => $dbName ?: 'N/A', 'badge' => 'primary'],
+            ['label' => 'Tip strežnika:', 'value' => 'MySQL ' . $db->getAttribute(PDO::ATTR_SERVER_VERSION), 'badge' => 'primary'],
+            ['label' => 'Št. tabel:', 'value' => $tableStats['table_count'] ?? 'N/A', 'badge' => 'secondary'],
+            ['label' => 'Velikost baze:', 'value' => round($tableStats['size_mb'] ?? 0, 2) . ' MB', 'badge' => 'secondary']
+        ];
+        foreach ($dbItems as $item) {
+            $output .= '<div class="d-flex justify-between items-center py-xs">';
+            $output .= '<span class="text-secondary">' . $item['label'] . '</span>';
+            $output .= '<span class="badge badge-' . $item['badge'] . '">' . htmlspecialchars($item['value']) . '</span>';
+            $output .= '</div>';
+        }
         $output .= '</div>';
-
-        $output .= '<div class="status-section col-12 col-md-6">';
-        $output .= '<h5 class="mb-md border-bottom pb-sm font-medium d-flex items-center gap-xs"><span class="material-icons-outlined align-middle">dns</span> Strežnik & PHP</h5>';
-        $output .= '<ul class="list-unstyled p-0 m-0 d-flex flex-column gap-sm text-sm">';
-        $output .= '<li class="d-flex justify-between"><span>PHP verzija:</span> <strong class="font-medium">' . htmlspecialchars(PHP_VERSION) . '</strong></li>';
-        $output .= '<li class="d-flex justify-between"><span>Aktivne seje:</span> <strong class="font-medium">' . htmlspecialchars($sessionCount) . '</strong></li>';
-        $output .= '<li class="d-flex justify-between"><span>Max upload:</span> <strong class="font-medium">' . htmlspecialchars(ini_get('upload_max_filesize')) . '</strong></li>';
-        $output .= '<li class="d-flex justify-between"><span>Čas strežnika:</span> <strong class="font-medium">' . htmlspecialchars(date('Y-m-d H:i:s')) . '</strong></li>';
-        $output .= '</ul>';
         $output .= '</div>';
 
+        // Server status section (expanding)
+        $output .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
+        $output .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Strežnik & PHP</h5>';
+        $output .= '<div class="p-md flex-grow-1">';
+        $serverItems = [
+            ['label' => 'PHP verzija:', 'value' => PHP_VERSION, 'badge' => 'info'],
+            ['label' => 'Aktivne seje:', 'value' => $sessionCount, 'badge' => ($sessionCount > 10 ? 'warning' : 'info')], // Adjusted threshold
+            ['label' => 'Max. nalaganje:', 'value' => ini_get('upload_max_filesize'), 'badge' => 'secondary'],
+            ['label' => 'Čas strežnika:', 'value' => date('d.m.Y H:i:s'), 'badge' => 'secondary']
+        ];
+        foreach ($serverItems as $item) {
+            $output .= '<div class="d-flex justify-between items-center py-xs">';
+            $output .= '<span class="text-secondary">' . $item['label'] . '</span>';
+            $output .= '<span class="badge badge-' . $item['badge'] . '">' . htmlspecialchars($item['value']) . '</span>';
+            $output .= '</div>';
+        }
         $output .= '</div>';
         $output .= '</div>';
+        $output .= '</div>'; // End flex container
 
         return $output;
     } catch (Exception $e) {
@@ -1335,7 +1492,7 @@ function renderAdminAttendanceWidget(): string
         $bestClassQuery = "SELECT c.class_code, c.title,
                           COUNT(CASE WHEN a.status = 'P' THEN 1 END) as present_count,
                           COUNT(a.att_id) as total_count,
-                          (COUNT(CASE WHEN a.status = 'P' THEN 1 END) * 100.0 / COUNT(a.att_id)) as present_percent
+                          (COUNT(CASE WHEN a.status = 'P' THEN 1 END) * 100.0 / NULLIF(COUNT(a.att_id),0)) as present_percent
                        FROM attendance a
                        JOIN periods p ON a.period_id = p.period_id
                        JOIN enrollments e ON a.enroll_id = e.enroll_id
@@ -1351,35 +1508,66 @@ function renderAdminAttendanceWidget(): string
         $bestClassStmt->execute();
         $bestClass = $bestClassStmt->fetch(PDO::FETCH_ASSOC);
 
-        $output = '<div class="attendance-stats card card__content">';
+        $output = '<div class="d-flex flex-column h-full">'; // Main widget container
 
-        $output .= '<div class="attendance-overview mb-lg">';
-        $output .= '<h5 class="mb-md text-center font-medium">Skupna prisotnost (zadnjih ' . $intervalDays . ' dni)</h5>';
-
-        $output .= '<div class="progress-chart d-flex rounded overflow-hidden mb-sm bg-tertiary shadow-sm" style="height: 20px;">';
-        $output .= '<div class="progress-bar status-present" style="width:' . $presentPercent . '%" title="Prisotni: ' . $presentPercent . '%"></div>';
-        $output .= '<div class="progress-bar status-late" style="width:' . $latePercent . '%" title="Zamude: ' . $latePercent . '%"></div>';
-        $output .= '<div class="progress-bar status-absent" style="width:' . $absentPercent . '%" title="Odsotni: ' . $absentPercent . '%"></div>';
-        $output .= '</div>';
-
-        $output .= '<div class="attendance-legend d-flex justify-center flex-wrap gap-md text-sm">';
-        $output .= '<span class="legend-item d-flex items-center gap-xs"><span class="legend-color d-inline-block rounded-full status-present" style="width: 10px; height: 10px;"></span>Prisotni: ' . $present . ' (' . $presentPercent . '%)</span>';
-        $output .= '<span class="legend-item d-flex items-center gap-xs"><span class="legend-color d-inline-block rounded-full status-late" style="width: 10px; height: 10px;"></span>Zamude: ' . $late . ' (' . $latePercent . '%)</span>';
-        $output .= '<span class="legend-item d-flex items-center gap-xs"><span class="legend-color d-inline-block rounded-full status-absent" style="width: 10px; height: 10px;"></span>Odsotni: ' . $absent . ' (' . $absentPercent . '%)</span>';
-        $output .= '</div>';
-        $output .= '</div>';
-
-        if ($bestClass) {
-            $output .= '<div class="best-class mt-lg p-md bg-secondary rounded border-start border-success border-4 shadow-sm">';
-            $output .= '<h5 class="mb-md font-medium d-flex items-center gap-xs"><span class="material-icons-outlined align-middle">emoji_events</span> Razred z najboljšo prisotnostjo</h5>';
-            $output .= '<div class="best-class-info d-flex justify-between items-center">';
-            $output .= '<span class="best-class-title font-medium">' . htmlspecialchars($bestClass['title']) . ' (' . htmlspecialchars($bestClass['class_code']) . ')</span>';
-            $output .= '<span class="best-class-percent badge grade-high">' . htmlspecialchars(round($bestClass['present_percent'], 1)) . '%</span>';
+        // Overall attendance section
+        $output .= '<div class="rounded p-0 shadow-sm mb-lg">';
+        $output .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Prisotnost (zadnjih ' . $intervalDays . ' dni)</h5>';
+        $output .= '<div class="p-md">';
+        if ($total > 0) {
+            $output .= '<div class="rounded overflow-hidden mb-md" style="height: 24px;">';
+            $output .= '<div class="d-flex w-full h-full">';
+            if ($presentPercent > 0) $output .= '<div class="status-present d-flex items-center justify-center text-xs" style="width:' . $presentPercent . '%">' . ($presentPercent > 10 ? $presentPercent . '%' : '') . '</div>';
+            if ($latePercent > 0) $output .= '<div class="status-late d-flex items-center justify-center text-xs" style="width:' . $latePercent . '%">' . ($latePercent > 10 ? $latePercent . '%' : '') . '</div>';
+            if ($absentPercent > 0) $output .= '<div class="status-absent d-flex items-center justify-center text-xs" style="width:' . $absentPercent . '%">' . ($absentPercent > 10 ? $absentPercent . '%' : '') . '</div>';
             $output .= '</div>';
             $output .= '</div>';
+
+            $legendItems = [
+                ['class' => 'status-present', 'label' => 'Prisotni', 'count' => $present, 'percent' => $presentPercent],
+                ['class' => 'status-late', 'label' => 'Zamude', 'count' => $late, 'percent' => $latePercent],
+                ['class' => 'status-absent', 'label' => 'Odsotni', 'count' => $absent, 'percent' => $absentPercent]
+            ];
+            $output .= '<div class="d-flex flex-wrap gap-md justify-around">'; // justify-around for better spacing
+            foreach ($legendItems as $item) {
+                $output .= '<div class="d-flex items-center gap-xs">';
+                $output .= '<span class="d-inline-block rounded-full ' . $item['class'] . '" style="width: 12px; height: 12px;"></span>';
+                $output .= '<span class="text-sm">' . $item['label'] . ': <span class="font-medium">' . $item['count'] . '</span> (' . $item['percent'] . '%)</span>';
+                $output .= '</div>';
+            }
+            $output .= '</div>';
+        } else {
+            $output .= '<p class="text-secondary text-center m-0">Ni podatkov o prisotnosti za izbrano obdobje.</p>';
         }
-
         $output .= '</div>';
+        $output .= '</div>';
+
+        // Best class section (expanding)
+        $output .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
+        $output .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Razred z najboljšo prisotnostjo</h5>';
+        $output .= '<div class="p-md flex-grow-1 d-flex flex-column justify-center">';
+        if ($bestClass && $bestClass['present_percent'] !== null) {
+            $output .= '<div class="d-flex justify-between items-center mb-md">';
+            $output .= '<div>';
+            $output .= '<span class="text-lg font-medium">' . htmlspecialchars($bestClass['title']) . '</span>';
+            $output .= '<span class="d-block text-sm text-secondary mt-xs">(' . htmlspecialchars($bestClass['class_code']) . ')</span>';
+            $output .= '</div>';
+            $output .= '<div class="text-right">';
+            $output .= '<span class="grade grade-high d-block text-xl">' . htmlspecialchars(round((float)$bestClass['present_percent'], 1)) . '%</span>';
+            $output .= '<span class="d-block text-sm text-secondary mt-xs">prisotnost</span>';
+            $output .= '</div>';
+            $output .= '</div>';
+            $output .= '<div class="d-flex justify-around text-center text-sm">';
+            $output .= '<div><span class="d-block font-medium">' . htmlspecialchars($bestClass['present_count']) . '</span><span class="text-secondary">prisotnih</span></div>';
+            $output .= '<div><span class="d-block font-medium">' . htmlspecialchars($bestClass['total_count'] - $bestClass['present_count']) . '</span><span class="text-secondary">odsotnih/zamud</span></div>';
+            $output .= '<div><span class="d-block font-medium">' . htmlspecialchars($bestClass['total_count']) . '</span><span class="text-secondary">vseh vnosov</span></div>';
+            $output .= '</div>';
+        } else {
+            $output .= '<p class="text-secondary text-center m-0">Ni dovolj podatkov za prikaz najboljšega razreda.</p>';
+        }
+        $output .= '</div>';
+        $output .= '</div>';
+        $output .= '</div>'; // End flex container
 
         return $output;
     } catch (PDOException $e) {
@@ -1435,9 +1623,7 @@ function validateUserForm(array $userData): bool|string
 
     if (!isset($userData['user_id']) && empty($userData['password'])) return 'Geslo je obvezno za nove uporabnike.';
 
-    if (!isset($userData['user_id']) && !empty($userData['password'])) {
-        if (strlen($userData['password']) < 6) return 'Geslo mora biti dolgo vsaj 6 znakov.';
-    }
+    if (!isset($userData['user_id']) && !empty($userData['password'])) if (strlen($userData['password']) < 6) return 'Geslo mora biti dolgo vsaj 6 znakov.';
 
     switch ($userData['role_id']) {
         case ROLE_STUDENT:

@@ -159,14 +159,24 @@ function getNavItemsByRole(int $role): array
                 'icon' => 'people'
             ];
             $items[] = [
-                'title' => 'Nastavitve',
-                'url' => '/uwuweb/admin/settings.php',
-                'icon' => 'settings'
+                'title' => 'Razredi',
+                'url' => '/uwuweb/admin/manage_classes.php',
+                'icon' => 'school'
             ];
             $items[] = [
-                'title' => 'Razredi in predmeti',
-                'url' => '/uwuweb/admin/class_subjects.php',
-                'icon' => 'school'
+                'title' => 'Predmeti',
+                'url' => '/uwuweb/admin/manage_subjects.php',
+                'icon' => 'menu_book'
+            ];
+            $items[] = [
+                'title' => 'Dodelitve predmetov',
+                'url' => '/uwuweb/admin/manage_assignments.php',
+                'icon' => 'assignment'
+            ];
+            $items[] = [
+                'title' => 'Sistemske nastavitve',
+                'url' => '/uwuweb/admin/system_settings.php',
+                'icon' => 'settings'
             ];
             break;
 
@@ -252,6 +262,10 @@ function getWidgetsByRole(int $role): array
             $widgets[] = [
                 'title' => 'Prisotnost na šoli',
                 'function' => 'renderAdminAttendanceWidget'
+            ];
+            $widgets[] = [
+                'title' => 'Nedavna aktivnost',
+                'function' => 'renderRecentActivityWidget'
             ];
             break;
 
@@ -450,57 +464,52 @@ function renderRecentActivityWidget(): string
 
         if (empty($activities)) return renderPlaceholderWidget('Ni nedavnih aktivnosti.');
 
-        $html = '<div class="card card__content p-0">';
-        $html .= '<ul class="list-unstyled m-0 activity-list">';
+        $html = '</div><ul class="list-unstyled m-0 rounded">';
 
         foreach ($activities as $activity) {
-            $html .= '<li class="activity-item d-flex items-start gap-md p-md border-bottom">';
+            $html .= '<li class="d-flex items-start gap-md p-md' . (next($activities) ? ' border-bottom' : '') . '">';
 
             switch ($roleId) {
                 case 1: // Admin
-                    $icon = 'admin_panel_settings';
                     $iconClass = 'profile-admin';
-                    $html .= '<div class="activity-icon rounded-full p-sm ' . $iconClass . ' text-white"><span class="material-icons-outlined">' . $icon . '</span></div>';
-                    $html .= '<div class="activity-content flex-grow-1">';
-                    $html .= '<span class="activity-title font-medium d-block">' . htmlspecialchars($activity['description']) . '</span>';
-                    $html .= '<span class="activity-details text-sm text-secondary d-block">Uporabnik: ' . htmlspecialchars($activity['username']) .
+                    $html .= '<div class="rounded-full p-sm ' . $iconClass . ' text-white">A</div>';
+                    $html .= '<div class="flex-grow-1">';
+                    $html .= '<span class="font-medium d-block">' . htmlspecialchars($activity['description']) . '</span>';
+                    $html .= '<span class="text-sm text-secondary d-block">Uporabnik: ' . htmlspecialchars($activity['username']) .
                         ' (' . htmlspecialchars($activity['role_name']) . ')</span>';
-                    $html .= '<span class="activity-time text-xs text-disabled d-block">' . date('d.m.Y H:i', strtotime($activity['activity_date'])) . '</span>';
+                    $html .= '<span class="text-xs text-disabled d-block">' . date('d.m.Y H:i', strtotime($activity['activity_date'])) . '</span>';
                     $html .= '</div>';
                     break;
 
                 case 2: // Teacher
-                    $icon = 'edit_note';
                     $iconClass = 'profile-teacher';
-                    $html .= '<div class="activity-icon rounded-full p-sm ' . $iconClass . ' text-white"><span class="material-icons-outlined">' . $icon . '</span></div>';
-                    $html .= '<div class="activity-content flex-grow-1">';
-                    $html .= '<span class="activity-title font-medium d-block">Nova ocena: ' . htmlspecialchars($activity['grade_item']) . '</span>';
-                    $html .= '<span class="activity-details text-sm text-secondary d-block">Dijak: ' . htmlspecialchars($activity['first_name'] . ' ' . $activity['last_name']) .
+                    $html .= '<div class="rounded-full p-sm ' . $iconClass . ' text-white">T</div>';
+                    $html .= '<div class="flex-grow-1">';
+                    $html .= '<span class="font-medium d-block">Nova ocena: ' . htmlspecialchars($activity['grade_item']) . '</span>';
+                    $html .= '<span class="text-sm text-secondary d-block">Dijak: ' . htmlspecialchars($activity['first_name'] . ' ' . $activity['last_name']) .
                         ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
-                    if (!empty($activity['comment'])) $html .= '<span class="activity-comment text-sm text-secondary fst-italic d-block">"' . htmlspecialchars($activity['comment']) . '"</span>';
+                    if (!empty($activity['comment'])) $html .= '<span class="text-sm text-secondary d-block">"' . htmlspecialchars($activity['comment']) . '"</span>';
                     $html .= '</div>';
                     break;
 
                 case 3: // Student
-                    $icon = 'school';
                     $iconClass = 'profile-student';
-                    $html .= '<div class="activity-icon rounded-full p-sm ' . $iconClass . ' text-white"><span class="material-icons-outlined">' . $icon . '</span></div>';
-                    $html .= '<div class="activity-content flex-grow-1">';
-                    $html .= '<span class="activity-title font-medium d-block">Nova ocena: ' . htmlspecialchars($activity['subject_name']) . '</span>';
-                    $html .= '<span class="activity-details text-sm text-secondary d-block">' . htmlspecialchars($activity['grade_item']) .
+                    $html .= '<div class="rounded-full p-sm ' . $iconClass . ' text-white">S</div>';
+                    $html .= '<div class="flex-grow-1">';
+                    $html .= '<span class="font-medium d-block">Nova ocena: ' . htmlspecialchars($activity['subject_name']) . '</span>';
+                    $html .= '<span class="text-sm text-secondary d-block">' . htmlspecialchars($activity['grade_item']) .
                         ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
-                    if (!empty($activity['comment'])) $html .= '<span class="activity-comment text-sm text-secondary fst-italic d-block">"' . htmlspecialchars($activity['comment']) . '"</span>';
+                    if (!empty($activity['comment'])) $html .= '<span class="text-sm text-secondary d-block">"' . htmlspecialchars($activity['comment']) . '"</span>';
                     $html .= '</div>';
                     break;
 
                 case 4: // Parent
-                    $icon = 'family_restroom';
                     $iconClass = 'profile-parent';
-                    $html .= '<div class="activity-icon rounded-full p-sm ' . $iconClass . ' text-white"><span class="material-icons-outlined">' . $icon . '</span></div>';
-                    $html .= '<div class="activity-content flex-grow-1">';
-                    $html .= '<span class="activity-title font-medium d-block">Nova ocena: ' . htmlspecialchars($activity['first_name']) .
+                    $html .= '<div class="rounded-full p-sm ' . $iconClass . ' text-white">P</div>';
+                    $html .= '<div class="flex-grow-1">';
+                    $html .= '<span class="font-medium d-block">Nova ocena: ' . htmlspecialchars($activity['first_name']) .
                         ' - ' . htmlspecialchars($activity['subject_name']) . '</span>';
-                    $html .= '<span class="activity-details text-sm text-secondary d-block">' . htmlspecialchars($activity['grade_item']) .
+                    $html .= '<span class="text-sm text-secondary d-block">' . htmlspecialchars($activity['grade_item']) .
                         ', Točke: ' . htmlspecialchars($activity['points'] . '/' . $activity['max_points']) . '</span>';
                     $html .= '</div>';
                     break;
@@ -509,7 +518,7 @@ function renderRecentActivityWidget(): string
             $html .= '</li>';
         }
 
-        $html .= '</ul></div>';
+        $html .= '</ul>';
 
         return $html;
 
