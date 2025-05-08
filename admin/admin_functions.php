@@ -257,8 +257,21 @@ function createNewUser(array $userData): bool|int
                 break;
 
             case ROLE_TEACHER:
-                $stmt = $pdo->prepare("INSERT INTO teachers (user_id) VALUES (?)");
-                $stmt->execute([$userId]);
+                if (empty($userData['first_name']) || empty($userData['last_name'])) {
+                    $pdo->rollBack();
+                    return false;
+                }
+
+                $stmt = $pdo->prepare("
+                    INSERT INTO teachers (user_id, first_name, last_name)
+                    VALUES (?, ?, ?)
+                ");
+
+                $stmt->execute([
+                    $userId,
+                    $userData['first_name'],
+                    $userData['last_name']
+                ]);
                 break;
 
             case ROLE_PARENT:
@@ -1167,7 +1180,7 @@ function getAllTeachers(): array
         if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getAllTeachers", 500, "admin_functions.php");
 
         $query = "
-            SELECT t.teacher_id, u.user_id, u.username
+            SELECT t.teacher_id, u.user_id, u.username, t.first_name, t.last_name
             FROM teachers t
             JOIN users u ON t.user_id = u.user_id
             WHERE u.role_id = ?
