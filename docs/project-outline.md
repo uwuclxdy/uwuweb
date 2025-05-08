@@ -53,6 +53,7 @@ uwuweb/
 │ ├── system_settings.php # School-wide system settings
 │ └── users.php # User management interface
 ├── api/
+│ ├── admin.php # Admin API endpoints
 │ ├── attendance.php # Attendance data API endpoints
 │ ├── grades.php # Grades data API endpoints
 │ └── justifications.php # Absence justification API endpoints
@@ -67,12 +68,14 @@ uwuweb/
 │ ├── system_settings.sql # System settings structure
 │ └── uwuweb.sql # Main database schema
 ├── design/
+│ ├── modal-examples.php # Examples of modal dialog implementations
 │ └── uwuweb-logo.png # Application logo
 ├── docs/
 │ ├── backend-checklist.md # Backend implementation checklist
 │ ├── css-readme.md # CSS architecture documentation
 │ ├── frontend-checklist.md # Frontend implementation checklist
 │ ├── local-setup.md # Local development setup guide
+│ ├── modal-guidelines.md # Guidelines for implementing modals
 │ ├── project-functions.md # Function reference documentation
 │ └── project-outline.md # This file
 ├── includes/
@@ -100,6 +103,7 @@ uwuweb/
 ├── dashboard.php # Role-aware main dashboard
 ├── db_test.php # Database connection testing
 ├── index.php # Main application entry point
+├── temp.php # Temporary file for development testing
 └── qodana.yaml # Code quality configuration
 
 *`dashboard.php`* reads role and loads widgets/links for that role.
@@ -164,6 +168,7 @@ files.
 
 ### API Endpoints
 
+- **admin.php**: API endpoints for admin operations such as retrieving class details
 - **grades.php**: CRUD operations for grade data (teacher access)
 - **attendance.php**: CRUD operations for attendance with role-based access
 - **justifications.php**: Handling absence justifications submissions and approvals

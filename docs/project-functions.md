@@ -202,6 +202,11 @@ settings, and class-subject assignments.
 - `getAllClassSubjectAssignments(): array` - Returns all class-subject assignments with related information.
 - `getAllTeachers(): array` - Returns all teachers with their basic information.
 
+### System Settings Functions:
+
+- `getSystemSettings(): array` - Retrieves system-wide settings from the database.
+- `updateSystemSettings(array $settings): bool` - Updates system-wide settings. Returns success status.
+
 ### Dashboard Widget Functions:
 
 - `renderAdminUserStatsWidget(): string` - Displays user statistics by role with counts and recent registrations.
@@ -331,3 +336,14 @@ Handles CRUD operations for grade data via AJAX requests. Returns JSON responses
   given grade item
 - `teacherHasAccessToEnrollment(int $enrollId): bool` - Verifies if the current teacher is authorized to modify grades
   for the given enrollment
+
+## /api/admin.php
+
+Handles administrative API functions for the uwuweb system. Returns JSON responses for client-side processing.
+
+### Class and Subject Management:
+
+- `getClassDetails(): void` - Retrieves detailed information about a class including enrolled students and assigned
+  subjects
+- `getSubjectDetails(): void` - Retrieves detailed information about a subject including assigned classes
+- `getTeacherDetails(): void` - Retrieves detailed information about a teacher including assigned classes and subjects

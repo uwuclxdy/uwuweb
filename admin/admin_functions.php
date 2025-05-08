@@ -762,7 +762,9 @@ function getAllClasses(): array
         if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija getAllClasses", 500, "admin_functions.php");
 
         $query = "
-            SELECT c.*, t.teacher_id, u.username as homeroom_teacher_name
+            SELECT c.*, t.teacher_id, u.username as homeroom_teacher_name,
+                   (SELECT COUNT(*) FROM students s WHERE s.class_code = c.class_code) as student_count,
+                   (SELECT COUNT(*) FROM class_subjects cs WHERE cs.class_id = c.class_id) as subject_count
             FROM classes c
             LEFT JOIN teachers t ON c.homeroom_teacher_id = t.teacher_id
             LEFT JOIN users u ON t.user_id = u.user_id
@@ -785,36 +787,52 @@ function displayClassesList(): void
 {
     $classes = getAllClasses();
 
-    echo '<div class="table-responsive mb-md">';
     echo '<table class="data-table">';
     echo '<thead>';
     echo '<tr>';
-    echo '<th>ID</th>';
-    echo '<th>Code</th>';
-    echo '<th>Title</th>';
-    echo '<th>Homeroom Teacher</th>';
-    echo '<th>Actions</th>';
+    echo '<th>Ime</th>';
+    echo '<th>Koda (Leto)</th>';
+    echo '<th>Razrednik</th>';
+    echo '<th class="text-center">Učenci</th>';
+    echo '<th class="text-center">Predmeti</th>';
+    echo '<th class="text-right">Dejanja</th>';
     echo '</tr>';
     echo '</thead>';
     echo '<tbody>';
 
-    foreach ($classes as $class) {
+    if (empty($classes)) {
         echo '<tr>';
-        echo '<td>' . htmlspecialchars($class['class_id']) . '</td>';
-        echo '<td><span class="badge badge-primary">' . htmlspecialchars($class['class_code']) . '</span></td>';
+        echo '<td colspan="6" class="text-center p-lg">';
+        echo '<div class="alert status-info mb-0">';
+        echo 'Ni še ustvarjenih razredov. Uporabite gumb zgoraj za dodajanje.';
+        echo '</div>';
+        echo '</td>';
+        echo '</tr>';
+    } else foreach ($classes as $class) {
+        echo '<tr>';
         echo '<td>' . htmlspecialchars($class['title']) . '</td>';
-        echo '<td>' . ($class['homeroom_teacher_name'] ? htmlspecialchars($class['homeroom_teacher_name']) : '<span class="text-disabled">Ni dodeljen</span>') . '</td>';
-        echo '<td class="actions d-flex gap-sm">'; // Use flex and gap for button spacing
-        echo '<a href="/uwuweb/admin/manage_classes.php?class_id=' . $class['class_id'] . '" class="btn btn-primary btn-sm">Uredi</a>';
-        echo '<a href="/uwuweb/admin/manage_classes.php?action=delete_class&class_id=' . $class['class_id'] . '" class="btn btn-error btn-sm"
-                onclick="return confirm(\'Ali ste prepričani, da želite izbrisati ta razred?\');">Izbriši</a>';
+        echo '<td>' . htmlspecialchars($class['class_code']) . '</td>';
+        echo '<td>' . htmlspecialchars($class['homeroom_teacher_name'] ?? 'N/A') . '</td>';
+        echo '<td class="text-center">' . ($class['student_count'] ?? 0) . '</td>';
+        echo '<td class="text-center">' . ($class['subject_count'] ?? 0) . '</td>';
+        echo '<td>';
+        echo '<div class="d-flex justify-end gap-xs">';
+        echo '<button class="btn btn-secondary btn-sm edit-class-btn d-flex items-center gap-xs" ';
+        echo 'data-id="' . $class['class_id'] . '">';
+        echo '<span class="text-md">✎</span> Uredi';
+        echo '</button>';
+        echo '<button class="btn btn-secondary btn-sm delete-class-btn d-flex items-center gap-xs" ';
+        echo 'data-id="' . $class['class_id'] . '" ';
+        echo 'data-name="' . htmlspecialchars($class['title'] ?? '') . '">';
+        echo '<span class="text-md">🗑</span> Izbriši';
+        echo '</button>';
+        echo '</div>';
         echo '</td>';
         echo '</tr>';
     }
 
     echo '</tbody>';
     echo '</table>';
-    echo '</div>';
 }
 
 /**
@@ -1358,9 +1376,7 @@ function renderAdminUserStatsWidget(): string
                 $output .= '</div>';
             }
             $output .= '</div>'; // End recent users
-        } elseif (empty($roleStats) && empty($recentUsers)) {
-            $output .= '<p class="text-secondary text-center">Ni podatkov o uporabnikih.</p>';
-        }
+        } elseif (empty($roleStats)) $output .= '<p class="text-secondary text-center">Ni podatkov o uporabnikih.</p>';
 
         $output .= '</div>'; // End content wrapper
         $output .= '</div>'; // End section
@@ -1536,9 +1552,7 @@ function renderAdminAttendanceWidget(): string
                 $output .= '</div>';
             }
             $output .= '</div>';
-        } else {
-            $output .= '<p class="text-secondary text-center m-0">Ni podatkov o prisotnosti za izbrano obdobje.</p>';
-        }
+        } else $output .= '<p class="text-secondary text-center m-0">Ni podatkov o prisotnosti za izbrano obdobje.</p>';
         $output .= '</div>';
         $output .= '</div>';
 
@@ -1562,9 +1576,7 @@ function renderAdminAttendanceWidget(): string
             $output .= '<div><span class="d-block font-medium">' . htmlspecialchars($bestClass['total_count'] - $bestClass['present_count']) . '</span><span class="text-secondary">odsotnih/zamud</span></div>';
             $output .= '<div><span class="d-block font-medium">' . htmlspecialchars($bestClass['total_count']) . '</span><span class="text-secondary">vseh vnosov</span></div>';
             $output .= '</div>';
-        } else {
-            $output .= '<p class="text-secondary text-center m-0">Ni dovolj podatkov za prikaz najboljšega razreda.</p>';
-        }
+        } else $output .= '<p class="text-secondary text-center m-0">Ni dovolj podatkov za prikaz najboljšega razreda.</p>';
         $output .= '</div>';
         $output .= '</div>';
         $output .= '</div>'; // End flex container
