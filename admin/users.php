@@ -375,7 +375,6 @@ function handleDeleteUser(): void
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="createUserModalTitle">
         <div class="modal-header">
             <h3 class="modal-title" id="createUserModalTitle">Create New User</h3>
-            <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
         <form id="createUserForm" method="POST" action="users.php">
             <div class="modal-body">
@@ -487,7 +486,6 @@ function handleDeleteUser(): void
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="editUserModalTitle">
         <div class="modal-header">
             <h3 class="modal-title" id="editUserModalTitle">Edit User</h3>
-            <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
         <form id="editUserForm" method="POST" action="users.php">
             <div class="modal-body">
@@ -589,7 +587,6 @@ function handleDeleteUser(): void
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="resetPasswordModalTitle">
         <div class="modal-header">
             <h3 class="modal-title" id="resetPasswordModalTitle">Reset Password</h3>
-            <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
         <form id="resetPasswordForm" method="POST" action="users.php">
             <div class="modal-body">
@@ -629,34 +626,23 @@ function handleDeleteUser(): void
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="deleteUserModalTitle">
         <div class="modal-header">
             <h3 class="modal-title" id="deleteUserModalTitle">Delete User</h3>
-            <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
-        <form id="deleteUserForm" method="POST" action="users.php">
-            <div class="modal-body">
-                <div class="alert status-error mb-md">
-                    <p>You are about to permanently delete user <strong id="deleteUsername"></strong>.</p>
-                    <p>This action cannot be undone and will remove all associated data.</p>
-                </div>
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                <input type="hidden" name="delete_user" value="1">
-                <input type="hidden" id="delete_user_id" name="user_id" value="">
-
-                <div class="form-group">
-                    <label class="form-label" for="delete_confirmation">To confirm deletion, type "DELETE"
-                        below:</label>
-                    <input type="text" id="delete_confirmation" name="delete_confirmation" class="form-input" required
-                           pattern="DELETE">
-                </div>
+        <div class="modal-body">
+            <div class="alert status-warning mb-md">
+                <p>Are you sure you want to delete user <strong id="deleteUsername"></strong>?</p>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-error" id="deleteUserSubmitBtn" disabled>Delete User</button>
+            <div class="alert status-error font-bold">
+                <p>This action cannot be undone.</p>
             </div>
-        </form>
+            <input type="hidden" id="delete_user_id" value="">
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+            <button type="button" class="btn btn-error" id="confirmDeleteBtn">Delete</button>
+        </div>
     </div>
 </div>
 
-<!--suppress JSUnresolvedReference -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // --- Constants ---
@@ -892,16 +878,51 @@ function handleDeleteUser(): void
 
                 const userIdField = document.getElementById('delete_user_id');
                 const usernameDisplay = document.getElementById('deleteUsername');
-                const confirmationField = document.getElementById('delete_confirmation');
-                const submitBtn = document.getElementById('deleteUserSubmitBtn');
 
                 if (userIdField) userIdField.value = userId;
                 if (usernameDisplay) usernameDisplay.textContent = username || 'this user';
-                if (confirmationField) confirmationField.value = '';
-                if (submitBtn) submitBtn.disabled = true;
 
                 openModal(modals.delete);
             });
+        });
+
+        // Confirm Delete Button
+        document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+            const userId = document.getElementById('delete_user_id').value;
+            if (!userId) return;
+
+            // Create and submit form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = window.location.href;
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = '<?= htmlspecialchars($csrfToken) ?>';
+
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'delete_user';
+            actionInput.value = '1';
+
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'user_id';
+            idInput.value = userId;
+
+            // Add DELETE confirmation for backward compatibility with server-side validation
+            const confirmInput = document.createElement('input');
+            confirmInput.type = 'hidden';
+            confirmInput.name = 'delete_confirmation';
+            confirmInput.value = 'DELETE';
+
+            form.appendChild(csrfInput);
+            form.appendChild(actionInput);
+            form.appendChild(idInput);
+            form.appendChild(confirmInput);
+            document.body.appendChild(form);
+            form.submit();
         });
 
         // Close Modal Buttons
