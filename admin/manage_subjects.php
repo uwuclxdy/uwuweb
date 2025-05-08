@@ -144,10 +144,11 @@ $pdo = getDBConnection();
     </div>
 
     <?php if (!empty($message)): ?>
-        <div class="alert status-<?= $messageType === 'success' ? 'success' : 'error' ?> mb-lg d-flex items-center gap-sm">
-             <span class="alert-icon text-lg">
+        <div class="alert status-<?= $messageType === 'success' ? 'success' : 'error' ?> page-transition mb-lg"
+             role="alert" aria-live="polite">
+            <div class="alert-icon">
                 <?= $messageType === 'success' ? '✓' : '⚠' ?>
-            </span>
+            </div>
             <div class="alert-content">
                 <?= htmlspecialchars($message) ?>
             </div>
@@ -177,8 +178,11 @@ $pdo = getDBConnection();
                 <?php if (empty($subjects)): ?>
                     <tr>
                         <td colspan="4" class="text-center p-lg">
-                            <div class="alert status-info mb-0">
-                                Ni še ustvarjenih predmetov. Uporabite gumb zgoraj za dodajanje.
+                            <div class="alert status-info page-transition mb-0" role="status">
+                                <div class="alert-icon">ℹ</div>
+                                <div class="alert-content">
+                                    Ni še ustvarjenih predmetov. Uporabite gumb zgoraj za dodajanje.
+                                </div>
                             </div>
                         </td>
                     </tr>
