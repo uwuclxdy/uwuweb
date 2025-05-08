@@ -312,7 +312,6 @@ function handleDeleteUser(): void
                 <table class="data-table w-full" id="usersTable">
                     <thead>
                     <tr>
-                        <th class="text-left">ID</th>
                         <th class="text-left">Username</th>
                         <th class="text-left">Full Name</th>
                         <th class="text-left">Role</th>
@@ -324,7 +323,7 @@ function handleDeleteUser(): void
                     <tbody>
                     <?php if (empty($users)): ?>
                         <tr>
-                            <td colspan="7" class="text-center py-md">No users found matching the criteria.</td>
+                            <td colspan="6" class="text-center py-md">No users found matching the criteria.</td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($users as $user): ?>
@@ -334,7 +333,6 @@ function handleDeleteUser(): void
                             ?>
                             <tr data-role="<?= strtolower($user['role_name']) ?>"
                                 data-search-terms="<?= strtolower(htmlspecialchars($user['username'] . ' ' . $user['first_name'] . ' ' . $user['last_name'] . ' ' . ($user['email'] ?? ''))) ?>">
-                                <td><?= $user['user_id'] ?></td>
                                 <td><?= htmlspecialchars($user['username']) ?></td>
                                 <td><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></td>
                                 <td>
@@ -413,7 +411,7 @@ function handleDeleteUser(): void
 
                 <div class="form-group">
                     <label class="form-label" for="create_email">Email:</label>
-                    <input type="email" id="create_email" name="email" class="form-input" required>
+                    <input type="email" id="create_email" name="email" class="form-input">
                 </div>
 
                 <div class="form-group">
@@ -504,7 +502,7 @@ function handleDeleteUser(): void
 
                 <div class="form-group">
                     <label class="form-label" for="edit_email">Email:</label>
-                    <input type="email" id="edit_email" name="email" class="form-input" required>
+                    <input type="email" id="edit_email" name="email" class="form-input">
                 </div>
 
                 <div class="row">
@@ -772,7 +770,7 @@ function handleDeleteUser(): void
                     if (!noResultsRow) {
                         noResultsRow = document.createElement('tr');
                         noResultsRow.classList.add('no-results');
-                        noResultsRow.innerHTML = `<td colspan="7" class="text-center py-md">No users found matching your search criteria.</td>`;
+                        noResultsRow.innerHTML = `<td colspan="6" class="text-center py-md">No users found matching your search criteria.</td>`;
                         const tbody = usersTable.querySelector('tbody');
                         if (tbody) tbody.appendChild(noResultsRow);
                     }
@@ -800,13 +798,13 @@ function handleDeleteUser(): void
 
                 // Get the user from the table row instead of using AJAX
                 const row = this.closest('tr');
-                const username = row.querySelector('td:nth-child(2)').textContent;
-                const fullName = row.querySelector('td:nth-child(3)').textContent;
+                const username = row.querySelector('td:nth-child(1)').textContent;
+                const fullName = row.querySelector('td:nth-child(2)').textContent;
                 const roleId = parseInt(row.dataset.role === 'administrator' ? '1' :
                     row.dataset.role === 'teacher' ? '2' :
                         row.dataset.role === 'student' ? '3' :
                             row.dataset.role === 'parent' ? '4' : '0');
-                const email = row.querySelector('td:nth-child(5)').textContent;
+                const email = row.querySelector('td:nth-child(4)').textContent;
 
                 // Populate the edit form
                 document.getElementById('edit_user_id').value = userId;
