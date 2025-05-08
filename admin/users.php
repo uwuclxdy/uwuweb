@@ -30,6 +30,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') if (!isset($_POST['csrf_token']) || !
     $messageType = 'error';
 } else if (isset($_POST['create_user'])) handleCreateUser(); else if (isset($_POST['update_user'])) handleUpdateUser(); else if (isset($_POST['reset_password'])) handleResetPassword(); else if (isset($_POST['delete_user'])) handleDeleteUser();
 
+// Handle JSON request for user details
+if (isset($_GET['action'], $_GET['user_id'], $_GET['format']) && $_GET['action'] === 'edit' && $_GET['format'] === 'json') {
+    $userId = (int)$_GET['user_id'];
+    $userData = getUserDetails($userId);
+
+    header('Content-Type: application/json');
+
+    if ($userData)
+        try {
+            echo json_encode($userData, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            sendJsonErrorResponse('Error encoding JSON', 500, 'admin/users.php AJAX get_user_details');
+        }
+
+    if (!$userData)
+        try {
+            echo json_encode(['error' => 'User not found'], JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            sendJsonErrorResponse('Error encoding JSON', 500, 'admin/users.php AJAX get_user_details');
+        }
+    exit;
+}
+
 // Handle edit, reset, or delete requests
 if (isset($_GET['action'], $_GET['user_id'])) {
     $userId = (int)$_GET['user_id'];
@@ -48,6 +71,7 @@ if (isset($_GET['action'], $_GET['user_id'])) {
 $users = getAllUsers();
 $roleFilter = $_GET['role'] ?? 'all';
 if ($roleFilter !== 'all') $users = array_filter($users, static function ($user) use ($roleFilter) {
+    if ($roleFilter === 'admin' && strtolower($user['role_name']) === 'administrator') return true;
     return strtolower($user['role_name']) === strtolower($roleFilter);
 });
 
@@ -304,13 +328,17 @@ function handleDeleteUser(): void
                         </tr>
                     <?php else: ?>
                         <?php foreach ($users as $user): ?>
+                            <?php
+                            $roleClass = strtolower($user['role_name']);
+                            if ($roleClass === 'administrator') $roleClass = 'admin';
+                            ?>
                             <tr data-role="<?= strtolower($user['role_name']) ?>"
                                 data-search-terms="<?= strtolower(htmlspecialchars($user['username'] . ' ' . $user['first_name'] . ' ' . $user['last_name'] . ' ' . ($user['email'] ?? ''))) ?>">
                                 <td><?= $user['user_id'] ?></td>
                                 <td><?= htmlspecialchars($user['username']) ?></td>
                                 <td><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></td>
                                 <td>
-                                        <span class="role-badge role-<?= strtolower($user['role_name']) ?>">
+                                        <span class="role-badge role-<?= $roleClass ?>">
                                             <?= htmlspecialchars(ucfirst($user['role_name'])) ?>
                                         </span>
                                 </td>
@@ -766,74 +794,77 @@ function handleDeleteUser(): void
 
         // Edit User Buttons
         document.querySelectorAll('.edit-user-btn').forEach(btn => {
-            btn.addEventListener('click', async function () {
+            btn.addEventListener('click', function () {
                 const userId = this.dataset.id;
                 if (!userId) return;
 
-                try {
-                    // Fetch user details via AJAX
-                    const response = await fetch(`/uwuweb/api/users.php?action=get_details&id=${userId}`);
+                // Get the user from the table row instead of using AJAX
+                const row = this.closest('tr');
+                const username = row.querySelector('td:nth-child(2)').textContent;
+                const fullName = row.querySelector('td:nth-child(3)').textContent;
+                const roleId = parseInt(row.dataset.role === 'administrator' ? '1' :
+                    row.dataset.role === 'teacher' ? '2' :
+                        row.dataset.role === 'student' ? '3' :
+                            row.dataset.role === 'parent' ? '4' : '0');
+                const email = row.querySelector('td:nth-child(5)').textContent;
 
-                    const userData = await response.json();
+                // Populate the edit form
+                document.getElementById('edit_user_id').value = userId;
+                document.getElementById('edit_username').value = username;
+                document.getElementById('edit_email').value = email === 'N/A' ? '' : email;
 
-                    // Populate the edit form
-                    const userIdField = document.getElementById('edit_user_id');
-                    const usernameField = document.getElementById('edit_username');
-                    const emailField = document.getElementById('edit_email');
-                    const firstNameField = document.getElementById('edit_first_name');
-                    const lastNameField = document.getElementById('edit_last_name');
-                    const roleField = document.getElementById('edit_role');
+                // Split full name into first and last name
+                const nameParts = fullName.split(' ');
+                document.getElementById('edit_first_name').value = nameParts[0] || '';
+                document.getElementById('edit_last_name').value = nameParts.slice(1).join(' ') || '';
 
-                    if (userIdField) userIdField.value = userId;
-                    if (usernameField) usernameField.value = userData.username || '';
-                    if (emailField) emailField.value = userData.email || '';
-                    if (firstNameField) firstNameField.value = userData.first_name || '';
-                    if (lastNameField) lastNameField.value = userData.last_name || '';
-                    if (roleField) roleField.value = userData.role_id || '';
+                // Set role
+                document.getElementById('edit_role').value = roleId;
 
-                    // Update fields visibility based on role
-                    updateRoleSpecificFields(document.getElementById('edit_role'), 'edit');
+                // Update fields visibility based on role
+                updateRoleSpecificFields(document.getElementById('edit_role'), 'edit');
 
-                    // Populate role-specific fields
-                    if (userData.role_id === ROLE_STUDENT) {
-                        const studentClassField = document.getElementById('edit_student_class');
-                        const dobField = document.getElementById('edit_dob');
+                // For full details, we'll need to redirect to get the data
+                // This opens the modal with basic info immediately
+                openModal(modals.edit);
 
-                        if (studentClassField && userData.hasOwnProperty('class_code')) {
-                            studentClassField.value = userData.class_code || '';
+                // Then fetch additional role-specific data
+                fetch(`users.php?action=edit&user_id=${userId}&format=json`)
+                    .then(response => response.json())
+                    .then(userData => {
+                        // Populate role-specific fields if data is available
+                        if (userData.role_id === ROLE_STUDENT) {
+                            const studentClassField = document.getElementById('edit_student_class');
+                            const dobField = document.getElementById('edit_dob');
+
+                            if (studentClassField && userData.class_code) {
+                                studentClassField.value = userData.class_code;
+                            }
+
+                            if (dobField && userData.dob) {
+                                dobField.value = userData.dob;
+                            }
+                        } else if (userData.role_id === ROLE_TEACHER && userData.subjects) {
+                            const subjectSelect = document.getElementById('edit_teacher_subjects');
+                            if (subjectSelect) {
+                                const optionElements = subjectSelect.querySelectorAll('option');
+                                optionElements.forEach(option => {
+                                    option.selected = userData.subjects.includes(parseInt(option.value));
+                                });
+                            }
+                        } else if (userData.role_id === ROLE_PARENT && userData.children) {
+                            const childrenSelect = document.getElementById('edit_parent_children');
+                            if (childrenSelect) {
+                                const optionElements = childrenSelect.querySelectorAll('option');
+                                optionElements.forEach(option => {
+                                    option.selected = userData.children.includes(parseInt(option.value));
+                                });
+                            }
                         }
-
-                        if (dobField && userData.hasOwnProperty('dob')) {
-                            dobField.value = userData.dob || '';
-                        }
-                    } else if (userData.role_id === ROLE_TEACHER) {
-                        const subjectSelect = document.getElementById('edit_teacher_subjects');
-
-                        if (subjectSelect && userData.hasOwnProperty('subjects') && Array.isArray(userData.subjects)) {
-                            const optionElements = subjectSelect.querySelectorAll('option');
-                            optionElements.forEach(option => {
-                                const optionValue = parseInt(option.value || '0');
-                                option.selected = userData.subjects.includes(optionValue);
-                            });
-                        }
-                    } else if (userData.role_id === ROLE_PARENT) {
-                        const childrenSelect = document.getElementById('edit_parent_children');
-
-                        if (childrenSelect && userData.hasOwnProperty('children') && Array.isArray(userData.children)) {
-                            const optionElements = childrenSelect.querySelectorAll('option');
-                            optionElements.forEach(option => {
-                                const optionValue = parseInt(option.value || '0');
-                                option.selected = userData.children.includes(optionValue);
-                            });
-                        }
-                    }
-
-                    openModal(modals.edit);
-
-                } catch (error) {
-                    console.error('Error fetching user details:', error);
-                    alert('Could not load user details. Please try again.');
-                }
+                    })
+                    .catch(() => {
+                        console.log('Could not load additional user details. Some fields may need to be filled in manually.');
+                    });
             });
         });
 
