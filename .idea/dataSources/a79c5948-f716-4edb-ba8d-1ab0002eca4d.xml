@@ -1156,25 +1156,25 @@ test\\_%|schema||&apos;&apos;||UPDATE|G</Grants>
     <schema id="328" parent="1" name="uwuweb">
       <AutoIntrospectionLevel>3</AutoIntrospectionLevel>
       <LastIntrospectionLevel>3</LastIntrospectionLevel>
-      <LastIntrospectionLocalTimestamp>2025-05-08.04:15:51</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2025-05-08.23:15:48</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb4_unicode_ci</CollationName>
     </schema>
-    <user id="329" parent="1" name="&apos;&apos;">
+    <user id="329" parent="1" name="pma">
       <Host>localhost</Host>
     </user>
-    <user id="330" parent="1" name="mariadb.sys">
-      <Host>localhost</Host>
-    </user>
-    <user id="331" parent="1" name="pma">
-      <Host>localhost</Host>
-    </user>
-    <user id="332" parent="1" name="root">
+    <user id="330" parent="1" name="root">
       <Host>127.0.0.1</Host>
     </user>
-    <user id="333" parent="1" name="root">
+    <user id="331" parent="1" name="root">
       <Host>::1</Host>
     </user>
-    <user id="334" parent="1" name="root">
+    <user id="332" parent="1" name="root">
+      <Host>localhost</Host>
+    </user>
+    <user id="333" parent="1" name="&apos;&apos;">
+      <Host>localhost</Host>
+    </user>
+    <user id="334" parent="1" name="mariadb.sys">
       <Host>localhost</Host>
     </user>
     <table id="335" parent="328" name="attendance">
@@ -1253,7 +1253,7 @@ test\\_%|schema||&apos;&apos;||UPDATE|G</Grants>
       <CollationName>utf8mb4_unicode_ci</CollationName>
     </table>
     <column id="350" parent="335" name="att_id">
-      <AutoIncrement>208</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1323,7 +1323,7 @@ period_id</ColNames>
       <UnderlyingIndexName>enroll_id</UnderlyingIndexName>
     </key>
     <column id="365" parent="336" name="class_subject_id">
-      <AutoIncrement>11</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1386,7 +1386,7 @@ subject_id</ColNames>
       <UnderlyingIndexName>class_id</UnderlyingIndexName>
     </key>
     <column id="378" parent="337" name="class_id">
-      <AutoIncrement>3</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1434,7 +1434,7 @@ subject_id</ColNames>
       <UnderlyingIndexName>class_code</UnderlyingIndexName>
     </key>
     <column id="388" parent="338" name="enroll_id">
-      <AutoIncrement>21</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1483,7 +1483,7 @@ class_id</ColNames>
       <UnderlyingIndexName>student_id</UnderlyingIndexName>
     </key>
     <column id="398" parent="339" name="item_id">
-      <AutoIncrement>7</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1528,7 +1528,7 @@ class_id</ColNames>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
     <column id="407" parent="340" name="grade_id">
-      <AutoIncrement>56</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1581,7 +1581,7 @@ class_id</ColNames>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
     <column id="418" parent="341" name="parent_id">
-      <AutoIncrement>8</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1615,7 +1615,7 @@ class_id</ColNames>
       <UnderlyingIndexName>user_id</UnderlyingIndexName>
     </key>
     <column id="425" parent="342" name="period_id">
-      <AutoIncrement>24</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1711,7 +1711,7 @@ parent_id</ColNames>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
     <column id="444" parent="345" name="student_id">
-      <AutoIncrement>22</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1765,7 +1765,7 @@ parent_id</ColNames>
       <UnderlyingIndexName>user_id</UnderlyingIndexName>
     </key>
     <column id="455" parent="346" name="subject_id">
-      <AutoIncrement>10</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1849,7 +1849,7 @@ parent_id</ColNames>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
     <column id="470" parent="348" name="teacher_id">
-      <AutoIncrement>5</AutoIncrement>
+      <AutoIncrement>1</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1859,81 +1859,91 @@ parent_id</ColNames>
       <Position>2</Position>
       <StoredType>int(11)|0s</StoredType>
     </column>
-    <foreign-key id="472" parent="348" name="teachers_ibfk_1">
+    <column id="472" parent="348" name="first_name">
+      <NotNull>1</NotNull>
+      <Position>3</Position>
+      <StoredType>varchar(100)|0s</StoredType>
+    </column>
+    <column id="473" parent="348" name="last_name">
+      <NotNull>1</NotNull>
+      <Position>4</Position>
+      <StoredType>varchar(100)|0s</StoredType>
+    </column>
+    <foreign-key id="474" parent="348" name="teachers_ibfk_1">
       <ColNames>user_id</ColNames>
       <RefColNames>user_id</RefColNames>
       <RefTableName>users</RefTableName>
     </foreign-key>
-    <index id="473" parent="348" name="PRIMARY">
+    <index id="475" parent="348" name="PRIMARY">
       <ColNames>teacher_id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="474" parent="348" name="user_id">
+    <index id="476" parent="348" name="user_id">
       <ColNames>user_id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <key id="475" parent="348" name="PRIMARY">
+    <key id="477" parent="348" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <key id="476" parent="348" name="user_id">
+    <key id="478" parent="348" name="user_id">
       <UnderlyingIndexName>user_id</UnderlyingIndexName>
     </key>
-    <column id="477" parent="349" name="user_id">
-      <AutoIncrement>37</AutoIncrement>
+    <column id="479" parent="349" name="user_id">
+      <AutoIncrement>2</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
     </column>
-    <column id="478" parent="349" name="username">
+    <column id="480" parent="349" name="username">
       <NotNull>1</NotNull>
       <Position>2</Position>
       <StoredType>varchar(50)|0s</StoredType>
     </column>
-    <column id="479" parent="349" name="pass_hash">
+    <column id="481" parent="349" name="pass_hash">
       <NotNull>1</NotNull>
       <Position>3</Position>
       <StoredType>varchar(255)|0s</StoredType>
     </column>
-    <column id="480" parent="349" name="role_id">
+    <column id="482" parent="349" name="role_id">
       <NotNull>1</NotNull>
       <Position>4</Position>
       <StoredType>int(11)|0s</StoredType>
     </column>
-    <column id="481" parent="349" name="created_at">
+    <column id="483" parent="349" name="created_at">
       <DefaultExpression>current_timestamp()</DefaultExpression>
       <NotNull>1</NotNull>
       <Position>5</Position>
       <StoredType>timestamp|0s</StoredType>
     </column>
-    <foreign-key id="482" parent="349" name="users_ibfk_1">
+    <foreign-key id="484" parent="349" name="users_ibfk_1">
       <ColNames>role_id</ColNames>
       <RefColNames>role_id</RefColNames>
       <RefTableName>roles</RefTableName>
     </foreign-key>
-    <index id="483" parent="349" name="PRIMARY">
+    <index id="485" parent="349" name="PRIMARY">
       <ColNames>user_id</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="484" parent="349" name="username">
+    <index id="486" parent="349" name="username">
       <ColNames>username</ColNames>
       <Type>btree</Type>
       <Unique>1</Unique>
     </index>
-    <index id="485" parent="349" name="role_id">
+    <index id="487" parent="349" name="role_id">
       <ColNames>role_id</ColNames>
       <Type>btree</Type>
     </index>
-    <key id="486" parent="349" name="PRIMARY">
+    <key id="488" parent="349" name="PRIMARY">
       <NameSurrogate>1</NameSurrogate>
       <Primary>1</Primary>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
-    <key id="487" parent="349" name="username">
+    <key id="489" parent="349" name="username">
       <UnderlyingIndexName>username</UnderlyingIndexName>
     </key>
   </database-model>

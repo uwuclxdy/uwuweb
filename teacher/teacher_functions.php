@@ -434,7 +434,7 @@ function saveAttendance(int $enrollId, int $periodId, string $status): bool
  * @param int $classSubjectId Class-Subject ID
  * @return array Array of grade item records
  */
-function getGradeItems(int $classSubjectId): array
+function getGradeItemsFunction(int $classSubjectId): array
 {
     // Verify teacher has access to this class-subject
     if (!teacherHasAccessToClassSubject($classSubjectId)) {
@@ -472,7 +472,7 @@ function getGradeItems(int $classSubjectId): array
  * @param int $classSubjectId Class-Subject ID
  * @return array Array of grade records grouped by student
  */
-function getClassGrades(int $classSubjectId): array
+function getClassGradesTeacher(int $classSubjectId): array
 {
     if (!teacherHasAccessToClassSubject($classSubjectId)) {
         return [];
@@ -500,7 +500,7 @@ function getClassGrades(int $classSubjectId): array
 
         $students = getClassStudents($classSubject['class_id']);
 
-        $gradeItems = getGradeItems($classSubjectId);
+        $gradeItems = getGradeItemsFunction($classSubjectId);
 
         $result = [
             'students' => $students,
@@ -545,7 +545,7 @@ function getClassGrades(int $classSubjectId): array
  * @param float $weight Weight of the grade item
  * @return bool|int False on failure, grade item ID on success
  */
-function addGradeItem(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): bool|int
+function addGradeItemFunction(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): bool|int
 {
     if (!teacherHasAccessToClassSubject($classSubjectId)) {
         return false;

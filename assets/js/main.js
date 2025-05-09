@@ -20,6 +20,208 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Form validation
     initFormValidation();
+
+    // --- Modal Management Functions ---
+    const openModal = (modalId) => {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('open');
+            // Focus the first focusable element
+            const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
+            if (firstFocusable) firstFocusable.focus();
+        }
+    };
+
+    const closeModal = (modal) => {
+        if (typeof modal === 'string') {
+            modal = document.getElementById(modal);
+        }
+
+        if (modal) {
+            modal.classList.remove('open');
+            // Reset forms if present
+            const form = modal.querySelector('form');
+            if (form) form.reset();
+
+            // Clear any error messages
+            const errorMsgs = modal.querySelectorAll('.feedback-error');
+            errorMsgs.forEach(msg => {
+                if (msg && msg.style) {
+                    msg.style.display = 'none';
+                }
+            });
+        }
+    };
+
+    // --- Event Listeners ---
+
+    // Open modal buttons
+    document.querySelectorAll('[data-open-modal]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const modalId = this.dataset.openModal;
+            openModal(modalId);
+
+            // If the button has additional data attributes, process them
+            // Example: data-id, data-name, etc.
+            const dataId = this.dataset.id;
+            const dataName = this.dataset.name;
+
+            if (dataId) {
+                // Handle ID data (e.g., fill hidden form field)
+                const idField = document.getElementById(`${modalId}_id`);
+                if (idField) idField.value = dataId;
+            }
+
+            if (dataName) {
+                // Handle name data (e.g., show in confirmation text)
+                const nameDisplay = document.getElementById(`${modalId}_name`);
+                if (nameDisplay) nameDisplay.textContent = dataName;
+            }
+        });
+    });
+
+    // Close modal buttons
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            closeModal(this.closest('.modal'));
+        });
+    });
+
+    // Close modals when clicking the overlay
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', function () {
+            closeModal(this.closest('.modal'));
+        });
+    });
+
+    // Close modals with Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.modal.open').forEach(modal => {
+                closeModal(modal);
+            });
+        }
+    });
+
+    // Tab switching functionality - shared across teacher pages
+    document.querySelectorAll('.tab-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-btn').forEach(function (b) {
+                b.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-content').forEach(function (c) {
+                c.classList.remove('active');
+            });
+
+            // Add active class to clicked tab and corresponding content
+            this.classList.add('active');
+            document.getElementById(this.dataset.tab).classList.add('active');
+        });
+    });
+
+    // Special case for delete confirmation modal in attendance.php
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', function () {
+            const itemId = document.getElementById('deletePeriodModal_id').value;
+
+            // Create and submit form
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = window.location.href;
+
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = document.querySelector('input[name="csrf_token"]').value;
+
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'delete_period';
+            actionInput.value = '1';
+
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden';
+            idInput.name = 'period_id';
+            idInput.value = itemId;
+
+            form.appendChild(csrfInput);
+            form.appendChild(actionInput);
+            form.appendChild(idInput);
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+
+    // Alert auto-dismissal for non-error alerts
+    const createAlert = (message, type = 'info', container = '.alert-container', autoRemove = true, duration = 5000) => {
+        const alertElement = document.createElement('div');
+        alertElement.className = `alert status-${type} card-entrance`;
+
+        const iconElement = document.createElement('div');
+        iconElement.className = 'alert-icon';
+
+        // Use appropriate icon based on type
+        let iconContent;
+        switch (type) {
+            case 'success':
+                iconContent = '✓';
+                break;
+            case 'warning':
+                iconContent = '⚠';
+                break;
+            case 'error':
+                iconContent = '✕';
+                break;
+            case 'info':
+            default:
+                iconContent = 'ℹ';
+                break;
+        }
+        iconElement.innerHTML = iconContent;
+
+        const contentElement = document.createElement('div');
+        contentElement.className = 'alert-content';
+        contentElement.innerHTML = message;
+
+        // Assemble alert
+        alertElement.appendChild(iconElement);
+        alertElement.appendChild(contentElement);
+
+        // Insert into DOM
+        const containerElement = document.querySelector(container);
+        if (containerElement) {
+            containerElement.appendChild(alertElement);
+        } else {
+            // If no container exists, create one
+            const newContainer = document.createElement('div');
+            newContainer.className = 'alert-container';
+            document.querySelector('.card').after(newContainer);
+            newContainer.appendChild(alertElement);
+        }
+
+        // Auto-remove if needed
+        if (autoRemove && type !== 'error') {
+            setTimeout(() => {
+                alertElement.classList.add('closing');
+                setTimeout(() => {
+                    if (alertElement.parentNode) {
+                        alertElement.parentNode.removeChild(alertElement);
+                    }
+                }, 300);
+            }, duration);
+        }
+
+        return alertElement;
+    };
+
+    // Expose important functions globally
+    window.modalUtils = {
+        openModal,
+        closeModal,
+        createAlert
+    };
 });
 
 /**

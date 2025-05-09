@@ -19,6 +19,7 @@
  * Formatting Functions:
  * - formatDateDisplay(string $date): string - Formats date from YYYY-MM-DD to DD.MM.YYYY
  * - formatDateTimeDisplay(string $datetime): string - Formats datetime to DD.MM.YYYY
+ * - formatFileSize(int $bytes): string - Formats byte size to KB, MB with appropriate units
  *
  * Navigation and Widgets:
  * - getNavItemsByRole(int $role): array - Returns navigation items based on user role
@@ -715,4 +716,18 @@ function formatDateDisplay(string $date): string
 function formatDateTimeDisplay(string $datetime): string
 {
     return date('d.m.Y', strtotime($datetime));
+}
+
+/**
+ * Format file size into human-readable string
+ *
+ * @param int $bytes File size in bytes
+ * @return string Formatted file size with appropriate unit (KB, MB, GB)
+ */
+function formatFileSize(int $bytes): string
+{
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $factor = floor((strlen($bytes) - 1) / 3);
+
+    return sprintf("%.2f %s", $bytes / pow(1024, $factor), $units[$factor]);
 }

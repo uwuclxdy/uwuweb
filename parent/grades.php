@@ -35,7 +35,7 @@ $classes = $selectedStudentId ? getStudentClasses($selectedStudentId) : [];
 $selectedClassId = isset($_GET['class_id']) ? (int)$_GET['class_id'] : ($classes[0]['class_id'] ?? 0);
 
 // Get grades if class is selected
-$grades = ($selectedStudentId && $selectedClassId) ? getClassGrades($selectedStudentId, $selectedClassId) : [];
+$grades = ($selectedStudentId && $selectedClassId) ? getClassGradesTeacher($selectedStudentId, $selectedClassId) : [];
 
 // Calculate class average
 $classAverage = calculateClassAverage($grades);
