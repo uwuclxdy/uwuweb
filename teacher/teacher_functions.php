@@ -883,39 +883,50 @@ function renderTeacherClassOverviewWidget(): string
     $db = getDBConnection();
     if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
-    // Fetch classes (simplified)
-    $query = "SELECT cs.class_subject_id, c.class_code, c.title as class_title, s.name as subject_name, COUNT(DISTINCT e.student_id) as student_count FROM class_subjects cs JOIN classes c ON cs.class_id = c.class_id JOIN subjects s ON cs.subject_id = s.subject_id LEFT JOIN enrollments e ON c.class_id = e.class_id WHERE cs.teacher_id = :teacher_id GROUP BY cs.class_subject_id, c.class_code, c.title, s.name ORDER BY c.title, s.name";
+    $query = "SELECT cs.class_subject_id, c.class_code, c.title AS class_title, s.name AS subject_name, COUNT(DISTINCT e.student_id) AS student_count
+              FROM class_subjects cs
+              JOIN classes c   ON cs.class_id   = c.class_id
+              JOIN subjects s  ON cs.subject_id = s.subject_id
+              LEFT JOIN enrollments e ON c.class_id = e.class_id
+              WHERE cs.teacher_id = :teacher_id
+              GROUP BY cs.class_subject_id, c.class_code, c.title, s.name
+              ORDER BY c.title, s.name";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
     $stmt->execute();
     $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $html = '<div class="d-flex flex-column h-full">';
-    $html .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
-    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Pregled mojih predmetov/razredov</h5>';
-    $html .= '<div class="p-0 flex-grow-1" style="overflow-y: auto;">';
+    $html .= '  <div class="rounded p-0 shadow flex-grow-1 d-flex flex-column">';
+    $html .= '    <h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Pregled mojih predmetov/razredov</h5>';
+    $html .= '    <div class="p-0 flex-grow-1" style="overflow-y:auto;">';
 
     if (empty($classes)) {
-        $html .= '<p class="p-md text-secondary text-center">Trenutno ne poučujete nobenega predmeta/razreda.</p>';
+        $html .= '      <p class="p-md text-secondary text-center">Trenutno ne poučujete nobenega predmeta/razreda.</p>';
     } else {
-        $html .= '<ul class="list-unstyled m-0">';
+        $html .= '      <ul class="list-unstyled m-0">';
         foreach ($classes as $class) {
-            $html .= '<li class="p-md border-bottom">';
-            $html .= '<div class="d-flex justify-between items-center mb-sm">';
+            $html .= '        <li class="p-md border-bottom">';
+            $html .= '          <div class="d-flex justify-between items-center mb-sm">';
             $html .= '<span class="font-medium">' . htmlspecialchars($class['class_title']) . ' (' . htmlspecialchars($class['subject_name']) . ')</span>';
             $html .= '<span class="badge badge-secondary">' . htmlspecialchars($class['class_code']) . '</span>';
-            $html .= '</div>';
-            $html .= '<div class="d-flex justify-between items-center text-sm text-secondary mb-md">';
+            $html .= '          </div>';
+            $html .= '          <div class="d-flex justify-between items-center text-sm text-secondary mb-md">';
             $html .= '<span>' . htmlspecialchars($class['student_count']) . ' dijakov</span>';
-            $html .= '</div>';
-            $html .= '<div class="d-flex gap-sm justify-end">';
-            $html .= '<a href="/uwuweb/teacher/gradebook.php?class_subject_id=' . $class['class_subject_id'] . '" class="btn btn-sm btn-primary d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-sm">grade</span> Redovalnica</a>';
-            $html .= '<a href="/uwuweb/teacher/attendance.php?class_subject_id=' . $class['class_subject_id'] . '" class="btn btn-sm btn-secondary d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-sm">event_available</span> Prisotnost</a>';
-            $html .= '</div></li>';
+            $html .= '          </div>';
+            $html .= '          <div class="d-flex gap-sm justify-end">';
+            $html .= '<a href="/uwuweb/teacher/gradebook.php?class_subject_id=' . (int)$class['class_subject_id'] . '" class="btn btn-sm btn-primary">Redovalnica</a>';
+            $html .= '<a href="/uwuweb/teacher/attendance.php?class_subject_id=' . (int)$class['class_subject_id'] . '" class="btn btn-sm btn-secondary">Prisotnost</a>';
+            $html .= '          </div>';
+            $html .= '        </li>';
         }
-        $html .= '</ul>';
+        $html .= '      </ul>';
     }
-    $html .= '</div></div></div>';
+
+    $html .= '    </div>';
+    $html .= '  </div>';
+    $html .= '</div>';
+
     return $html;
 }
 
@@ -932,54 +943,81 @@ function renderTeacherAttendanceWidget(): string
     $db = getDBConnection();
     if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
-    // Fetch today's classes (simplified)
-    $query = "SELECT p.period_id, p.period_label, c.class_code, s.name as subject_name, cs.class_subject_id, (SELECT COUNT(*) FROM enrollments WHERE class_id = c.class_id) as total_students, (SELECT COUNT(*) FROM attendance WHERE period_id = p.period_id) as recorded_attendance FROM periods p JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id JOIN classes c ON cs.class_id = c.class_id JOIN subjects s ON cs.subject_id = s.subject_id WHERE cs.teacher_id = :teacher_id AND DATE(p.period_date) = CURRENT_DATE() ORDER BY p.period_label";
+    $query = "SELECT p.period_id, p.period_label, c.class_code, s.name AS subject_name, cs.class_subject_id,
+                     (SELECT COUNT(*) FROM enrollments WHERE class_id = c.class_id)        AS total_students,
+                     (SELECT COUNT(*) FROM attendance  WHERE period_id = p.period_id)      AS recorded_attendance
+              FROM periods p
+              JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+              JOIN classes c        ON cs.class_id        = c.class_id
+              JOIN subjects s       ON cs.subject_id      = s.subject_id
+              WHERE cs.teacher_id = :teacher_id AND DATE(p.period_date) = CURRENT_DATE()
+              ORDER BY p.period_label";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
     $stmt->execute();
     $todayClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $html = '<div class="d-flex flex-column h-full">';
-    $html .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
-    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Današnja prisotnost</h5>';
-    $html .= '<div class="p-0 flex-grow-1" style="overflow-y: auto;">';
+    $html .= '  <div class="rounded p-0 shadow flex-grow-1 d-flex flex-column">';
+    $html .= '    <h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Današnja prisotnost</h5>';
 
+    $html .= '    <div class="p-0 flex-grow-1" style="overflow-y:auto;">';
     if (empty($todayClasses)) {
-        $html .= '<p class="p-md text-secondary text-center">Danes nimate načrtovanega pouka.</p>';
+        $html .= '      <p class="p-md text-secondary text-center">Danes nimate načrtovanega pouka.</p>';
     } else {
-        $html .= '<div class="table-responsive">';
-        $html .= '<table class="data-table w-100 text-sm">';
-        $html .= '<thead><tr><th>Ura</th><th>Razred</th><th>Predmet</th><th class="text-center">Status</th><th class="text-right">Akcija</th></tr></thead><tbody>';
+        $html .= '      <div class="table-responsive">';
+        $html .= '        <table class="data-table w-100 text-sm">';
+        $html .= '          <thead><tr><th>Ura</th><th>Razred</th><th>Predmet</th><th class="text-center">Status</th><th class="text-right">Akcija</th></tr></thead><tbody>';
+
         foreach ($todayClasses as $class) {
             $recorded = (int)$class['recorded_attendance'];
             $total = (int)$class['total_students'];
-            $statusText = 'Ne vneseno';
-            $statusClass = 'badge-error';
-            $icon = 'edit';
-            $btnClass = 'btn-primary';
-            if ($total == 0) {
+
+            // Determine status label & style
+            if ($total === 0) {
                 $statusText = 'Ni dijakov';
                 $statusClass = 'badge-secondary';
-                $icon = 'info';
                 $btnClass = 'btn-secondary';
+                $btnLabel = 'Pogled';
             } elseif ($recorded >= $total) {
                 $statusText = 'Zabeleženo';
                 $statusClass = 'badge-success';
-                $icon = 'check_circle';
                 $btnClass = 'btn-secondary';
+                $btnLabel = 'Pogled';
             } elseif ($recorded > 0) {
                 $statusText = 'Delno (' . round($recorded / $total * 100) . '%)';
                 $statusClass = 'badge-warning';
+                $btnClass = 'btn-primary';
+                $btnLabel = 'Uredi';
+            } else {
+                $statusText = 'Ne vneseno';
+                $statusClass = 'badge-error';
+                $btnClass = 'btn-primary';
+                $btnLabel = 'Uredi';
             }
 
-            $html .= '<tr><td>' . htmlspecialchars($class['period_label']) . '. ura</td><td>' . htmlspecialchars($class['class_code']) . '</td><td>' . htmlspecialchars($class['subject_name']) . '</td><td class="text-center"><span class="badge ' . $statusClass . '">' . $statusText . '</span></td><td class="text-right"><a href="/uwuweb/teacher/attendance.php?class_subject_id=' . $class['class_subject_id'] . '&period_id=' . $class['period_id'] . '" class="btn btn-xs ' . $btnClass . ' d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-xs">' . $icon . '</span></a></td></tr>';
+            $html .= '            <tr>';
+            $html .= '              <td>' . htmlspecialchars($class['period_label']) . '. ura</td>';
+            $html .= '              <td>' . htmlspecialchars($class['class_code']) . '</td>';
+            $html .= '              <td>' . htmlspecialchars($class['subject_name']) . '</td>';
+            $html .= '              <td class="text-center"><span class="badge ' . $statusClass . '">' . $statusText . '</span></td>';
+            $html .= '              <td class="text-right">';
+            $html .= '                <a href="/uwuweb/teacher/attendance.php?class_subject_id=' . (int)$class['class_subject_id'] . '&period_id=' . (int)$class['period_id'] . '" class="btn btn-xs ' . $btnClass . '">' . $btnLabel . '</a>';
+            $html .= '              </td>';
+            $html .= '            </tr>';
         }
-        $html .= '</tbody></table></div>';
+        $html .= '          </tbody></table>';
+        $html .= '      </div>';// /table‑responsive
     }
-    $html .= '</div></div>';
-    $html .= '<div class="mt-auto text-right border-top pt-md p-md">';
-    $html .= '<a href="/uwuweb/teacher/attendance.php" class="btn btn-sm btn-secondary">Vsa prisotnost</a>';
-    $html .= '</div></div>';
+    $html .= '    </div>';
+
+    $html .= '    <div class="p-md border-top text-right mt-auto">';
+    $html .= '      <a href="/uwuweb/teacher/attendance.php" class="btn btn-sm btn-secondary">Vsa prisotnost</a>';
+    $html .= '    </div>';
+
+    $html .= '  </div>';
+    $html .= '</div>';
+
     return $html;
 }
 
@@ -997,56 +1035,84 @@ function renderTeacherPendingJustificationsWidget(): string
     if (!$db) return renderPlaceholderWidget('Povezava s podatkovno bazo ni uspela.');
 
     $limit = 5;
-    // Fetch justifications (simplified)
-    $query = "SELECT a.att_id, s.first_name, s.last_name, c.class_code, p.period_date, p.period_label, a.justification, a.justification_file, subj.name as subject_name FROM attendance a JOIN enrollments e ON a.enroll_id = e.enroll_id JOIN students s ON e.student_id = s.student_id JOIN periods p ON a.period_id = p.period_id JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id JOIN classes c ON cs.class_id = c.class_id JOIN subjects subj ON cs.subject_id = subj.subject_id WHERE cs.teacher_id = :teacher_id AND a.status = 'A' AND a.justification IS NOT NULL AND a.approved IS NULL ORDER BY p.period_date DESC LIMIT :limit";
+    $query = "SELECT a.att_id, s.first_name, s.last_name, c.class_code, p.period_date, p.period_label,
+                     a.justification, a.justification_file, subj.name AS subject_name
+              FROM attendance a
+              JOIN enrollments e ON a.enroll_id = e.enroll_id
+              JOIN students s    ON e.student_id   = s.student_id
+              JOIN periods p     ON a.period_id    = p.period_id
+              JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+              JOIN classes c     ON cs.class_id     = c.class_id
+              JOIN subjects subj ON cs.subject_id   = subj.subject_id
+              WHERE cs.teacher_id = :teacher_id AND a.status = 'A' AND a.justification IS NOT NULL AND a.approved IS NULL
+              ORDER BY p.period_date DESC
+              LIMIT :limit";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
     $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
     $stmt->execute();
     $justifications = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    $countQuery = "SELECT COUNT(*) FROM attendance a JOIN periods p ON a.period_id = p.period_id JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id WHERE cs.teacher_id = :teacher_id AND a.status = 'A' AND a.justification IS NOT NULL AND a.approved IS NULL";
+
+    $countQuery = "SELECT COUNT(*)
+                   FROM attendance a
+                   JOIN periods p ON a.period_id = p.period_id
+                   JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+                   WHERE cs.teacher_id = :teacher_id AND a.status = 'A' AND a.justification IS NOT NULL AND a.approved IS NULL";
     $countStmt = $db->prepare($countQuery);
     $countStmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
     $countStmt->execute();
-    $totalPending = $countStmt->fetchColumn();
+    $totalPending = (int)$countStmt->fetchColumn();
 
     $html = '<div class="d-flex flex-column h-full">';
-    $html .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
-    // Combined Header for title and count
-    $html .= '<div class="d-flex justify-between items-center p-md border-bottom">';
-    $html .= '<h5 class="m-0 card-subtitle font-medium">Čakajoča opravičila</h5>';
-    if ($totalPending > 0) $html .= '<span class="badge badge-warning">' . $totalPending . '</span>';
+    $html .= '  <div class="rounded p-0 shadow flex-grow-1 d-flex flex-column">';
+
+    $html .= '    <div class="d-flex justify-between items-center px-md py-sm border-bottom">';
+    $html .= '      <h5 class="m-0 card-subtitle font-medium">Čakajoča opravičila</h5>';
+    if ($totalPending > 0) {
+        $html .= '  <span class="badge badge-warning">' . $totalPending . '</span>';
+    }
+    $html .= '    </div>';
+
+    $html .= '    <div class="p-0 flex-grow-1" style="overflow-y:auto;">';
+    if ($totalPending === 0) {
+        $html .= '      <p class="p-md text-secondary text-center">Trenutno ni čakajočih opravičil.</p>';
+    } else {
+        $html .= '      <ul class="list-unstyled m-0">';
+        foreach ($justifications as $just) {
+            $html .= '        <li class="p-md border-bottom">';
+            $html .= '          <div class="d-flex justify-between items-center mb-sm">';
+            $html .= '            <strong class="font-medium">' . htmlspecialchars($just['first_name'] . ' ' . $just['last_name']) . '</strong>';
+            $html .= '            <span class="badge badge-secondary">' . htmlspecialchars($just['class_code']) . '</span>';
+            $html .= '          </div>';
+            $html .= '          <div class="text-sm text-secondary mb-sm">';
+            $html .= 'Datum: ' . date('d.m.Y', strtotime($just['period_date'])) . ' (' . htmlspecialchars($just['period_label']) . '. ura, ' . htmlspecialchars($just['subject_name']) . ')';
+            $html .= '          </div>';
+            if (!empty($just['justification'])) {
+                $html .= '      <p class="text-sm fst-italic p-sm rounded bg-tertiary mb-sm">"' . htmlspecialchars(mb_strimwidth($just['justification'], 0, 70, '...')) . '"</p>';
+            }
+            if (!empty($just['justification_file'])) {
+                $html .= '      <div class="text-sm text-secondary mb-md">Priloga na voljo</div>';
+            }
+            $html .= '          <div class="d-flex gap-sm justify-end">';
+            $html .= '            <a href="/uwuweb/teacher/justifications.php?action=view&id=' . (int)$just['att_id'] . '" class="btn btn-xs btn-secondary">Pogled</a>';
+            $html .= '            <a href="/uwuweb/teacher/justifications.php?action=approve&id=' . (int)$just['att_id'] . '" class="btn btn-xs btn-success">Odobri</a>';
+            $html .= '            <a href="/uwuweb/teacher/justifications.php?action=reject&id=' . (int)$just['att_id'] . '" class="btn btn-xs btn-error">Zavrni</a>';
+            $html .= '          </div>';
+            $html .= '        </li>';
+        }
+        $html .= '      </ul>';
+    }
+    $html .= '    </div>';
+
+    if ($totalPending > $limit) {
+        $html .= '  <div class="p-md border-top text-center mt-auto">';
+        $html .= '    <a href="/uwuweb/teacher/justifications.php" class="btn btn-sm btn-secondary">Prikaži vsa (' . $totalPending . ')</a>';
+        $html .= '  </div>';
+    }
+
+    $html .= '  </div>';
     $html .= '</div>';
 
-    $html .= '<div class="p-0 flex-grow-1" style="overflow-y: auto;">';
-    if ($totalPending == 0) {
-        $html .= '<p class="p-md text-secondary text-center">Trenutno ni čakajočih opravičil.</p>';
-    } else {
-        $html .= '<ul class="list-unstyled m-0">';
-        foreach ($justifications as $just) {
-            $html .= '<li class="p-md border-bottom">';
-            $html .= '<div class="d-flex justify-between items-center mb-sm">';
-            $html .= '<strong class="font-medium">' . htmlspecialchars($just['first_name'] . ' ' . $just['last_name']) . '</strong>';
-            $html .= '<span class="badge badge-secondary">' . htmlspecialchars($just['class_code']) . '</span>';
-            $html .= '</div>';
-            $html .= '<div class="text-sm text-secondary mb-sm">Datum: ' . date('d.m.Y', strtotime($just['period_date'])) . ' (' . htmlspecialchars($just['period_label']) . '. ura, ' . htmlspecialchars($just['subject_name']) . ')</div>';
-            if (!empty($just['justification'])) $html .= '<p class="text-sm fst-italic p-sm rounded bg-tertiary mb-sm">"' . htmlspecialchars(mb_strimwidth($just['justification'], 0, 70, '...')) . '"</p>';
-            if (!empty($just['justification_file'])) $html .= '<div class="text-sm text-secondary d-flex items-center gap-xs mb-md"><span class="material-icons-outlined text-sm">attachment</span> Priloga na voljo</div>';
-            $html .= '<div class="d-flex gap-sm justify-end">';
-            $html .= '<a href="/uwuweb/teacher/justifications.php?action=view&id=' . $just['att_id'] . '" class="btn btn-xs btn-secondary d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-xs">visibility</span></a>';
-            $html .= '<a href="/uwuweb/teacher/justifications.php?action=approve&id=' . $just['att_id'] . '" class="btn btn-xs btn-success d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-xs">check</span></a>';
-            $html .= '<a href="/uwuweb/teacher/justifications.php?action=reject&id=' . $just['att_id'] . '" class="btn btn-xs btn-error d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-xs">close</span></a>';
-            $html .= '</div></li>';
-        }
-        $html .= '</ul>';
-    }
-    $html .= '</div></div>';
-    if ($totalPending > $limit) {
-        $html .= '<div class="mt-auto text-center border-top pt-md p-md">';
-        $html .= '<a href="/uwuweb/teacher/justifications.php" class="btn btn-sm btn-secondary">Prikaži vsa (' . $totalPending . ')</a>';
-        $html .= '</div>';
-    }
-    $html .= '</div>';
     return $html;
 }
 
@@ -1063,43 +1129,66 @@ function renderTeacherClassAveragesWidget(): string
     $db = getDBConnection();
     if (!$db) return renderPlaceholderWidget('Napaka pri povezovanju z bazo podatkov.');
 
-    // Fetch averages (simplified)
-    $query = "SELECT cs.class_subject_id, c.title AS class_title, s.name AS subject_name, COUNT(DISTINCT e.student_id) AS student_count, (SELECT AVG(CASE WHEN gi.max_points > 0 THEN (g.points / gi.max_points) * 100 END) FROM grades g JOIN grade_items gi ON g.item_id = gi.item_id WHERE gi.class_subject_id = cs.class_subject_id) AS avg_score FROM class_subjects cs JOIN classes c ON cs.class_id = c.class_id JOIN subjects s ON cs.subject_id = s.subject_id LEFT JOIN enrollments e ON c.class_id = e.class_id WHERE cs.teacher_id = :teacher_id GROUP BY cs.class_subject_id, c.title, s.name ORDER BY s.name, c.title";
+    $query = "SELECT cs.class_subject_id, c.title AS class_title, s.name AS subject_name,
+                     COUNT(DISTINCT e.student_id) AS student_count,
+                     (SELECT AVG(CASE WHEN gi.max_points > 0 THEN (g.points / gi.max_points) * 100 END)
+                      FROM grades g
+                      JOIN grade_items gi ON g.item_id = gi.item_id
+                      WHERE gi.class_subject_id = cs.class_subject_id) AS avg_score
+              FROM class_subjects cs
+              JOIN classes c ON cs.class_id   = c.class_id
+              JOIN subjects s ON cs.subject_id = s.subject_id
+              LEFT JOIN enrollments e ON c.class_id = e.class_id
+              WHERE cs.teacher_id = :teacher_id
+              GROUP BY cs.class_subject_id, c.title, s.name
+              ORDER BY s.name, c.title";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':teacher_id', $teacherId, PDO::PARAM_INT);
     $stmt->execute();
     $classAverages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $html = '<div class="d-flex flex-column h-full">';
-    $html .= '<div class="rounded p-0 shadow-sm flex-grow-1 d-flex flex-column">';
-    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Povprečja mojih razredov</h5>';
-    $html .= '<div class="p-md flex-grow-1" style="overflow-y: auto;">'; // Scrollable content for multiple cards
+    $html .= '  <div class="rounded p-0 shadow flex-grow-1 d-flex flex-column">';
+    $html .= '    <h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Povprečja mojih razredov</h5>';
+    $html .= '    <div class="p-md flex-grow-1" style="overflow-y:auto;">';
 
     if (empty($classAverages) || !array_filter($classAverages, static fn($ca) => $ca['avg_score'] !== null)) {
-        $html .= '<p class="text-secondary text-center">Nimate razredov z ocenami za prikaz povprečij.</p>';
+        $html .= '      <p class="text-secondary text-center">Nimate razredov z ocenami za prikaz povprečij.</p>';
     } else {
-        $html .= '<div class="row gap-md">'; // Use row for card layout
+        $html .= '      <div class="row gap-md">';
         foreach ($classAverages as $class) {
             if ($class['avg_score'] === null) continue;
-            $avgF = number_format($class['avg_score'], 1);
-            $sClass = $class['avg_score'] >= 80 ? 'grade-high' : ($class['avg_score'] >= 60 ? 'grade-medium' : 'grade-low');
+            $avg = (float)$class['avg_score'];
+            $avgF = number_format($avg, 1);
+            $badge = $avg >= 80 ? 'grade-high' : ($avg >= 60 ? 'grade-medium' : 'grade-low');
 
-            $html .= '<div class="col-12 col-md-6 mb-md">'; // Each card in a column
-            $html .= '<div class="rounded p-0 shadow-sm h-100 d-flex flex-column">';
-            $html .= '<div class="d-flex justify-between items-center p-md border-bottom">';
-            $html .= '<h6 class="m-0 font-medium">' . htmlspecialchars($class['subject_name']) . '</h6>';
-            $html .= '<span class="badge badge-secondary">' . htmlspecialchars($class['class_title']) . '</span>';
-            $html .= '</div>';
-            $html .= '<div class="p-md flex-grow-1 d-flex flex-column justify-center items-center text-center">';
-            $html .= '<div class="' . $sClass . ' mb-sm"><span class="font-size-xl font-bold">' . $avgF . '%</span><br><span class="text-sm text-secondary">Povprečje</span></div>';
-            $html .= '<div class="text-sm"><span class="font-medium">' . (int)$class['student_count'] . '</span> <span class="text-secondary">dijakov</span></div>';
-            $html .= '</div>';
-            $html .= '<div class="p-md mt-auto text-right border-top">';
-            $html .= '<a href="/uwuweb/teacher/gradebook.php?class_subject_id=' . (int)$class['class_subject_id'] . '" class="btn btn-sm btn-primary">Redovalnica</a>';
-            $html .= '</div></div></div>';
+            $html .= '        <div class="col-12 col-md-6 mb-md">';
+            $html .= '          <div class="rounded p-0 shadow h-100 d-flex flex-column">';
+            $html .= '            <div class="d-flex justify-between items-center p-md border-bottom">';
+            $html .= '              <h6 class="m-0 font-medium">' . htmlspecialchars($class['subject_name']) . '</h6>';
+            $html .= '              <span class="badge badge-secondary">' . htmlspecialchars($class['class_title']) . '</span>';
+            $html .= '            </div>';
+            $html .= '            <div class="p-md flex-grow-1 d-flex flex-column justify-center items-center text-center">';
+            $html .= '              <div class="' . $badge . ' mb-sm">';
+            $html .= '                <span class="font-size-xl font-bold">' . $avgF . '%</span><br>';
+            $html .= '                <span class="text-sm text-secondary">Povprečje</span>';
+            $html .= '              </div>';
+            $html .= '              <div class="text-sm">';
+            $html .= '                <span class="font-medium">' . (int)$class['student_count'] . '</span> <span class="text-secondary">dijakov</span>';
+            $html .= '              </div>';
+            $html .= '            </div>';
+            $html .= '            <div class="p-md border-top text-right mt-auto">';
+            $html .= '              <a href="/uwuweb/teacher/gradebook.php?class_subject_id=' . (int)$class['class_subject_id'] . '" class="btn btn-sm btn-primary">Redovalnica</a>';
+            $html .= '            </div>';
+            $html .= '          </div>';// /mini‑card
+            $html .= '        </div>';// /col
         }
-        $html .= '</div>';
+        $html .= '      </div>';// /row
     }
-    $html .= '</div></div></div>';
+
+    $html .= '    </div>';
+    $html .= '  </div>';
+    $html .= '</div>';
+
     return $html;
 }
