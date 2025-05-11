@@ -5,822 +5,631 @@
  *
  * Provides interface for teachers to manage student grades
  * Supports viewing, adding, and editing grades for assigned classes
- *
  */
-
-use Random\RandomException;
 
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
 require_once '../includes/functions.php';
-require_once '../includes/header.php'; // header.php includes the CSS link, no need to change href there
+require_once '../includes/header.php';
 require_once 'teacher_functions.php';
 
-// Ensure only teachers can access this page
 requireRole(ROLE_TEACHER);
 
-// Get the teacher ID of the logged-in user
 $teacherId = getTeacherId();
-if (!$teacherId) die('Error: Teacher account not found.');
+if (!$teacherId) {
+    echo generateAlert('Račun učitelja ni najden.', 'error');
+    include '../includes/footer.php';
+    exit;
+}
 
-// Database connection - using safe connection to prevent null pointer exceptions
 $pdo = safeGetDBConnection('teacher/gradebook.php');
+$csrfToken = generateCSRFToken();
 
-// Process form submissions
-$message = '';
-$messageType = '';
+// Get classes taught by this teacher
+$teacherClassSubjects = getTeacherClasses($teacherId);
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
-    $message = 'Invalid form submission. Please try again.';
-    $messageType = 'error';
-} else if (isset($_POST['add_grade_item'])) {
-    $classSubjectId = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0; // Assuming class_id refers to class_subject_id here based on function usage
-    $name = isset($_POST['item_name']) ? trim($_POST['item_name']) : '';
-    $description = isset($_POST['item_description']) ? trim($_POST['item_description']) : '';
-    $maxPoints = isset($_POST['max_points']) ? (float)$_POST['max_points'] : 0;
-    $weight = isset($_POST['weight']) ? (float)$_POST['weight'] : 1.00; // Default weight if not provided
-    $date = $_POST['item_date'] ?? date('Y-m-d');
-
-    if ($classSubjectId <= 0 || empty($name) || $maxPoints <= 0) {
-        $message = 'Please fill out all required fields for the grade item (Class, Name, Max Points).';
-        $messageType = 'error';
-    } else if (!teacherHasAccessToClassSubject($classSubjectId, $teacherId)) {
-        $message = 'You do not have permission to add grade items to this class.';
-        $messageType = 'error';
-    } else try {
-        if (addGradeItemFunction($classSubjectId, $name, $maxPoints, $weight)) {
-            $message = 'New grade item added successfully.';
-            $messageType = 'success';
-        } else {
-            $message = 'Error adding grade item. Please check permissions or try again.';
-            $messageType = 'error';
-        }
-    } catch (JsonException|Exception $e) {
+// Process classes into a nested structure for the template
+$teacherClasses = [];
+foreach ($teacherClassSubjects as $classSubject) {
+    $classId = $classSubject['class_id'];
+    if (!isset($teacherClasses[$classId])) {
+        $teacherClasses[$classId] = [
+            'class_id' => $classId,
+            'class_title' => $classSubject['class_title'],
+            'class_code' => $classSubject['class_code'],
+            'subjects' => []
+        ];
     }
-} else if (isset($_POST['save_grades'])) {
-    $classSubjectId = isset($_POST['class_id']) ? (int)$_POST['class_id'] : 0;
-    $itemId = isset($_POST['item_id']) ? (int)$_POST['item_id'] : 0;
-    $grades = $_POST['grade'] ?? [];
-    $feedback = $_POST['feedback'] ?? [];
 
-    if ($classSubjectId <= 0 || $itemId <= 0) {
-        $message = 'Invalid grade data provided.';
-        $messageType = 'error';
-    } else if (!teacherHasAccessToClassSubject($classSubjectId)) {
-        $message = 'You do not have permission to save grades for this class.';
-        $messageType = 'error';
-    } else {
-        $successCount = 0;
-        $failCount = 0;
-        foreach ($grades as $enrollId => $pointsStr) {
-            $points = ($pointsStr !== '' && is_numeric($pointsStr)) ? (float)$pointsStr : null; // Allow null for empty grades
-            $studentFeedback = isset($feedback[$enrollId]) ? trim($feedback[$enrollId]) : null;
+    $teacherClasses[$classId]['subjects'][] = [
+        'class_subject_id' => $classSubject['class_subject_id'],
+        'subject_id' => $classSubject['subject_id'],
+        'subject_name' => $classSubject['subject_name']
+    ];
+}
+$teacherClasses = array_values($teacherClasses);
 
-            try {
-                if (saveGrade((int)$enrollId, $itemId, $points, $studentFeedback)) $successCount++; else $failCount++;
-            } catch (JsonException|Exception $e) {
+// Handle class selection
+$selectedClassSubject = null;
+$selectedClassInfo = null;
+$gradeItems = [];
+$classGrades = [];
 
+if (isset($_GET['class_subject_id']) && is_numeric($_GET['class_subject_id'])) {
+    $selectedClassSubject = (int)$_GET['class_subject_id'];
+
+    // Verify teacher has access to this class-subject
+    if (!teacherHasAccessToClassSubject($selectedClassSubject, $teacherId)) {
+        echo generateAlert('Nimate dostopa do izbranega razreda.', 'error');
+        $selectedClassSubject = null;
+    } else try {
+        $stmt = $pdo->prepare("
+            SELECT cs.class_subject_id, c.title as class_title, s.name as subject_name 
+            FROM class_subjects cs
+            JOIN classes c ON cs.class_id = c.class_id
+            JOIN subjects s ON cs.subject_id = s.subject_id
+            WHERE cs.class_subject_id = ?
+        ");
+        $stmt->execute([$selectedClassSubject]);
+        $selectedClassInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Get grade items for this class-subject
+        $gradeItems = getGradeItems($selectedClassSubject);
+
+        // Get all grades for this class-subject
+        $gradesData = getClassGrades($selectedClassSubject);
+
+        // Process the data structure for the template
+        $classGrades = [];
+        if (!empty($gradesData['students'])) {
+            foreach ($gradesData['students'] as $student) {
+                $studentData = [
+                    'enroll_id' => $student['enroll_id'],
+                    'student_name' => $student['last_name'] . ' ' . $student['first_name'],
+                    'grades' => []
+                ];
+
+                // Add grades if they exist
+                if (isset($gradesData['grades'][$student['enroll_id']])) {
+                    foreach ($gradesData['grades'][$student['enroll_id']] as $itemId => $grade) {
+                        $grade['item_id'] = $itemId;
+                        $studentData['grades'][] = $grade;
+                    }
+                } else {
+                    $studentData['grades'] = []; // Ensure grades array exists even if empty
+                }
+
+                $classGrades[] = $studentData;
             }
         }
-
-        if ($failCount === 0 && $successCount > 0) {
-            $message = 'Grades saved successfully.';
-            $messageType = 'success';
-        } elseif ($successCount > 0 && $failCount > 0) {
-            $message = 'Some grades saved successfully, but ' . $failCount . ' failed (possibly due to invalid input or permissions).';
-            $messageType = 'warning';
-        } elseif ($successCount === 0 && $failCount > 0) {
-            $message = 'Failed to save grades. Please check input or permissions.';
-            $messageType = 'error';
-        } else {
-            $message = 'No grades were submitted or changed.';
-            $messageType = 'info';
-        }
+    } catch (PDOException $e) {
+        logDBError($e->getMessage());
+        echo generateAlert('Napaka pri pridobivanju podatkov o ocenah.', 'error');
     }
-} else if (isset($_POST['delete_grade_item'])) $itemIdToDelete = isset($_POST['item_id']) ? (int)$_POST['item_id'] : 0;
-
-// Get teacher's classes (class-subject combinations)
-$classes = getTeacherClasses($teacherId);
-
-// Selected class-subject ID
-$selectedClassSubjectId = isset($_GET['class_id']) ? (int)$_GET['class_id'] : ($classes[0]['class_subject_id'] ?? 0);
-
-// Verify teacher has access to the selected class-subject
-if ($selectedClassSubjectId > 0 && !teacherHasAccessToClassSubject($selectedClassSubjectId, $teacherId)) {
-    // If access denied, reset selection and show error
-    $selectedClassSubjectId = 0;
-    $message = 'You do not have access to the selected class.';
-    $messageType = 'error';
 }
 
-$gradeItems = $selectedClassSubjectId ? getGradeItemsFunction($selectedClassSubjectId) : [];
-$selectedItemId = isset($_GET['item_id']) ? (int)$_GET['item_id'] : 0;
+// Process form submission for adding grade item (AJAX is handled in api/grades.php)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_type']) && $_POST['action_type'] === 'add_grade_item') if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) echo generateAlert('Neveljaven varnostni žeton. Poskusite znova.', 'error'); else {
+    $classSubjectId = isset($_POST['class_subject_id']) ? (int)$_POST['class_subject_id'] : 0;
+    $name = isset($_POST['name']) ? trim($_POST['name']) : '';
+    $maxPoints = isset($_POST['max_points']) ? (float)$_POST['max_points'] : 0;
+    $weight = isset($_POST['weight']) ? (float)$_POST['weight'] : 1.0;
 
-// Get students and grades if a class-subject is selected
-$students = [];
-$grades = [];
-if ($selectedClassSubjectId > 0) {
-    // Assuming getClassStudents needs class_id, not class_subject_id. Need to fetch class_id first.
-    // This requires adjusting getTeacherClasses or adding a function to get class_id from class_subject_id.
-    // For now, let's assume getClassStudents is adapted or we fetch class_id elsewhere.
-    // Find the class_id associated with the selectedClassSubjectId from the $classes array
-    $currentClassId = null;
-    foreach ($classes as $classInfo) if ($classInfo['class_subject_id'] == $selectedClassSubjectId) {
-        $currentClassId = $classInfo['class_id'];
-        break;
+    if (empty($name) || $maxPoints <= 0) echo generateAlert('Prosimo, izpolnite vsa obvezna polja.', 'error'); else {
+        $result = addGradeItem($classSubjectId, $name, $maxPoints, $weight);
+        if ($result !== false) {
+            echo generateAlert('Element ocene uspešno dodan.', 'success');
+            // Refresh the page to show the new grade item
+            header("Location: gradebook.php?class_subject_id=$classSubjectId");
+            exit;
+        } else echo generateAlert('Napaka pri dodajanju elementa ocene.', 'error');
     }
-    if ($currentClassId) $students = getClassStudents($currentClassId); else {
-        // Handle case where class_id couldn't be found for the selected class_subject_id
-        $message = 'Error retrieving student list for the selected class-subject.';
-        $messageType = 'error';
-    }
-
-    $gradesData = getClassGradesTeacher($selectedClassSubjectId); // Needs class_subject_id
-    $grades = $gradesData['grades'] ?? [];
 }
 
+// Process form submission for saving grade (AJAX is handled in api/grades.php)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_type']) && $_POST['action_type'] === 'save_grade') if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) echo generateAlert('Neveljaven varnostni žeton. Poskusite znova.', 'error'); else {
+    $enrollId = isset($_POST['enroll_id']) ? (int)$_POST['enroll_id'] : 0;
+    $itemId = isset($_POST['item_id']) ? (int)$_POST['item_id'] : 0;
+    $points = isset($_POST['points']) ? (float)$_POST['points'] : 0;
+    $comment = isset($_POST['comment']) ? trim($_POST['comment']) : null;
+    $classSubjectId = isset($_POST['class_subject_id']) ? (int)$_POST['class_subject_id'] : 0;
 
-// Generate CSRF token
-try {
-    $csrfToken = generateCSRFToken();
-} catch (RandomException $e) {
-    error_log("CSRF Token Generation Failed: " . $e->getMessage());
-    die('Error generating security token. Please try refreshing the page.');
+    if ($enrollId > 0 && $itemId > 0) {
+        $result = saveGrade($enrollId, $itemId, $points, $comment);
+        if ($result) {
+            echo generateAlert('Ocena uspešno shranjena.', 'success');
+            // Refresh the page to show the updated grade
+            header("Location: gradebook.php?class_subject_id=$classSubjectId");
+            exit;
+        } else echo generateAlert('Napaka pri shranjevanju ocene.', 'error');
+    } else echo generateAlert('Manjkajoči ali neveljavni podatki.', 'error');
 }
 
+renderHeaderCard('Redovalnica', 'Upravljanje ocen učencev', 'teacher', 'Učitelj');
 ?>
 
-<!-- Main card with page title and description -->
-<div class="card shadow mb-lg mt-lg">
-    <div class="d-flex justify-between items-center">
-        <div>
-            <h2 class="mt-0 mb-xs">Gradebook</h2>
-            <p class="text-secondary mt-0 mb-0">Manage grades for your classes</p>
+<div class="section">
+    <div class="container">
+        <!-- Class selection -->
+        <div class="card mb-lg">
+            <div class="card__title">Izbira razreda in predmeta</div>
+            <div class="card__content">
+                <?php if (empty($teacherClasses)): ?>
+                    <p>Trenutno nimate dodeljenih razredov.</p>
+                <?php else: ?>
+                    <form method="GET" action="gradebook.php" class="mb-md">
+                        <div class="form-group">
+                            <label for="class_subject_select" class="form-label">Izberite razred in predmet:</label>
+                            <select id="class_subject_select" name="class_subject_id" class="form-select"
+                                    onchange="this.form.submit()">
+                                <option value="">-- Izberite razred in predmet --</option>
+                                <?php foreach ($teacherClasses as $class): ?>
+                                    <?php foreach ($class['subjects'] as $subject): ?>
+                                        <option value="<?= htmlspecialchars($subject['class_subject_id']) ?>"
+                                            <?= $selectedClassSubject == $subject['class_subject_id'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($class['class_title']) ?>
+                                            - <?= htmlspecialchars($subject['subject_name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            </div>
         </div>
-        <div class="role-badge role-teacher">Teacher</div>
+
+        <?php if ($selectedClassSubject && $selectedClassInfo): ?>
+            <div class="card mb-lg">
+                <div class="card__title">
+                    Redovalnica: <?= htmlspecialchars($selectedClassInfo['class_title']) ?> -
+                    <?= htmlspecialchars($selectedClassInfo['subject_name']) ?>
+                </div>
+                <div class="card__content">
+                    <div class="mb-md d-flex items-center justify-between">
+                        <h3>Elementi ocenjevanja</h3>
+                        <button data-open-modal="addGradeItemModal" class="btn btn-primary">
+                            Dodaj element ocene
+                        </button>
+                    </div>
+
+                    <?php if (empty($gradeItems)): ?>
+                        <div class="alert status-info mb-md">
+                            <div class="alert-content">
+                                <p>Za ta razred in predmet še ni elementov ocenjevanja. Dodajte nov element z gumbom
+                                    zgoraj.</p>
+                            </div>
+                        </div>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                <tr>
+                                    <th>Učenec</th>
+                                    <?php foreach ($gradeItems as $item): ?>
+                                        <th title="Max: <?= htmlspecialchars($item['max_points']) ?>, Utež: <?= htmlspecialchars($item['weight']) ?>">
+                                            <?= htmlspecialchars($item['name']) ?>
+                                        </th>
+                                    <?php endforeach; ?>
+                                    <th>Povprečje</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <?php if (empty($classGrades)): ?>
+                                    <tr>
+                                        <td colspan="<?= count($gradeItems) + 2 ?>">Ni najdenih učencev za ta
+                                            razred.
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php foreach ($classGrades as $student): ?>
+                                        <tr>
+                                            <td><?= htmlspecialchars($student['student_name'] ?? '') ?></td>
+                                            <?php
+                                            $totalPoints = 0;
+                                            $totalWeight = 0;
+                                            $gradeCount = 0;
+                                            ?>
+                                            <?php foreach ($gradeItems as $item): ?>
+                                                <?php
+                                                $grade = null;
+                                                if (!empty($student['grades'])) {
+                                                    foreach ($student['grades'] as $g) {
+                                                        if ($g['item_id'] == $item['item_id']) {
+                                                            $grade = $g;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+
+                                                $percentage = 0;
+                                                if ($grade) {
+                                                    $percentage = ($grade['points'] / $item['max_points']) * 100;
+                                                    $totalPoints += ($percentage / 100) * $item['weight'];
+                                                    $totalWeight += $item['weight'];
+                                                    $gradeCount++;
+                                                }
+
+                                                $gradeClass = '';
+                                                if ($grade) if ($percentage >= 80) $gradeClass = 'grade-high'; elseif ($percentage >= 50) $gradeClass = 'grade-medium';
+                                                else $gradeClass = 'grade-low';
+                                                ?>
+                                                <td class="<?= $gradeClass ?>">
+                                                    <?php if ($grade): ?>
+                                                        <span class="grade"
+                                                              data-open-modal="editGradeModal"
+                                                              data-enroll-id="<?= $student['enroll_id'] ?>"
+                                                              data-item-id="<?= $item['item_id'] ?>"
+                                                              data-points="<?= $grade['points'] ?>"
+                                                              data-comment="<?= htmlspecialchars($grade['comment'] ?? '') ?>"
+                                                              data-max-points="<?= $item['max_points'] ?>"
+                                                              data-student-name="<?= htmlspecialchars($student['student_name']) ?>"
+                                                              data-item-name="<?= htmlspecialchars($item['name']) ?>">
+                                                                <?= htmlspecialchars($grade['points']) ?>
+                                                            <?php if (!empty($grade['comment'])): ?>
+                                                                <span class="text-secondary">*</span>
+                                                            <?php endif; ?>
+                                                            </span>
+                                                    <?php else: ?>
+                                                        <span class="text-disabled"
+                                                              data-open-modal="editGradeModal"
+                                                              data-enroll-id="<?= $student['enroll_id'] ?? 0 ?>"
+                                                              data-item-id="<?= $item['item_id'] ?>"
+                                                              data-points=""
+                                                              data-comment=""
+                                                              data-max-points="<?= $item['max_points'] ?>"
+                                                              data-student-name="<?= htmlspecialchars($student['student_name'] ?? '') ?>"
+                                                              data-item-name="<?= htmlspecialchars($item['name']) ?>">
+                                                                -
+                                                            </span>
+                                                    <?php endif; ?>
+                                                </td>
+                                            <?php endforeach; ?>
+                                            <td>
+                                                <?php if ($gradeCount > 0 && $totalWeight > 0): ?>
+                                                    <?php
+                                                    $weightedAverage = $totalPoints / $totalWeight;
+                                                    $averageClass = '';
+                                                    if ($weightedAverage >= 0.8) $averageClass = 'grade-high'; elseif ($weightedAverage >= 0.5) $averageClass = 'grade-medium';
+                                                    else $averageClass = 'grade-low';
+                                                    ?>
+                                                    <span class="grade <?= $averageClass ?>">
+                                                            <?= number_format($weightedAverage * 5, 1) ?>
+                                                        </span>
+                                                <?php else: ?>
+                                                    <span class="text-disabled">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Class average visualization -->
+            <?php if (!empty($gradeItems) && !empty($classGrades)): ?>
+                <div class="card">
+                    <div class="card__title">Razredna analiza ocen</div>
+                    <div class="card__content">
+                        <div class="row">
+                            <div class="col col-md-6">
+                                <h4 class="mb-md">Povprečne ocene po elementih</h4>
+                                <div class="alert status-info mb-md">
+                                    <div class="alert-content">
+                                        <p>Kliknite na ime elementi za urejanje podrobnosti ali element ocene za
+                                            vnos ocene.</p>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="data-table">
+                                        <thead>
+                                        <tr>
+                                            <th>Element ocene</th>
+                                            <th>Povprečje razreda</th>
+                                            <th>Max. točke</th>
+                                            <th>Utež</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <?php foreach ($gradeItems as $item): ?>
+                                            <?php
+                                            // Calculate class average for this item
+                                            $totalPoints = 0;
+                                            $count = 0;
+
+                                            foreach ($classGrades as $student) {
+                                                if (!empty($student['grades'])) {
+                                                    foreach ($student['grades'] as $grade) {
+                                                        if ($grade['item_id'] == $item['item_id']) {
+                                                            $totalPoints += $grade['points'];
+                                                            $count++;
+                                                            break;
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            $average = $count > 0 ? $totalPoints / $count : 0;
+                                            $percentage = $item['max_points'] > 0 ? ($average / $item['max_points']) * 100 : 0;
+
+                                            $averageClass = '';
+                                            if ($percentage >= 80) $averageClass = 'grade-high'; elseif ($percentage >= 50) $averageClass = 'grade-medium';
+                                            else $averageClass = 'grade-low';
+                                            ?>
+                                            <tr>
+                                                <td><?= htmlspecialchars($item['name']) ?></td>
+                                                <td class="<?= $averageClass ?>">
+                                                    <?php if ($count > 0): ?>
+                                                        <?= number_format($average, 1) ?> / <?= $item['max_points'] ?>
+                                                        (<?= number_format($percentage, 1) ?>%)
+                                                    <?php else: ?>
+                                                        <span class="text-disabled">Ni ocen</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td><?= $item['max_points'] ?></td>
+                                                <td><?= $item['weight'] ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="col col-md-6">
+                                <h4 class="mb-md">Skupno razredno povprečje</h4>
+                                <?php
+                                // Calculate overall class average
+                                $overallTotal = 0;
+                                $overallCount = 0;
+
+                                foreach ($classGrades as $student) {
+                                    $studentTotalPoints = 0;
+                                    $studentTotalWeight = 0;
+
+                                    if (!empty($student['grades'])) {
+                                        foreach ($student['grades'] as $grade) {
+                                            foreach ($gradeItems as $item) {
+                                                if ($item['item_id'] == $grade['item_id']) {
+                                                    $percentage = ($grade['points'] / $item['max_points']) * 100;
+                                                    $studentTotalPoints += ($percentage / 100) * $item['weight'];
+                                                    $studentTotalWeight += $item['weight'];
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    if ($studentTotalWeight > 0) {
+                                        $overallTotal += ($studentTotalPoints / $studentTotalWeight) * 5; // Convert to 5-point scale
+                                        $overallCount++;
+                                    }
+                                }
+
+                                $classAverage = $overallCount > 0 ? $overallTotal / $overallCount : 0;
+
+                                $averageClass = '';
+                                if ($classAverage >= 4) $averageClass = 'grade-high'; elseif ($classAverage >= 2.5) $averageClass = 'grade-medium';
+                                else $averageClass = 'grade-low';
+                                ?>
+
+                                <div class="card">
+                                    <div class="card__content text-center">
+                                        <h2 class="font-bold mb-sm">Skupno povprečje razreda</h2>
+                                        <div class="grade <?= $averageClass ?> font-bold" style="font-size: 3rem;">
+                                            <?= number_format($classAverage, 2) ?>
+                                        </div>
+                                        <p class="mt-md">na lestvici od 1 do 5</p>
+                                    </div>
+                                </div>
+
+                                <div class="mt-lg">
+                                    <h4 class="mb-md">Legenda ocen</h4>
+                                    <div class="d-flex flex-column gap-sm">
+                                        <div class="d-flex items-center gap-sm">
+                                            <span class="grade grade-high">5</span>
+                                            <span>Odlično (80-100%)</span>
+                                        </div>
+                                        <div class="d-flex items-center gap-sm">
+                                            <span class="grade grade-medium">3</span>
+                                            <span>Dobro (50-79%)</span>
+                                        </div>
+                                        <div class="d-flex items-center gap-sm">
+                                            <span class="grade grade-low">1</span>
+                                            <span>Nezadostno (0-49%)</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
     </div>
 </div>
 
-<?php if (!empty($message)): ?>
-    <div class="alert status-<?= htmlspecialchars($messageType) ?> mb-lg">
-        <div class="alert-icon">
-            <?php if ($messageType === 'success'): ?>✓
-            <?php elseif ($messageType === 'warning'): ?>⚠
-            <?php else: ?>✕
-            <?php endif; ?>
+<!-- Add Grade Item Modal -->
+<div class="modal" id="addGradeItemModal">
+    <div class="modal-overlay" aria-hidden="true"></div>
+    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="addGradeItemModalTitle">
+        <div class="modal-header">
+            <h3 class="modal-title" id="addGradeItemModalTitle">Dodaj element ocene</h3>
         </div>
-        <div class="alert-content">
-            <?= htmlspecialchars($message) ?>
-        </div>
-    </div>
-<?php endif; ?>
+        <form id="addGradeItemForm" method="POST">
+            <div class="modal-body">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                <input type="hidden" name="action_type" value="add_grade_item">
+                <input type="hidden" name="class_subject_id" value="<?= $selectedClassSubject ?? '' ?>">
 
-<!-- Class selection form with dropdown and select button -->
-<div class="card shadow mb-lg">
-    <div class="card__content">
-        <form method="GET" action="/uwuweb/teacher/gradebook.php" class="d-flex items-center gap-md flex-wrap">
-            <div class="form-group mb-0" style="flex: 1;">
-                <label for="class_id" class="form-label">Select Class & Subject:</label>
-                <select id="class_id" name="class_id" class="form-input form-select">
-                    <option value="">-- Select a class --</option>
-                    <?php foreach ($classes as $class): ?>
-                        <option value="<?= $class['class_subject_id'] ?>" <?= $selectedClassSubjectId == $class['class_subject_id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($class['class_code']) ?>
-                            - <?= htmlspecialchars($class['subject_name']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="form-group">
+                    <label class="form-label" for="grade_item_name">Naziv:</label>
+                    <input type="text" id="grade_item_name" name="name" class="form-input" required>
+                </div>
+
+                <div class="row">
+                    <div class="col col-md-6">
+                        <div class="form-group">
+                            <label class="form-label" for="grade_item_max_points">Največje možno število
+                                točk:</label>
+                            <input type="number" id="grade_item_max_points" name="max_points" class="form-input"
+                                   required min="1" step="0.01">
+                        </div>
+                    </div>
+                    <div class="col col-md-6">
+                        <div class="form-group">
+                            <label class="form-label" for="grade_item_weight">Utež:</label>
+                            <input type="number" id="grade_item_weight" name="weight" class="form-input"
+                                   value="1.00" min="0.01" max="3.00" step="0.01">
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group mb-0" style="align-self: flex-end;">
-                <button type="submit" class="btn btn-primary">Select Class</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                <button type="submit" class="btn btn-primary">Dodaj</button>
             </div>
         </form>
     </div>
 </div>
 
-<?php if ($selectedClassSubjectId): ?>
-    <!-- Tab navigation with three tabs -->
-    <div class="card shadow mb-lg">
-        <div class="d-flex mb-lg p-sm" style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-            <button class="btn tab-btn active" data-tab="grade-items">Grade Items</button>
-            <button class="btn tab-btn" data-tab="enter-grades">Enter Grades</button>
-            <button class="btn tab-btn" data-tab="grade-overview">Grade Overview</button>
+<!-- Edit Grade Modal -->
+<div class="modal" id="editGradeModal">
+    <div class="modal-overlay" aria-hidden="true"></div>
+    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="editGradeModalTitle">
+        <div class="modal-header">
+            <h3 class="modal-title" id="editGradeModalTitle">Urejanje ocene</h3>
         </div>
-
-        <!-- Grade Items tab content -->
-        <div class="tab-content active" id="grade-items">
-            <div class="d-flex justify-between items-center mb-md p-md">
-                <h3 class="mt-0 mb-0">Assessment Items</h3>
-                <button class="btn btn-primary btn-sm" id="addGradeItemBtn">
-                    <span class="btn-icon">+</span> Add Grade Item
-                </button>
-            </div>
-
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Max Points</th>
-                        <th>Weight</th>
-                        <th>Actions</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <?php if (empty($gradeItems)): ?>
-                        <tr>
-                            <td colspan="4" class="text-center p-lg">
-                                <div class="alert status-info mb-0">
-                                    No grade items exist for this class-subject combination. Click "Add Grade Item" to
-                                    create one.
-                                </div>
-                            </td>
-                        </tr>
-                    <?php else: ?>
-                        <?php foreach ($gradeItems as $item): ?>
-                            <tr>
-                                <td><?= htmlspecialchars($item['name']) ?></td>
-                                <td><?= htmlspecialchars((string)$item['max_points']) ?></td>
-                                <td><?= htmlspecialchars((string)$item['weight']) ?>%</td>
-                                <td>
-                                    <div class="d-flex gap-xs">
-                                        <a href="/uwuweb/teacher/gradebook.php?class_id=<?= $selectedClassSubjectId ?>&item_id=<?= $item['item_id'] ?>"
-                                           class="btn btn-secondary btn-sm">Enter Grades</a>
-                                        <button class="btn btn-sm edit-item-btn"
-                                                data-id="<?= $item['item_id'] ?>"
-                                                data-name="<?= htmlspecialchars($item['name']) ?>"
-                                                data-max-points="<?= htmlspecialchars((string)$item['max_points']) ?>"
-                                                data-weight="<?= htmlspecialchars((string)$item['weight']) ?>">Edit
-                                        </button>
-                                        <button class="btn btn-danger btn-sm delete-item-btn"
-                                                data-id="<?= $item['item_id'] ?>"
-                                                data-name="<?= htmlspecialchars($item['name']) ?>">Delete
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Enter Grades tab content -->
-        <div class="tab-content" id="enter-grades">
-            <div class="card__content">
-                <?php if (empty($gradeItems)): ?>
-                    <div class="alert status-warning">
-                        No grade items exist for this class. Please create a grade item first in the 'Grade Items' tab.
-                    </div>
-                <?php else: ?>
-                    <div class="form-group mb-lg">
-                        <label class="form-label" for="grade_item_select">Select Grade Item:</label>
-                        <select id="grade_item_select" class="form-input form-select">
-                            <option value="">-- Select an item --</option>
-                            <?php foreach ($gradeItems as $item): ?>
-                                <option value="<?= $item['item_id'] ?>" <?= $selectedItemId == $item['item_id'] ? 'selected' : '' ?>>
-                                    <?= htmlspecialchars($item['name']) ?>
-                                    (Max: <?= htmlspecialchars((string)$item['max_points']) ?> pts,
-                                    Weight: <?= htmlspecialchars((string)$item['weight']) ?>%)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
-
-                    <?php if (!$selectedItemId): ?>
-                        <div class="alert status-info">
-                            Please select a grade item from the dropdown above to enter grades.
-                        </div>
-                    <?php elseif (empty($students)): ?>
-                        <div class="alert status-info">
-                            No students are enrolled in this class, or student data could not be retrieved.
-                        </div>
-                    <?php else: ?>
-                        <?php
-                        // Find the details of the selected grade item
-                        $currentItem = null;
-                        foreach ($gradeItems as $item) if ($item['id'] == $selectedItemId) {
-                            $currentItem = $item;
-                            break;
-                        }
-                        ?>
-                        <form method="POST"
-                              action="/uwuweb/teacher/gradebook.php?class_id=<?= $selectedClassSubjectId ?>&item_id=<?= $selectedItemId ?>"
-                              id="gradeForm">
-                            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                            <input type="hidden" name="class_id" value="<?= $selectedClassSubjectId ?>">
-                            <input type="hidden" name="item_id" id="form_item_id" value="<?= $selectedItemId ?>">
-                            <input type="hidden" name="save_grades" value="1">
-
-                            <div class="table-responsive">
-                                <table class="data-table">
-                                    <thead>
-                                    <tr>
-                                        <th>Student</th>
-                                        <th>Points
-                                            (Max: <?= $currentItem ? htmlspecialchars((string)$currentItem['max_points']) : 'N/A' ?>
-                                            )
-                                        </th>
-                                        <th>Grade (%)</th>
-                                        <th>Comment</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    <?php foreach ($students as $student): ?>
-                                        <?php
-                                        $enrollId = $student['enroll_id'];
-                                        $existingGrade = isset($grades[$enrollId][$selectedItemId]) ? $grades[$enrollId][$selectedItemId] : null;
-
-                                        $points = $existingGrade ? $existingGrade['points'] : '';
-                                        $comment = $existingGrade ? $existingGrade['comment'] : '';
-                                        $maxPointsForItem = $currentItem ? (float)$currentItem['max_points'] : 0;
-                                        $percentage = ($points !== '' && $maxPointsForItem > 0) ?
-                                            (((float)$points / $maxPointsForItem) * 100) : null;
-
-                                        $gradeClass = '';
-                                        if ($percentage !== null) if ($percentage >= 80) $gradeClass = 'grade-high';
-                                        elseif ($percentage >= 50) $gradeClass = 'grade-medium';
-                                        else $gradeClass = 'grade-low';
-                                        ?>
-                                        <tr>
-                                            <td>
-                                                <?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?>
-                                            </td>
-                                            <td style="width: 150px">
-                                                <label>
-                                                    <input type="number" class="form-input point-input"
-                                                           name="grade[<?= $enrollId ?>]"
-                                                           value="<?= htmlspecialchars((string)$points) ?>"
-                                                           step="0.01" min="0"
-                                                           max="<?= $maxPointsForItem ?>"
-                                                           data-max-points="<?= $maxPointsForItem ?>"
-                                                           data-enroll-id="<?= $enrollId ?>">
-                                                </label>
-                                            </td>
-                                            <td style="width: 80px">
-                                                    <span class="grade <?= $gradeClass ?>"
-                                                          id="grade-display-<?= $enrollId ?>">
-                                                        <?= $percentage !== null ? number_format($percentage) . '%' : '—' ?>
-                                                    </span>
-                                            </td>
-                                            <td>
-                                                <label>
-                                                    <input type="text" class="form-input"
-                                                           name="feedback[<?= $enrollId ?>]"
-                                                           value="<?= htmlspecialchars($comment) ?>"
-                                                           placeholder="Optional comment">
-                                                </label>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            <div class="d-flex justify-end mt-lg">
-                                <button type="submit" class="btn btn-primary">Save Grades</button>
-                            </div>
-                        </form>
-                    <?php endif; ?>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <!-- Grade Overview tab -->
-        <div class="tab-content" id="grade-overview">
-            <div class="card__content">
-                <?php if (empty($gradeItems) || empty($students)): ?>
-                    <div class="alert status-info">
-                        <?= empty($students) ? 'No students are enrolled in this class.' : 'No grade items exist to calculate an overview.' ?>
-                    </div>
-                <?php else: ?>
-                    <div class="table-responsive">
-                        <table class="data-table">
-                            <thead>
-                            <tr>
-                                <th>Student</th>
-                                <?php foreach ($gradeItems as $item): ?>
-                                    <th title="<?= htmlspecialchars($item['name']) ?> (<?= htmlspecialchars((string)$item['weight']) ?>%)">
-                                        <?= htmlspecialchars(substr($item['name'], 0, 15)) . (strlen($item['name']) > 15 ? '...' : '') ?>
-                                        <br><small>(<?= htmlspecialchars((string)$item['weight']) ?>%)</small>
-                                    </th>
-                                <?php endforeach; ?>
-                                <th>Weighted Avg (%)</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <?php foreach ($students as $student): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?></td>
-
-                                    <?php
-                                    $weightedSum = 0;
-                                    $totalWeight = 0;
-
-                                    foreach ($gradeItems as $item):
-                                        $itemId = $item['item_id'];
-                                        $enrollId = $student['enroll_id'];
-                                        $studentGrade = isset($grades[$enrollId][$itemId]) ? $grades[$enrollId][$itemId] : null;
-
-                                        $points = ($studentGrade && isset($studentGrade['points'])) ? (float)$studentGrade['points'] : null;
-                                        $maxPointsForItem = (float)$item['max_points'];
-                                        $weightForItem = (float)$item['weight'];
-                                        $percentage = ($points !== null && $maxPointsForItem > 0) ?
-                                            (($points / $maxPointsForItem) * 100) : null;
-
-                                        if ($percentage !== null && $weightForItem > 0) {
-                                            $weightedSum += $percentage * ($weightForItem / 100);
-                                            $totalWeight += $weightForItem / 100;
-                                        }
-
-                                        $gradeClass = '';
-                                        if ($percentage !== null) if ($percentage >= 80) $gradeClass = 'grade-high';
-                                        elseif ($percentage >= 50) $gradeClass = 'grade-medium';
-                                        else $gradeClass = 'grade-low';
-                                        ?>
-                                        <td class="text-center">
-                                            <?php if ($percentage !== null): ?>
-                                                <span class="grade <?= $gradeClass ?>">
-                                                        <?= number_format($percentage) ?>%
-                                                    </span>
-                                                <br><small>(<?= htmlspecialchars((string)$points) ?>
-                                                    /<?= htmlspecialchars((string)$maxPointsForItem) ?>)</small>
-                                            <?php else: ?>
-                                                <span class="text-disabled">—</span>
-                                            <?php endif; ?>
-                                        </td>
-                                    <?php endforeach; ?>
-
-                                    <?php
-                                    $finalAverage = ($totalWeight > 0) ? ($weightedSum / $totalWeight) : null;
-                                    $finalGradeClass = '';
-
-                                    if ($finalAverage !== null) if ($finalAverage >= 80) $finalGradeClass = 'grade-high';
-                                    elseif ($finalAverage >= 50) $finalGradeClass = 'grade-medium';
-                                    else $finalGradeClass = 'grade-low';
-                                    ?>
-
-                                    <td class="text-center">
-                                        <?php if ($finalAverage !== null): ?>
-                                            <span class="grade <?= $finalGradeClass ?> font-bold">
-                                                    <?= number_format($finalAverage, 1) ?>%
-                                                </span>
-                                        <?php else: ?>
-                                            <span class="text-disabled">—</span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for adding/editing grade items -->
-    <div class="modal" id="gradeItemModal">
-        <div class="modal-overlay"></div>
-        <div class="modal-container">
-            <div class="modal-header">
-                <h3 class="modal-title" id="modalTitle">Add Grade Item</h3>
-                <button class="btn-close" id="closeModal">×</button>
-            </div>
+        <form id="editGradeForm" method="POST">
             <div class="modal-body">
-                <!-- Form action points to the API endpoint -->
-                <form id="gradeItemForm">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                    <input type="hidden" name="class_subject_id" value="<?= $selectedClassSubjectId ?>">
-                    <input type="hidden" name="item_id" id="edit_item_id" value="">
-                    <input type="hidden" name="action" id="form_action" value="add"> <!-- 'add' or 'update' -->
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                <input type="hidden" name="action_type" value="save_grade">
+                <input type="hidden" name="class_subject_id" value="<?= $selectedClassSubject ?? '' ?>">
+                <input type="hidden" id="editGradeModal_enroll_id" name="enroll_id" value="">
+                <input type="hidden" id="editGradeModal_item_id" name="item_id" value="">
 
-                    <div class="form-group">
-                        <label class="form-label" for="item_name">Name:</label>
-                        <input type="text" id="item_name" name="name" class="form-input" required>
-                    </div>
+                <p class="mb-md">
+                    Urejanje ocene za <strong id="editGradeModal_student_name"></strong> pri elementu
+                    <strong id="editGradeModal_item_name"></strong>
+                </p>
 
-                    <div class="form-group">
-                        <label class="form-label" for="max_points">Maximum Points:</label>
-                        <input type="number" id="max_points" name="max_points" class="form-input" min="0" step="0.01"
-                               required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="weight">Weight (%):</label>
-                        <input type="number" id="weight" name="weight" class="form-input" min="0" max="100" step="0.1"
-                               value="1.0" required>
-                    </div>
-                    <div id="modal-error" class="alert status-error" style="display: none;"></div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelBtn">Cancel</button>
-                <button class="btn btn-primary" id="saveItemBtn">Save</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal for confirming deletion -->
-    <div class="modal" id="deleteModal">
-        <div class="modal-overlay"></div>
-        <div class="modal-container">
-            <div class="modal-header">
-                <h3 class="modal-title">Confirm Deletion</h3>
-                <button class="btn-close" id="closeDeleteModal">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="alert status-warning">
-                    <p>Are you sure you want to delete the grade item "<strong id="deleteItemName"></strong>"?</p>
-                    <p>This will permanently delete all grades associated with this item and cannot be undone.</p>
+                <div class="form-group">
+                    <label class="form-label" for="grade_points">Točke:</label>
+                    <input type="number" id="grade_points" name="points" class="form-input" required min="0"
+                           step="0.01">
+                    <div class="feedback-text" id="grade_points_info">Maksimalne točke: <span
+                                id="editGradeModal_max_points"></span></div>
                 </div>
-                <div id="delete-modal-error" class="alert status-error" style="display: none;"></div>
-                <form id="deleteForm">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                    <input type="hidden" name="item_id" id="delete_item_id" value="">
-                    <input type="hidden" name="action" value="delete">
-                </form>
+
+                <div class="form-group">
+                    <label class="form-label" for="grade_comment">Opomba (opcijsko):</label>
+                    <textarea id="grade_comment" name="comment" class="form-textarea" rows="3"></textarea>
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" id="cancelDeleteBtn">Cancel</button>
-                <button class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                <button type="submit" class="btn btn-primary">Shrani</button>
             </div>
-        </div>
+        </form>
     </div>
-<?php endif; ?>
-
-<!-- JavaScript for tab switching, modal handling, and AJAX form submissions -->
-<style>
-    .tab-btn {
-        background: none;
-        border: none;
-        padding: var(--space-sm) var(--space-md);
-        margin-right: var(--space-sm);
-        border-bottom: 2px solid transparent;
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: all var(--transition-normal);
-    }
-
-    .tab-btn:hover {
-        color: var(--text-primary);
-        background-color: rgba(255, 255, 255, 0.05);
-    }
-
-    .tab-btn.active {
-        color: var(--accent-primary);
-        border-bottom-color: var(--accent-primary);
-    }
-
-    .tab-content {
-        display: none;
-        padding: var(--space-md);
-    }
-
-    .tab-content.active {
-        display: block;
-    }
-
-    .modal { /* Basic modal styles assumed from css */
-    }
-
-    .modal.open {
-        display: flex;
-    }
-
-    .font-bold {
-        font-weight: bold;
-    }
-
-    .text-center {
-        text-align: center;
-    }
-
-    .text-disabled {
-        color: var(--text-secondary);
-        font-style: italic;
-    }
-</style>
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // Tab Navigation
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        const tabContents = document.querySelectorAll('.tab-content');
-        const currentUrl = new URL(window.location.href);
-        const currentItemId = currentUrl.searchParams.get('item_id');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', function () {
-                const tabId = this.getAttribute('data-tab');
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-                this.classList.add('active');
-                document.getElementById(tabId).classList.add('active');
-            });
-        });
-
-        // Activate "Enter Grades" tab if item_id is in URL
-        if (currentItemId) {
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            const enterGradesBtn = document.querySelector('.tab-btn[data-tab="enter-grades"]');
-            const enterGradesContent = document.getElementById('enter-grades');
-            if (enterGradesBtn && enterGradesContent) {
-                enterGradesBtn.classList.add('active');
-                enterGradesContent.classList.add('active');
+        // --- Modal Management Functions ---
+        const openModal = (modalId) => {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('open');
+                // Focus the first focusable element
+                const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
+                if (firstFocusable) firstFocusable.focus();
             }
-        }
+        };
 
+        const closeModal = (modal) => {
+            if (typeof modal === 'string') {
+                modal = document.getElementById(modal);
+            }
 
-        // Modal Handling
-        const gradeItemModal = document.getElementById('gradeItemModal');
-        const deleteModal = document.getElementById('deleteModal');
-        const addGradeItemBtn = document.getElementById('addGradeItemBtn');
-        const closeModal = document.getElementById('closeModal');
-        const cancelBtn = document.getElementById('cancelBtn');
-        const saveItemBtn = document.getElementById('saveItemBtn');
-        const editItemBtns = document.querySelectorAll('.edit-item-btn');
-        const deleteItemBtns = document.querySelectorAll('.delete-item-btn');
-        const closeDeleteModal = document.getElementById('closeDeleteModal');
-        const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
-        const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-        const gradeItemForm = document.getElementById('gradeItemForm');
-        const deleteForm = document.getElementById('deleteForm');
-        const modalErrorDiv = document.getElementById('modal-error');
-        const deleteModalErrorDiv = document.getElementById('delete-modal-error');
-
-        function openModal(modal) {
-            if (modal) modal.classList.add('open');
-        }
-
-        function closeModalFunc(modal) {
             if (modal) {
                 modal.classList.remove('open');
-                // Reset errors
-                if (modalErrorDiv) modalErrorDiv.display = 'none';
-                if (deleteModalErrorDiv) deleteModalErrorDiv.display = 'none';
+                // Reset forms if present
+                const form = modal.querySelector('form');
+                if (form) form.reset();
+
+                // Clear any error messages
+                const errorMsgs = modal.querySelectorAll('.feedback-error');
+                errorMsgs.forEach(msg => {
+                    if (msg && msg.style) {
+                        msg.style.display = 'none';
+                    }
+                });
             }
-        }
+        };
 
-        if (addGradeItemBtn) {
-            addGradeItemBtn.addEventListener('click', function () {
-                document.getElementById('modalTitle').textContent = 'Add Grade Item';
-                gradeItemForm.reset(); // Reset form fields
-                document.getElementById('edit_item_id').value = '';
-                document.getElementById('form_action').value = 'add';
-                document.getElementById('weight').value = '1.0'; // Set default weight
-                openModal(gradeItemModal);
-            });
-        }
+        // --- Event Listeners ---
 
-        editItemBtns.forEach(btn => {
+        // Open modal buttons
+        document.querySelectorAll('[data-open-modal]').forEach(btn => {
             btn.addEventListener('click', function () {
-                document.getElementById('modalTitle').textContent = 'Edit Grade Item';
-                gradeItemForm.reset();
-                document.getElementById('edit_item_id').value = this.dataset.id;
-                document.getElementById('item_name').value = this.dataset.name;
-                document.getElementById('max_points').value = this.dataset.maxPoints;
-                document.getElementById('weight').value = this.dataset.weight;
-                document.getElementById('form_action').value = 'update';
-                openModal(gradeItemModal);
+                const modalId = this.dataset.openModal;
+                openModal(modalId);
+
+                // Handle grade editing modal data
+                if (modalId === 'editGradeModal') {
+                    document.getElementById('editGradeModal_enroll_id').value = this.dataset.enrollId;
+                    document.getElementById('editGradeModal_item_id').value = this.dataset.itemId;
+                    document.getElementById('grade_points').value = this.dataset.points;
+                    document.getElementById('grade_comment').value = this.dataset.comment;
+                    document.getElementById('editGradeModal_max_points').textContent = this.dataset.maxPoints;
+                    document.getElementById('editGradeModal_student_name').textContent = this.dataset.studentName;
+                    document.getElementById('editGradeModal_item_name').textContent = this.dataset.itemName;
+
+                    // Set max attribute on the points input
+                    document.getElementById('grade_points').setAttribute('max', this.dataset.maxPoints);
+                }
             });
         });
 
-        deleteItemBtns.forEach(btn => {
+        // Close modal buttons
+        document.querySelectorAll('[data-close-modal]').forEach(btn => {
             btn.addEventListener('click', function () {
-                document.getElementById('delete_item_id').value = this.dataset.id;
-                document.getElementById('deleteItemName').textContent = this.dataset.name;
-                openModal(deleteModal);
+                closeModal(this.closest('.modal'));
             });
         });
 
-        if (closeModal) closeModal.addEventListener('click', () => closeModalFunc(gradeItemModal));
-        if (cancelBtn) cancelBtn.addEventListener('click', () => closeModalFunc(gradeItemModal));
-        if (closeDeleteModal) closeDeleteModal.addEventListener('click', () => closeModalFunc(deleteModal));
-        if (cancelDeleteBtn) cancelDeleteBtn.addEventListener('click', () => closeModalFunc(deleteModal));
-
-        // AJAX for Save Grade Item
-        if (saveItemBtn) {
-            saveItemBtn.addEventListener('click', async function () {
-                modalErrorDiv.display = 'none'; // Hide previous errors
-                const formData = new FormData(gradeItemForm);
-                const action = formData.get('action') === 'update' ? 'updateGradeItem' : 'addGradeItem';
-                formData.append('action', action); // Ensure correct action for API
-
-                try {
-                    const response = await fetch('/uwuweb/api/grades.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-
-                    if (result.success) {
-                        closeModalFunc(gradeItemModal);
-                        window.location.reload(); // Reload to see changes
-                    } else {
-                        modalErrorDiv.textContent = result.message || 'An error occurred.';
-                        modalErrorDiv.display = 'block';
-                    }
-                } catch (error) {
-                    console.error('Error saving grade item:', error);
-                    modalErrorDiv.textContent = 'A network error occurred. Please try again.';
-                    modalErrorDiv.display = 'block';
-                }
-            });
-        }
-
-        // AJAX for Delete Grade Item
-        if (confirmDeleteBtn) {
-            confirmDeleteBtn.addEventListener('click', async function () {
-                deleteModalErrorDiv.display = 'none';
-                const formData = new FormData(deleteForm);
-                formData.append('action', 'deleteGradeItem'); // Explicitly set action
-
-                try {
-                    const response = await fetch('/uwuweb/api/grades.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-
-                    if (result.success) {
-                        closeModalFunc(deleteModal);
-                        window.location.reload(); // Reload to reflect deletion
-                    } else {
-                        deleteModalErrorDiv.textContent = result.message || 'An error occurred during deletion.';
-                        deleteModalErrorDiv.display = 'block';
-                    }
-                } catch (error) {
-                    console.error('Error deleting grade item:', error);
-                    deleteModalErrorDiv.textContent = 'A network error occurred. Please try again.';
-                    deleteModalErrorDiv.display = 'block';
-                }
-            });
-        }
-
-
-        // Grade item selection in "Enter Grades" tab
-        const gradeItemSelect = document.getElementById('grade_item_select');
-        if (gradeItemSelect) {
-            gradeItemSelect.addEventListener('change', function () {
-                const itemId = this.value;
-                const classSubjectId = <?= $selectedClassSubjectId ?>;
-                if (itemId) {
-                    window.location.href = `/uwuweb/teacher/gradebook.php?class_id=${classSubjectId}&item_id=${itemId}`;
-                } else {
-                    // Optionally handle the case where "-- Select an item --" is chosen
-                    // Maybe clear the table or show a message
-                    window.location.href = `/uwuweb/teacher/gradebook.php?class_id=${classSubjectId}`;
-                }
-            });
-        }
-
-        // Click modal overlay to close
+        // Close modals when clicking the overlay
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', function () {
-                closeModalFunc(gradeItemModal);
-                closeModalFunc(deleteModal);
+                closeModal(this.closest('.modal'));
             });
         });
 
-        // Calculate grades percentages on input
-        document.querySelectorAll('.point-input').forEach(input => {
-            input.addEventListener('input', function () {
-                const enrollId = this.dataset.enrollId;
-                const maxPoints = parseFloat(this.dataset.maxPoints);
-                const points = parseFloat(this.value);
-                const display = document.getElementById(`grade-display-${enrollId}`);
+        // Close modals with Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.open').forEach(modal => {
+                    closeModal(modal);
+                });
+            }
+        });
 
-                if (display && !isNaN(points) && !isNaN(maxPoints) && maxPoints > 0) {
-                    const percentage = Math.min(100, Math.max(0, (points / maxPoints) * 100)); // Clamp between 0 and 100
-                    display.textContent = `${percentage.toFixed(0)}%`;
+        // Validate max points when entering grade points
+        document.getElementById('grade_points').addEventListener('input', function () {
+            const maxPoints = parseFloat(document.getElementById('editGradeModal_max_points').textContent);
+            const currentPoints = parseFloat(this.value);
 
-                    display.className = 'grade'; // Reset classes
-                    if (percentage >= 80) display.classList.add('grade-high');
-                    else if (percentage >= 50) display.classList.add('grade-medium');
-                    else display.classList.add('grade-low');
-
-                } else if (display) {
-                    display.textContent = '—';
-                    display.className = 'grade'; // Reset classes
-                }
-
-                // Optional: Add validation styling for points > maxPoints
-                if (!isNaN(points) && !isNaN(maxPoints) && points > maxPoints) {
-                    this.borderColor = 'var(--accent-danger)';
-                } else {
-                    this.borderColor = ''; // Reset border color
-                }
-            });
-            // Trigger calculation on page load for existing values
-            input.dispatchEvent(new Event('input'));
+            if (currentPoints > maxPoints) {
+                this.setCustomValidity(`Najvišje možno število točk je ${maxPoints}`);
+            } else {
+                this.setCustomValidity('');
+            }
         });
     });
 </script>
 
-<?php
-// Include page footer
-include '../includes/footer.php';
-?>
+<?php include '../includes/footer.php'; ?>

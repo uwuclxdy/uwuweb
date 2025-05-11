@@ -17,7 +17,7 @@ requireRole(ROLE_STUDENT);
 
 // Get the student ID of the logged-in user
 $studentId = getStudentId();
-if (!$studentId) die('Error: Student account not found.');
+if (!$studentId) die('Napaka: Dijaški račun ni bil najden.');
 
 // Database connection
 $pdo = safeGetDBConnection('student/attendance.php');
@@ -28,16 +28,14 @@ $attendanceStats = calculateAttendanceStats($attendance);
 
 ?>
 
-<!-- Page title and description card -->
-<div class="card shadow mb-lg mt-lg">
-    <div class="d-flex justify-between items-center">
-        <div>
-            <h2 class="mt-0 mb-xs">Moja prisotnost</h2>
-            <p class="text-secondary mt-0 mb-0">Ogled evidenc prisotnosti za vse predmete</p>
-        </div>
-        <div class="role-badge role-student">Dijak</div>
-    </div>
-</div>
+<?php
+renderHeaderCard(
+    'Moja prisotnost',
+    'Ogled evidenc prisotnosti za vse predmete',
+    'student',
+    'Dijak'
+);
+?>
 
 <!-- Attendance summary statistics card -->
 <div class="row">
@@ -92,30 +90,31 @@ $attendanceStats = calculateAttendanceStats($attendance);
                             <tbody>
                             <?php foreach ($attendance as $record): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($record['date']) ?></td>
-                                    <td><?= htmlspecialchars($record['period']) ?></td>
+                                    <td><?= htmlspecialchars($record['period_date']) ?></td>
+                                    <td><?= htmlspecialchars($record['period_label']) ?></td>
                                     <td><?= htmlspecialchars($record['subject_name']) ?></td>
                                     <td>
-                                        <?php if ($record['status'] === 'present'): ?>
+                                        <?php if (strtoupper($record['status']) === 'P'): ?>
                                             <span class="attendance-status status-present">Present</span>
-                                        <?php elseif ($record['status'] === 'absent'): ?>
+                                        <?php elseif (strtoupper($record['status']) === 'A'): ?>
                                             <span class="attendance-status status-absent">Absent</span>
-                                        <?php elseif ($record['status'] === 'late'): ?>
+                                        <?php elseif (strtoupper($record['status']) === 'L'): ?>
                                             <span class="attendance-status status-late">Late</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <?php if ($record['is_justified']): ?>
-                                            <span class="badge badge-success">Yes</span>
+                                        <?php $is_justified = !empty($record['approved']) && $record['approved'] == 1; ?>
+                                        <?php if ($is_justified): ?>
+                                            <span class="badge badge-success">Da</span>
                                         <?php else: ?>
-                                            <span class="badge badge-error">No</span>
+                                            <span class="badge badge-error">Ne</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <?php if ($record['status'] !== 'present' && !$record['is_justified']): ?>
-                                            <a href="/uwuweb/student/justification.php?id=<?= $record['attendance_id'] ?>"
-                                               class="btn btn-primary btn-sm">Justify</a>
-                                        <?php elseif ($record['is_justified']): ?>
+                                        <?php if (strtoupper($record['status']) !== 'P' && !$is_justified): ?>
+                                            <a href="/uwuweb/student/justification.php?id=<?= $record['att_id'] ?>"
+                                               class="btn btn-primary btn-sm">Opraviči</a>
+                                        <?php elseif ($is_justified): ?>
                                             <span class="badge badge-secondary">Justified</span>
                                         <?php else: ?>
                                             <span>—</span>

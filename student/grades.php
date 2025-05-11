@@ -17,27 +17,25 @@ requireRole(ROLE_STUDENT);
 
 // Get the student ID of the logged-in user
 $studentId = getStudentId();
-if (!$studentId) die('Error: Student account not found.');
+if (!$studentId) die('Napaka: Dijaški račun ni bil najden.');
 
 // Database connection
 $pdo = safeGetDBConnection('student/grades.php');
 
-// Get grades data
-$grades = getStudentGrades($studentId);
+// todo: Get grades data
+$grades = [];
 $gradeStats = calculateGradeStatistics($grades);
 
 ?>
 
-<!-- Page title and description card -->
-<div class="card shadow mb-lg mt-lg">
-    <div class="d-flex justify-between items-center">
-        <div>
-            <h2 class="mt-0 mb-xs">Moje ocene</h2>
-            <p class="text-secondary mt-0 mb-0">Ogled trenutnih ocen za vse predmete</p>
-        </div>
-        <div class="role-badge role-student">Dijak</div>
-    </div>
-</div>
+<?php
+renderHeaderCard(
+    'Moje ocene',
+    'Ogled trenutnih ocen za vse predmete',
+    'student',
+    'Dijak'
+);
+?>
 
 <!-- Grades summary statistics card -->
 <div class="row">

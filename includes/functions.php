@@ -2091,3 +2091,31 @@ function sendJsonErrorResponse(string $message, int $statusCode = 400, string $c
     }
     exit;
 }
+
+/**
+ * Generates HTML for an alert message
+ * @param string $message The alert message
+ * @param string $type Alert type: 'success', 'warning', 'error', 'info'
+ * @param bool $animate Whether to add animation class
+ * @param string $animation Animation class to use
+ * @return string HTML for the alert
+ */
+function generateAlert(string $message, string $type = 'info', bool $animate = true, string $animation = 'card-entrance'): string
+{
+    $animClass = $animate ? ' ' . $animation : '';
+    $iconMap = [
+        'success' => '✓',
+        'warning' => '⚠',
+        'error' => '✕',
+        'info' => 'ℹ',
+    ];
+
+    $icon = $iconMap[$type] ?? $iconMap['info'];
+
+    return <<<HTML
+    <div class="alert status-{$type}{$animClass}">
+        <div class="alert-icon">{$icon}</div>
+        <div class="alert-content">{$message}</div>
+    </div>
+    HTML;
+}

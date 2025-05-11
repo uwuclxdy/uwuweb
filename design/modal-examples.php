@@ -48,16 +48,14 @@ $gradeItems = [
 </head>
 <body class="bg-primary">
 <div class="container mt-lg">
-    <!-- Header Card -->
-    <div class="card shadow mb-lg page-transition">
-        <div class="card__content p-md d-flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold mt-0 mb-xs">Modal Examples</h1>
-                <p class="text-secondary mt-0 mb-0">Preview of modal implementation patterns for uwuweb</p>
-            </div>
-            <div class="role-badge role-admin">Administrator</div>
-        </div>
-    </div>
+    <?php
+    require_once '../includes/functions.php';
+    renderHeaderCard(
+        'Modal Examples',
+        'Preview of modal implementation patterns for uwuweb',
+        'admin',
+        'Administrator'
+    ); ?>
 
     <!-- Modal Types Showcase -->
     <div class="card shadow mb-lg">
@@ -232,7 +230,7 @@ $gradeItems = [
     <div class="modal-overlay" aria-hidden="true"></div>
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="editItemModalTitle">
         <div class="modal-header">
-            <h3 class="modal-title" id="editItemModalTitle">Edit Item</h3>
+            <h3 class="modal-title" id="editItemModalTitle">Uredi element</h3>
             <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
         <form id="editItemForm" method="POST" action="modal-examples.php">
@@ -242,12 +240,12 @@ $gradeItems = [
                 <input type="hidden" id="editItemModal_id" name="item_id" value="">
 
                 <div class="form-group">
-                    <label class="form-label" for="edit_item_name">Name:</label>
+                    <label class="form-label" for="edit_item_name">Ime:</label>
                     <input type="text" id="edit_item_name" name="name" class="form-input" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="edit_item_description">Description:</label>
+                    <label class="form-label" for="edit_item_description">Opis:</label>
                     <textarea id="edit_item_description" name="description" class="form-input form-textarea"
                               rows="3"></textarea>
                 </div>
@@ -255,14 +253,14 @@ $gradeItems = [
                 <div class="row">
                     <div class="col col-md-6">
                         <div class="form-group">
-                            <label class="form-label" for="edit_item_points">Points:</label>
+                            <label class="form-label" for="edit_item_points">Točke:</label>
                             <input type="number" id="edit_item_points" name="points" class="form-input" required min="1"
                                    max="100">
                         </div>
                     </div>
                     <div class="col col-md-6">
                         <div class="form-group">
-                            <label class="form-label" for="edit_item_weight">Weight:</label>
+                            <label class="form-label" for="edit_item_weight">Utež:</label>
                             <input type="number" id="edit_item_weight" name="weight" class="form-input" min="0.1"
                                    max="3.0" step="0.1">
                         </div>
@@ -270,8 +268,8 @@ $gradeItems = [
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                <button type="submit" class="btn btn-primary">Shrani spremembe</button>
             </div>
         </form>
     </div>

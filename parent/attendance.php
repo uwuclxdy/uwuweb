@@ -61,15 +61,14 @@ if ($selectedStudent && !empty($attendanceRecords)) {
 ?>
 
 <div class="container mt-lg mb-lg">
-    <div class="card shadow page-transition">
-        <div class="card__content d-flex justify-between items-center flex-wrap gap-md">
-            <div>
-                <h1 class="text-xl font-bold mt-0 mb-xs">Prisotnost učenca</h1>
-                <p class="text-secondary mt-0 mb-0">Spremljajte podatke o prisotnosti vašega otroka.</p>
-            </div>
-            <div class="role-badge role-parent">Starš</div>
-        </div>
-    </div>
+    <?php
+    renderHeaderCard(
+        'Prisotnost učenca',
+        'Spremljajte podatke o prisotnosti vašega otroka.',
+        'parent',
+        'Starš'
+    );
+    ?>
 
     <?php if (count($students) > 1): ?>
         <div class="card shadow mb-lg">
@@ -242,7 +241,8 @@ if ($selectedStudent && !empty($attendanceRecords)) {
             <div class="card__title">Opravičila za odsotnosti</div>
             <div class="card__content">
                 <?php
-                $justifications = getStudentJustifications($selectedStudentId);
+                // todo: Fetch justifications from the database
+                $justifications = [];
                 if (!empty($justifications)):
                     ?>
                     <div class="table-responsive">
