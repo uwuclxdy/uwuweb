@@ -322,31 +322,6 @@ function initAlerts() {
                 }, 300);
             }, 5000);
         }
-
-        // Add close button to alerts
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'btn-close';
-        closeBtn.innerHTML = '&times;';
-        closeBtn.style.position = 'absolute';
-        closeBtn.style.right = '10px';
-        closeBtn.style.top = '10px';
-        closeBtn.style.background = 'none';
-        closeBtn.style.border = 'none';
-        closeBtn.style.fontSize = '1.25rem';
-        closeBtn.style.cursor = 'pointer';
-        closeBtn.style.color = 'inherit';
-
-        // Ensure alert has relative positioning for the close button
-        alert.style.position = 'relative';
-
-        closeBtn.addEventListener('click', () => {
-            alert.style.opacity = '0';
-            setTimeout(() => {
-                alert.style.display = 'none';
-            }, 300);
-        });
-
-        alert.appendChild(closeBtn);
     });
 }
 
