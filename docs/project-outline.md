@@ -49,7 +49,6 @@ uwuweb/
 │ ├── manage_assignments.php # Class-subject-teacher assignment management
 │ ├── manage_classes.php # Class/homeroom group management
 │ ├── manage_subjects.php # Academic subject management
-│ ├── settings.php # Settings redirect controller
 │ ├── system_settings.php # School-wide system settings
 │ └── users.php # User management interface
 ├── api/
@@ -61,27 +60,29 @@ uwuweb/
 │ ├── css/
 │ │ └── style.css # Main stylesheet
 │ └── js/
-│ └── main.js # Main JavaScript functionality
+│ └──── main.js # Main JavaScript functionality
 ├── db/
-│ ├── migrate_system_settings.sh # Settings migration script
 │ ├── seed_demo.sql # Demo data population script
 │ └── uwuweb.sql # Main database schema
 ├── design/
 │ ├── modal-examples.php # Examples of modal dialog implementations
-│ └── uwuweb-logo.png # Application logo
+│ ├── uwuweb-logo-old.png # Old application logo
+│ └── uwuweb-logo.png # Current application logo
 ├── docs/
+│ ├── alert-guidelines.md # Guidelines for implementing alerts
 │ ├── backend-checklist.md # Backend implementation checklist
 │ ├── css-readme.md # CSS architecture documentation
 │ ├── frontend-checklist.md # Frontend implementation checklist
 │ ├── local-setup.md # Local development setup guide
 │ ├── modal-guidelines.md # Guidelines for implementing modals
 │ ├── project-functions.md # Function reference documentation
-│ └── project-outline.md # This file
+│ ├── project-outline.md # This file
+│ └── teacher-checklist.md # Teacher view implementation checklist
 ├── includes/
 │ ├── auth.php # Authentication functions and role management
 │ ├── db.php # Database connection management
 │ ├── footer.php # Common page footer
-│ ├── functions.php # Core utility functions
+│ ├── functions.php # Core utility functions for all roles
 │ ├── header.php # Common page header
 │ └── logout.php # Session termination
 ├── parent/
@@ -95,6 +96,7 @@ uwuweb/
 │ └── student_functions.php # Student role functions library
 ├── teacher/
 │ ├── attendance.php # Attendance management interface
+│ ├── download_justification.php # Secure file download handler
 │ ├── gradebook.php # Grade management interface
 │ ├── justifications.php # Justification approval interface
 │ └── teacher_functions.php # Teacher role functions library
@@ -120,58 +122,6 @@ uwuweb/
 Check out the `project-functions.md` file for a comprehensive list of functions and APIs before checking individual
 files.
 
-### Admin Functions (admin_functions.php)
-
-- **User Management**: getAllUsers, displayUserList, getUserDetails, createNewUser, updateUser, resetUserPassword,
-  deleteUser
-- **Subject Management**: getAllSubjects, displaySubjectsList, getSubjectDetails, createSubject, updateSubject,
-  deleteSubject
-- **Class Management**: getAllClasses, displayClassesList, getClassDetails, createClass, updateClass, deleteClass
-- **Class-Subject Assignment**: assignSubjectToClass, updateClassSubjectAssignment, removeSubjectFromClass,
-  getAllClassSubjectAssignments, getAllTeachers
-- **System Settings**: getSystemSettings, updateSystemSettings
-- **Dashboard Widgets**: renderAdminUserStatsWidget, renderAdminSystemStatusWidget, renderAdminAttendanceWidget
-- **Validation**: getAllStudentsBasicInfo, validateUserForm, usernameExists, classCodeExists, subjectExists,
-  studentExists
-
-### Teacher Functions (teacher_functions.php)
-
-- **Teacher Information**: getTeacherId, getTeacherClasses, teacherHasAccessToClassSubject
-- **Class & Student Management**: getClassStudents, getClassPeriods
-- **Attendance Management**: getPeriodAttendance, addPeriod, saveAttendance, getStudentAttendanceByDate
-- **Grade Management**: getGradeItems, getClassGrades, addGradeItem, saveGrade
-- **Justification Management**: functions for handling absence justifications
-
-### Student Functions (student_functions.php)
-
-- **Student Data**: getStudentId, getStudentAttendance, getStudentGrades, getClassAverage, getStudentAbsences,
-  getStudentJustifications
-- **Grade Analysis**: calculateWeightedAverage, calculateGradeStatistics
-- **Absence Justifications**: uploadJustification, validateJustificationFile, saveJustificationFile,
-  getJustificationFileInfo
-- **Dashboard Widgets**: renderStudentGradesWidget, renderStudentAttendanceWidget
-
-### Parent Functions (parent_functions.php)
-
-- **Parent Information**: getParentId, getParentStudents, parentHasAccessToStudent
-- **Student Data Access**: getStudentClasses, getClassGrades
-- **Attendance and Justification**: getStudentAttendance, parentHasAccessToJustification, getJustificationDetails,
-  getStudentJustifications
-- **Dashboard Widgets**: renderParentAttendanceWidget, renderParentChildClassAveragesWidget
-
-### Core Includes
-
-- **auth.php**: Authentication, session management, role-based access control
-- **db.php**: Database connection handling, error logging
-- **functions.php**: Common utilities used across the application
-
-### API Endpoints
-
-- **admin.php**: API endpoints for admin operations such as retrieving class details
-- **grades.php**: CRUD operations for grade data (teacher access)
-- **attendance.php**: CRUD operations for attendance with role-based access
-- **justifications.php**: Handling absence justifications submissions and approvals
-
 ---
 
 ## 8. Styling & Responsiveness
@@ -180,8 +130,8 @@ files.
 - Single `style.css`; CSS variables for theme.
 - No external CSS frameworks (Bootstrap prohibited).
 - Progressive enhancement: core functions work without JS; vanilla JS `fetch()` adds inline edits.
-- Use `css-readme.com` for CSS documentation and use as much css classes as possible to make the site look good and
-  responsive.
+- Alert styling and implementation should follow `alert-guidelines.md`.
+- Modal dialogs should follow patterns outlined in `modal-guidelines.md`.
 
 ---
 
@@ -192,6 +142,7 @@ files.
 - CSRF tokens in all forms.
 - Session idle timeout 30 min.
 - System-wide maintenance mode that restricts access to administrators only.
+- Secure file downloads with proper authorization checks.
 
 ---
 
@@ -218,6 +169,8 @@ files.
     - Logic (functions) in centralized functions files that cannot be accessed via browser
     - Processing in page files (data retrieval, calculations, UI code - HTML)
 - The `[subfolder]_functions.php` file serves as a complete API for that role's functionality.
+- Core functionality for attendance, grades, and justifications is centralized in `/includes/functions.php` with
+  role-specific functions in their respective files.
 
 ## 12. Common Errors to Avoid
 
