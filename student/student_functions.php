@@ -4,33 +4,8 @@
  *
  * File path: /student/student_functions.php
  *
- * Provides functions for retrieving and managing student grades, attendance,
- * and absence justifications. This file serves as the complete API for the
- * student module functionality.
- *
- * Student Data Retrieval:
- * - getStudentId(): ?int - Returns student ID for current user, with caching for optimization
- * - getStudentAttendance(int $studentId): array - Returns student's attendance records
- * - getStudentGrades(int $studentId): array - Returns student's grades
- * - getClassAverage(int $classId): array - Returns academic averages for class
- * - getStudentAbsences(int $studentId): array - Returns student's absence records
- * - getStudentJustifications(int $studentId): array - Gets justifications submitted by a student
- *
- * Grade Analysis:
- * - calculateWeightedAverage(array $grades): float - Computes weighted grade average
- * - calculateGradeStatistics(array $grades): array - Analyzes grades by subject and class
- *
- * Absence Justifications:
- * - uploadJustification(int $absenceId, string $justification): bool - Stores absence explanation text
- * - validateJustificationFile(array $file): bool - Checks justification file validity
- * - saveJustificationFile(array $file, int $absenceId): bool|string - Stores justification file securely
- * - getJustificationFileInfo(int $absenceId): ?string - Returns justification file metadata
- *
- * Dashboard Widgets:
- * - renderStudentGradesWidget(): string - Displays student's recent grades and subject performance statistics
- * - renderStudentAttendanceWidget(): string - Shows attendance summary with statistics and recent attendance records
- * - renderStudentClassAveragesWidget(): string - Compares student's performance against class averages across subjects
- * - renderUpcomingClassesWidget(): string - Lists student's scheduled classes for the next week organized by day
+ * Provides student-specific helper functions and dashboard widgets.
+ * Core attendance, grade, and justification functions are now in /includes/functions.php.
  */
 
 require_once __DIR__ . '/../includes/db.php';
@@ -69,134 +44,6 @@ function getStudentId(): ?int
     } catch (PDOException $e) {
         error_log("Database error in getStudentId: " . $e->getMessage());
         return null;
-    }
-}
-
-/**
- * Gets attendance records for a student
- *
- * @param int $studentId Student ID
- * @return array Attendance records
- */
-function getStudentAttendance(int $studentId): array
-{
-    try {
-        $pdo = safeGetDBConnection('getStudentAttendance');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getStudentAttendance");
-            return [];
-        }
-
-        $query = "
-            SELECT a.att_id, a.status, a.justification, a.approved, a.reject_reason,
-                   p.period_date, p.period_label,
-                   s.name as subject_name,
-                   c.class_code, c.title as class_title
-            FROM attendance a
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN periods p ON a.period_id = p.period_id
-            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
-            JOIN subjects s ON cs.subject_id = s.subject_id
-            JOIN classes c ON cs.class_id = c.class_id
-            WHERE e.student_id = :student_id
-            ORDER BY p.period_date DESC, p.period_label";
-
-        $stmt = $pdo->prepare($query);
-        $stmt->bindParam(':student_id', $studentId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        logDBError($e->getMessage());
-        return [];
-    }
-}
-
-/**
- * Gets grades for a student
- *
- * @param int $studentId Student ID
- * @return array Student grades
- */
-function getStudentGrades(int $studentId): array
-{
-    try {
-        $pdo = safeGetDBConnection('getStudentGrades');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getStudentGrades");
-            return [];
-        }
-
-        $query = "
-            SELECT g.grade_id, g.points, g.comment,
-                   gi.name as item_name, gi.max_points, gi.weight,
-                   s.name as subject_name,
-                   c.class_code, c.title as class_title
-            FROM grades g
-            JOIN enrollments e ON g.enroll_id = e.enroll_id
-            JOIN grade_items gi ON g.item_id = gi.item_id
-            JOIN class_subjects cs ON gi.class_subject_id = cs.class_subject_id
-            JOIN subjects s ON cs.subject_id = s.subject_id
-            JOIN classes c ON cs.class_id = c.class_id
-            WHERE e.student_id = :student_id
-            ORDER BY s.name, gi.name";
-
-        $stmt = $pdo->prepare($query);
-        $stmt->bindParam(':student_id', $studentId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        logDBError($e->getMessage());
-        return [];
-    }
-}
-
-/**
- * Gets class average for a specific class
- *
- * @param int $classId Class ID
- * @return array Class averages by grade item
- */
-function getClassAverage(int $classId): array
-{
-    try {
-        $pdo = safeGetDBConnection('getClassAverage');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getClassAverage");
-            return [];
-        }
-
-        $query = "
-            SELECT
-                gi.item_id,
-                gi.name as item_name,
-                gi.max_points,
-                gi.weight,
-                s.subject_id,
-                s.name as subject_name,
-                AVG(g.points) as average_points,
-                AVG(g.points / gi.max_points * 100) as average_percentage,
-                COUNT(g.grade_id) as grade_count
-            FROM grade_items gi
-            JOIN class_subjects cs ON gi.class_subject_id = cs.class_subject_id
-            JOIN subjects s ON cs.subject_id = s.subject_id
-            LEFT JOIN grades g ON gi.item_id = g.item_id
-            WHERE cs.class_id = :class_id
-            GROUP BY gi.item_id, gi.name, gi.max_points, gi.weight, s.subject_id, s.name
-            ORDER BY s.name, gi.name";
-
-        $stmt = $pdo->prepare($query);
-        $stmt->bindParam(':class_id', $classId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        logDBError($e->getMessage());
-        return [];
     }
 }
 
@@ -286,403 +133,14 @@ function calculateGradeStatistics(array $grades): array
 
     // Calculate averages only where valid data exists
     foreach ($statistics as &$subjectData) {
-        if ($subjectData['total_max_points'] > 0 && $subjectData['total_weight'] > 0) $subjectData['weighted_average'] =
-            ($subjectData['total_points'] / $subjectData['total_max_points']) * 100; else $subjectData['weighted_average'] = 0.0;
+        if ($subjectData['total_max_points'] > 0 && $subjectData['total_weight'] > 0) $subjectData['weighted_average'] = ($subjectData['total_points'] / $subjectData['total_max_points']) * 100; else $subjectData['weighted_average'] = 0.0;
 
-        foreach ($subjectData['classes'] as &$classData) if ($classData['total_max_points'] > 0 && $classData['total_weight'] > 0) $classData['weighted_average'] =
-            ($classData['total_points'] / $classData['total_max_points']) * 100; else $classData['weighted_average'] = 0.0;
-        // Release reference
-        unset($classData);
+        foreach ($subjectData['classes'] as &$classData) if ($classData['total_max_points'] > 0 && $classData['total_weight'] > 0) $classData['weighted_average'] = ($classData['total_points'] / $classData['total_max_points']) * 100; else $classData['weighted_average'] = 0.0;
+        unset($classData); // Release reference
     }
-    // Release reference
-    unset($subjectData);
+    unset($subjectData); // Release reference
 
     return $statistics;
-}
-
-/**
- * Gets absences for a student
- *
- * @param int $studentId Student ID
- * @return array Absence records
- */
-function getStudentAbsences(int $studentId): array
-{
-    try {
-        $pdo = safeGetDBConnection('getStudentAbsences');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getStudentAbsences");
-            return [];
-        }
-
-        $query = "
-            SELECT a.att_id, a.status, a.justification, a.approved, a.reject_reason,
-                   a.justification_file, p.period_date, p.period_label,
-                   s.name as subject_name,
-                   c.class_code, c.title as class_title
-            FROM attendance a
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN periods p ON a.period_id = p.period_id
-            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
-            JOIN subjects s ON cs.subject_id = s.subject_id
-            JOIN classes c ON cs.class_id = c.class_id
-            WHERE e.student_id = :student_id
-            AND a.status = 'A'
-            ORDER BY p.period_date DESC, p.period_label";
-
-        $stmt = $pdo->prepare($query);
-        $stmt->bindParam(':student_id', $studentId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        logDBError($e->getMessage());
-        return [];
-    }
-}
-
-/**
- * Upload justification for an absence
- *
- * @param int $absenceId Absence ID
- * @param string $justification Justification text
- * @return bool Success status
- */
-function uploadJustification(int $absenceId, string $justification): bool
-{
-    // Basic check for current user ID existence in session
-    if (!isset($_SESSION['user_id'])) {
-        // Log error or handle appropriately
-        error_log("User ID not found in session during justification upload.");
-        return false;
-    }
-    $currentUserId = $_SESSION['user_id'];
-
-    try {
-        $pdo = safeGetDBConnection('uploadJustification');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in uploadJustification");
-            return false;
-        }
-
-        // Verify the current user (student) owns this absence record
-        $verifyQuery = "
-            SELECT a.att_id
-            FROM attendance a
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN students s ON e.student_id = s.student_id
-            WHERE a.att_id = :absence_id
-            AND s.user_id = :user_id";
-
-        $verifyStmt = $pdo->prepare($verifyQuery);
-        $verifyStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
-        $verifyStmt->bindParam(':user_id', $currentUserId, PDO::PARAM_INT);
-        $verifyStmt->execute();
-
-        if ($verifyStmt->rowCount() === 0) {
-            // Log attempt to modify unowned record
-            error_log("User $currentUserId attempted to upload justification for unowned absence ID $absenceId.");
-            return false; // User does not own this absence record
-        }
-
-        // Proceed with update
-        $updateQuery = "
-            UPDATE attendance
-            SET justification = :justification,
-                approved = NULL, -- Reset approval status when new justification is submitted
-                reject_reason = NULL -- Clear previous rejection reason
-            WHERE att_id = :absence_id";
-
-        $updateStmt = $pdo->prepare($updateQuery);
-        $updateStmt->bindParam(':justification', $justification);
-        $updateStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
-
-        return $updateStmt->execute();
-    } catch (PDOException $e) {
-        logDBError("PDOException in uploadJustification for absence ID $absenceId: " . $e->getMessage());
-        return false;
-    }
-}
-
-/**
- * Validate justification file
- *
- * @param array $file Uploaded file data from $_FILES superglobal
- * @return bool Validation result
- */
-function validateJustificationFile(array $file): bool
-{
-    // Check for upload errors
-    if (!isset($file['error']) || is_array($file['error'])) {
-        error_log("Invalid parameters received for file upload validation.");
-        return false; // Invalid parameters
-    }
-
-    switch ($file['error']) {
-        case UPLOAD_ERR_OK:
-            break; // No error, continue validation
-        case UPLOAD_ERR_NO_FILE:
-            error_log("No file sent during justification upload.");
-            return false; // Or handle as needed, maybe allow text-only justification
-        case UPLOAD_ERR_INI_SIZE:
-        case UPLOAD_ERR_FORM_SIZE:
-            error_log("Exceeded filesize limit during justification upload.");
-            return false;
-        default:
-            error_log("Unknown upload error: " . $file['error']);
-            return false;
-    }
-
-    // Check file size (e.g., 5MB maximum)
-    $maxSize = 5 * 1024 * 1024;
-    if (!isset($file['size']) || $file['size'] > $maxSize) {
-        error_log("File size exceeds limit ($maxSize bytes) or size not available.");
-        return false;
-    }
-    if ($file['size'] === 0) {
-        error_log("Uploaded file is empty.");
-        return false;
-    }
-
-    // Check MIME type using "finfo" for better security than relying on extension or client-provided type
-    $allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif']; // Add/remove allowed types as needed
-    if (!isset($file['tmp_name']) || !file_exists($file['tmp_name'])) {
-        error_log("Temporary file path is missing or file does not exist.");
-        return false;
-    }
-
-    try {
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo->file($file['tmp_name']);
-
-        if ($mimeType === false) {
-            error_log("Could not determine MIME type for uploaded file.");
-            return false; // Could not determine type
-        }
-
-        if (!in_array($mimeType, $allowedTypes, true)) {
-            error_log("Invalid file type uploaded: " . $mimeType);
-            return false; // Disallowed type
-        }
-    } catch (Exception $e) {
-        error_log("Error checking file MIME type: " . $e->getMessage());
-        return false;
-    }
-
-    // Optional: Add more checks like file name sanitization if needed before saving
-
-    return true; // File is valid
-}
-
-/**
- * Save uploaded justification file
- *
- * @param array $file Uploaded file data from $_FILES
- * @param int $absenceId Absence ID
- * @return bool|string Returns the saved filename on success, false on failure.
- */
-function saveJustificationFile(array $file, int $absenceId): bool|string
-{
-    // First, validate the file
-    if (!validateJustificationFile($file)) {
-        error_log("Justification file validation failed for absence ID $absenceId.");
-        return false;
-    }
-
-    // Check for current user ID existence in session
-    if (!isset($_SESSION['user_id'])) {
-        error_log("User ID not found in session during justification file save.");
-        return false;
-    }
-    $currentUserId = $_SESSION['user_id'];
-
-    try {
-        $pdo = safeGetDBConnection('saveJustificationFile');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in saveJustificationFile");
-            return false;
-        }
-
-        // Verify the current user (student) owns this absence record
-        $verifyQuery = "
-            SELECT a.att_id, a.justification_file -- Select existing file to potentially delete later
-            FROM attendance a
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN students s ON e.student_id = s.student_id
-            WHERE a.att_id = :absence_id
-            AND s.user_id = :user_id";
-
-        $verifyStmt = $pdo->prepare($verifyQuery);
-        $verifyStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
-        $verifyStmt->bindParam(':user_id', $currentUserId, PDO::PARAM_INT);
-        $verifyStmt->execute();
-        $attendanceRecord = $verifyStmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$attendanceRecord) {
-            error_log("User $currentUserId attempted to save justification file for unowned absence ID $absenceId.");
-            return false; // User does not own this absence record
-        }
-
-        // Define upload directory relative to *this* script's location
-        // Correct path should be relative to the project root or an absolute path
-        // Assuming project root is one level up from 'student' directory
-        $projectRoot = dirname(__DIR__); // Gets /path/to/uwuweb
-        $uploadDir = $projectRoot . '/uploads/justifications/';
-
-        // Ensure the upload directory exists and is writable
-        if (!is_dir($uploadDir)) if (!mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-            error_log(sprintf('Failed to create upload directory: "%s"', $uploadDir));
-            return false; // Directory creation failed
-        }
-        if (!is_writable($uploadDir)) {
-            error_log(sprintf('Upload directory is not writable: "%s"', $uploadDir));
-            return false;
-        }
-
-        // Generate a unique filename to prevent overwrites and potential security issues
-        // Use original extension, but sanitize it
-        $originalName = $file['name'];
-        $fileExtension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-        // Basic sanitization for extension (allow only alphanumeric)
-        $safeExtension = preg_replace('/[^a-z0-9]/', '', $fileExtension);
-        if (empty($safeExtension)) $safeExtension = 'bin'; // Default if extension is weird
-
-        $newFilename = 'justification_' . $absenceId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $safeExtension;
-        $targetPath = $uploadDir . $newFilename;
-
-        // Move the uploaded file from tmp location to the target path
-        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-            error_log("Failed to move uploaded file to $targetPath. Check permissions and paths.");
-            return false; // File move failed
-        }
-
-        // --- Optional: Delete old file if it exists ---
-        $oldFilename = $attendanceRecord['justification_file'];
-        if (!empty($oldFilename)) {
-            $oldFilePath = $uploadDir . $oldFilename;
-            if (file_exists($oldFilePath)) unlink($oldFilePath);
-        }
-        // --- End Optional Delete ---
-
-        // Update the database record with the new filename
-        $updateQuery = "
-            UPDATE attendance
-            SET justification_file = :filename,
-                approved = NULL, -- Reset approval status
-                reject_reason = NULL -- Clear rejection reason
-            WHERE att_id = :absence_id";
-
-        $updateStmt = $pdo->prepare($updateQuery);
-        $updateStmt->bindParam(':filename', $newFilename);
-        $updateStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
-
-        if ($updateStmt->execute()) return $newFilename; else {
-            error_log("Database update failed after saving justification file $newFilename for absence ID $absenceId.");
-            // Attempt to delete the newly saved file if DB update fails to prevent orphans
-            if (file_exists($targetPath)) unlink($targetPath);
-            return false; // DB update failed
-        }
-
-    } catch (PDOException $e) {
-        logDBError("PDOException in saveJustificationFile for absence ID $absenceId: " . $e->getMessage());
-        // Attempt to delete the file if it was moved before the exception
-        if (isset($targetPath) && file_exists($targetPath)) unlink($targetPath);
-        return false;
-    } catch (Exception $e) { // Catch other potential errors like random_bytes failure
-        error_log("General Exception in saveJustificationFile for absence ID $absenceId: " . $e->getMessage());
-        if (isset($targetPath) && file_exists($targetPath)) unlink($targetPath);
-        return false;
-    }
-}
-
-/**
- * Get justification file information (filename)
- *
- * @param int $absenceId Absence ID
- * @return string|null Filename or null if no file or access denied
- */
-function getJustificationFileInfo(int $absenceId): ?string
-{
-    try {
-        $pdo = safeGetDBConnection('getJustificationFileInfo');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getJustificationFileInfo");
-            return null;
-        }
-
-        $stmt = $pdo->prepare("
-            SELECT justification_file
-            FROM attendance
-            WHERE att_id = ?
-        ");
-        $stmt->execute([$absenceId]);
-
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $result && isset($result['justification_file']) && $result['justification_file'] ? $result['justification_file'] : null;
-    } catch (PDOException $e) {
-        logDBError("Error in getJustificationFileInfo: " . $e->getMessage());
-        return null;
-    }
-}
-
-/**
- * Gets justifications submitted by a specific student
- *
- * @param int $studentId The ID of the student whose justifications are requested.
- * @return array Array of justification records, potentially empty.
- */
-function getStudentJustifications(int $studentId): array
-{
-    try {
-        $pdo = safeGetDBConnection('getStudentJustifications');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getStudentJustifications");
-            return [];
-        }
-
-        // Query to retrieve justification details linked to the student
-        $query = "
-            SELECT
-                a.att_id as justification_id, -- Alias for clarity
-                a.justification as justification_text, -- Alias for clarity
-                a.justification_file,
-                a.approved,
-                a.reject_reason,
-                p.period_date as absence_date,
-                p.period_label as absence_period_label, -- More specific alias
-                s.name as subject_name,
-                c.title as class_title,
-                c.class_code,
-                -- Determine submission date (could be complex, using period date as proxy)
-                p.period_date as submitted_date_proxy -- Indicate this is an approximation
-            FROM attendance a
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN periods p ON a.period_id = p.period_id
-            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
-            JOIN subjects s ON cs.subject_id = s.subject_id
-            JOIN classes c ON cs.class_id = c.class_id -- Changed join condition to class_subjects
-            WHERE e.student_id = :student_id
-              AND (a.justification IS NOT NULL OR a.justification_file IS NOT NULL) -- Ensure there's a justification
-            ORDER BY p.period_date DESC, p.period_label"; // Order by date, then period label
-
-        $stmt = $pdo->prepare($query);
-        $stmt->bindParam(':student_id', $studentId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC); // Fetch all matching records
-
-    } catch (PDOException $e) {
-        // Log the database error for debugging
-        logDBError("PDOException in getStudentJustifications for student ID $studentId: " . $e->getMessage());
-        // Return an empty array in case of error to maintain consistent return type
-        return [];
-    }
 }
 
 /**
@@ -768,7 +226,6 @@ function renderStudentGradesWidget(): string
     return $html;
 }
 
-
 /**
  * Creates the HTML for the student's attendance dashboard widget
  *
@@ -830,8 +287,7 @@ function renderStudentAttendanceWidget(): string
         foreach ($recentRecords as $rec) {
             $statusBadge = getAttendanceStatusLabel($rec['status']); // This needs to return HTML badge
             $justHtml = '<span class="text-disabled">-</span>';
-            if ($rec['status'] == 'A') if ($rec['approved'] === 1) $justHtml = '<span class="badge badge-success">Opravičeno</span>';
-            elseif ($rec['approved'] === 0) $justHtml = '<span class="badge badge-error">Zavrnjeno</span>';
+            if ($rec['status'] == 'A') if ($rec['approved'] === 1) $justHtml = '<span class="badge badge-success">Opravičeno</span>'; elseif ($rec['approved'] === 0) $justHtml = '<span class="badge badge-error">Zavrnjeno</span>';
             elseif ($rec['justification'] !== null) $justHtml = '<span class="badge badge-warning">V obdelavi</span>';
             else $justHtml = '<a href="/uwuweb/student/justification.php?att_id=' . $rec['att_id'] . '" class="btn btn-xs btn-warning d-inline-flex items-center gap-xs"><span class="material-icons-outlined text-xs">edit</span> Oddaj</a>';
             $html .= '<tr><td>' . date('d.m.Y', strtotime($rec['period_date'])) . '</td><td>' . htmlspecialchars($rec['subject_name']) . ' (' . htmlspecialchars($rec['period_label']) . ')</td><td class="text-center">' . $statusBadge . '</td><td class="text-center">' . $justHtml . '</td></tr>';
@@ -876,7 +332,7 @@ function renderStudentClassAveragesWidget(): string
     if (empty($grades) || !array_filter($grades, static fn($g) => $g['student_avg_score'] !== null)) $html .= '<p class="p-md text-secondary text-center">Nimate razredov z ocenami za primerjavo.</p>'; else {
         $html .= '<div class="table-responsive">';
         $html .= '<table class="data-table w-100 text-sm">';
-        $html .= '<thead><tr><th>Predmet (Razred)</th><th class="text-center">Vaše povp.</th><th class="text-center">Povp. razreda</th><th class="text-center">Razlika</th></tr></thead><tbody>';
+        $html .= '<thead><tr><th>Predmet (Razred)</th><th class="text-center">Vaše povprečje</th><th class="text-center">Povprečje razreda</th><th class="text-center">Razlika</th></tr></thead><tbody>';
         foreach ($grades as $grade) {
             if ($grade['student_avg_score'] === null && $grade['class_avg_score'] === null) continue;
             $sAvgF = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) . '%' : 'N/A';
@@ -909,7 +365,6 @@ function renderStudentClassAveragesWidget(): string
     $html .= '</div></div>';
     return $html;
 }
-
 
 /**
  * Creates the HTML for a student's upcoming classes widget
@@ -981,7 +436,7 @@ function renderUpcomingClassesWidget(): string
                 $html .= '<div class="class-time font-medium text-center p-sm rounded bg-tertiary" style="min-width: 60px;">' . htmlspecialchars($class['period_label']) . '. ura</div>';
                 $html .= '<div class="class-details flex-grow-1 text-sm">';
                 $html .= '<div class="font-medium">' . htmlspecialchars($class['subject_name']) . '</div>';
-                $html .= '<div class="text-secondary">Prof.: ' . htmlspecialchars($class['teacher_fname'] . ' ' . $class['teacher_lname']) . '</div>';
+                $html .= '<div class="text-secondary">Prof.: ' . htmlspecialchars($class['teacher_name']) . '</div>';
                 $html .= '<div class="text-secondary">Razred: ' . htmlspecialchars($class['class_title']) . '</div>';
                 $html .= '</div></div>';
             }

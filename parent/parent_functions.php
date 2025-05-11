@@ -4,28 +4,8 @@
  *
  * File path: /parent/parent_functions.php
  *
- * Centralized functions for parent-specific functionality in the uwuweb system.
- * Includes functions for accessing parent ID, student data, grade data, attendance records,
- * and absence justifications for students linked to a parent, as well as parent dashboard widgets.
- *
- * Parent Information Functions:
- * - getParentId(): ?int - Retrieves the parent_id from the parents table for the currently logged-in user
- * - getParentStudents(?int $parentId = null): array - Retrieves all students linked to a specific parent
- * - parentHasAccessToStudent(int $studentId, ?int $parentId = null): bool - Verifies parent has access to student data
- *
- * Student Data Access Functions:
- * - getStudentClasses(int $studentId): array - Gets classes that a student is enrolled in
- * - getClassGrades(int $studentId, int $classId): array - Gets grades for a specific student in a class
- *
- * Attendance and Justification Functions:
- * - getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null): array - Gets attendance records for a student
- * - parentHasAccessToJustification(int $attId): bool - Checks if parent has access to a justification
- * - getJustificationDetails(int $attId): ?array - Gets detailed information about a specific justification
- * - getStudentJustifications(int $studentId): array - Gets all justifications for a student
- *
- * Dashboard Widget Functions:
- * - renderParentAttendanceWidget(): string - Renders attendance summary widget for parents
- * - renderParentChildClassAveragesWidget(): string - Renders class averages widget for parent's children
+ * Provides parent-specific helper functions and dashboard widgets.
+ * Core attendance, grade, and justification functions are now in /includes/functions.php.
  */
 
 require_once __DIR__ . '/../includes/db.php';
@@ -45,10 +25,9 @@ function getParentId(): ?int
 
     try {
         $pdo = safeGetDBConnection('getParentId');
-
         if ($pdo === null) {
             logDBError("Failed to establish database connection in getParentId");
-            sendJsonErrorResponse("Database connection error", 500, "getParentId");
+            return null;
         }
 
         $stmt = $pdo->prepare("SELECT parent_id FROM parents WHERE user_id = ?");
@@ -59,7 +38,7 @@ function getParentId(): ?int
         return $result ? (int)$result['parent_id'] : null;
     } catch (PDOException $e) {
         logDBError("Error in getParentId: " . $e->getMessage());
-        sendJsonErrorResponse("Database error in getParentId: " . $e->getMessage(), 500, "getParentId");
+        return null;
     }
 }
 
@@ -77,10 +56,9 @@ function getParentStudents(?int $parentId = null): array
 
     try {
         $pdo = safeGetDBConnection('getParentStudents');
-
         if ($pdo === null) {
             logDBError("Failed to establish database connection in getParentStudents");
-            sendJsonErrorResponse("Database connection error", 500, "getParentStudents");
+            return [];
         }
 
         $query = "
@@ -99,7 +77,7 @@ function getParentStudents(?int $parentId = null): array
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         logDBError("Error in getParentStudents: " . $e->getMessage());
-        sendJsonErrorResponse("Database error in getParentStudents: " . $e->getMessage(), 500, "getParentStudents");
+        return [];
     }
 }
 
@@ -118,15 +96,14 @@ function parentHasAccessToStudent(int $studentId, ?int $parentId = null): bool
 
     try {
         $pdo = safeGetDBConnection('parentHasAccessToStudent');
-
         if ($pdo === null) {
             logDBError("Failed to establish database connection in parentHasAccessToStudent");
-            sendJsonErrorResponse("Database connection error", 500, "parentHasAccessToStudent");
+            return false;
         }
 
         $stmt = $pdo->prepare("
-            SELECT COUNT(*) as count 
-            FROM student_parent 
+            SELECT COUNT(*) as count
+            FROM student_parent
             WHERE student_id = ? AND parent_id = ?
         ");
         $stmt->execute([$studentId, $parentId]);
@@ -136,7 +113,7 @@ function parentHasAccessToStudent(int $studentId, ?int $parentId = null): bool
         return $result && $result['count'] > 0;
     } catch (PDOException $e) {
         logDBError("Error in parentHasAccessToStudent: " . $e->getMessage());
-        sendJsonErrorResponse("Database error in parentHasAccessToStudent: " . $e->getMessage(), 500, "parentHasAccessToStudent");
+        return false;
     }
 }
 
@@ -153,7 +130,6 @@ function getStudentClasses(int $studentId): array
 
     try {
         $pdo = safeGetDBConnection('getStudentClasses');
-
         if ($pdo === null) {
             logDBError("Failed to establish database connection in getStudentClasses");
             return [];
@@ -162,7 +138,7 @@ function getStudentClasses(int $studentId): array
         $query = "
             SELECT c.class_id, c.class_code, c.title as class_title,
                    e.enroll_id,
-                   cs.class_subject_id, 
+                   cs.class_subject_id,
                    s.subject_id, s.name as subject_name,
                    t.teacher_id,
                    CONCAT(u.username) as teacher_name
@@ -187,341 +163,7 @@ function getStudentClasses(int $studentId): array
 }
 
 /**
- * Get grades for a specific student in a class
- *
- * Retrieves all grades for a student in a specific class
- * grouped by subject
- *
- * @param int $studentId Student ID
- * @param int $classId Class ID
- * @return array Array of grade records grouped by subject
- */
-function getClassGrades(int $studentId, int $classId): array
-{
-    // Verify parent has access to this student
-    if (!parentHasAccessToStudent($studentId)) return [];
-
-    try {
-        $pdo = safeGetDBConnection('getClassGrades');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getClassGrades");
-            return [];
-        }
-
-        // Get enrollment ID
-        $stmt = $pdo->prepare("
-            SELECT enroll_id
-            FROM enrollments
-            WHERE student_id = ? AND class_id = ?
-        ");
-        $stmt->execute([$studentId, $classId]);
-
-        $enrollment = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$enrollment) return [];
-
-        $enrollId = $enrollment['enroll_id'];
-
-        // Get all subjects for this class
-        $stmt = $pdo->prepare("
-            SELECT cs.class_subject_id, s.subject_id, s.name as subject_name
-            FROM class_subjects cs
-            JOIN subjects s ON cs.subject_id = s.subject_id
-            WHERE cs.class_id = ?
-        ");
-        $stmt->execute([$classId]);
-
-        $subjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        $result = [];
-
-        // For each subject, get grade items and grades
-        foreach ($subjects as $subject) {
-            $subjectData = [
-                'subject_id' => $subject['subject_id'],
-                'subject_name' => $subject['subject_name'],
-                'grade_items' => [],
-                'average' => 0
-            ];
-
-            // Get grade items for this subject
-            $stmt = $pdo->prepare("
-                SELECT gi.item_id, gi.name, gi.max_points, gi.weight
-                FROM grade_items gi
-                WHERE gi.class_subject_id = ?
-            ");
-            $stmt->execute([$subject['class_subject_id']]);
-
-            $gradeItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $totalPoints = 0;
-            $totalMaxPoints = 0;
-            $totalWeight = 0;
-
-            // For each grade item, get student's grade
-            foreach ($gradeItems as $item) {
-                $stmt = $pdo->prepare("
-                    SELECT g.points, g.comment
-                    FROM grades g
-                    WHERE g.enroll_id = ? AND g.item_id = ?
-                ");
-                $stmt->execute([$enrollId, $item['item_id']]);
-
-                $grade = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                $itemData = [
-                    'item_id' => $item['item_id'],
-                    'name' => $item['name'],
-                    'max_points' => $item['max_points'],
-                    'weight' => $item['weight']
-                ];
-
-                if ($grade) {
-                    $itemData['points'] = $grade['points'];
-                    $itemData['comment'] = $grade['comment'];
-
-                    // Calculate weighted contribution to average
-                    $totalPoints += ($grade['points'] * $item['weight']);
-                    $totalMaxPoints += ($item['max_points'] * $item['weight']);
-                    $totalWeight += $item['weight'];
-                }
-
-                $subjectData['grade_items'][] = $itemData;
-            }
-
-            // Calculate subject average
-            if ($totalMaxPoints > 0) {
-                $subjectData['average'] = ($totalPoints / $totalMaxPoints) * 100;
-                $subjectData['weighted_average'] = $totalWeight > 0 ?
-                    ($totalPoints / $totalWeight) : 0;
-            }
-
-            $result[] = $subjectData;
-        }
-
-        return $result;
-    } catch (PDOException $e) {
-        logDBError("Error in getClassGrades: " . $e->getMessage());
-        return [];
-    }
-}
-
-/**
- * Get attendance records for a student
- *
- * Retrieves attendance records for a specific student
- * that the parent has access to
- *
- * @param int $studentId Student ID
- * @param string|null $startDate Optional start date for filtering (YYYY-MM-DD)
- * @param string|null $endDate Optional end date for filtering (YYYY-MM-DD)
- * @return array Array of attendance records
- */
-function getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null): array
-{
-    // Verify parent has access to this student
-    if (!parentHasAccessToStudent($studentId)) return [];
-
-    try {
-        $pdo = safeGetDBConnection('getStudentAttendance');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getStudentAttendance");
-            return [];
-        }
-
-        $params = [$studentId];
-        $dateCondition = '';
-
-        if ($startDate) {
-            $dateCondition .= " AND p.period_date >= ?";
-            $params[] = $startDate;
-        }
-
-        if ($endDate) {
-            $dateCondition .= " AND p.period_date <= ?";
-            $params[] = $endDate;
-        }
-
-        $query = "
-            SELECT a.att_id, a.status, a.justification, a.approved, a.reject_reason, 
-                   a.justification_file,
-                   p.period_id, p.period_date as date, p.period_label,
-                   c.class_code, c.title as class_title, c.class_id,
-                   s.name as subject_name, s.subject_id,
-                   CONCAT(c.title, ' - ', s.name) as class_name
-            FROM students st
-            JOIN enrollments e ON st.student_id = e.student_id
-            JOIN attendance a ON e.enroll_id = a.enroll_id
-            JOIN periods p ON a.period_id = p.period_id
-            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
-            JOIN classes c ON cs.class_id = c.class_id
-            JOIN subjects s ON cs.subject_id = s.subject_id
-            WHERE st.student_id = ? $dateCondition
-            ORDER BY p.period_date DESC, s.name
-        ";
-
-        $stmt = $pdo->prepare($query);
-        $stmt->execute($params);
-
-        $attendance = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Add status labels
-        foreach ($attendance as &$record) $record['status_label'] = getAttendanceStatusLabel($record['status']);
-
-        return $attendance;
-    } catch (PDOException $e) {
-        logDBError("Error in getStudentAttendance: " . $e->getMessage());
-        return [];
-    }
-}
-
-/**
- * Check if parent has access to a justification
- *
- * @param int $attId Attendance record ID
- * @return bool True if parent has access, false otherwise
- */
-function parentHasAccessToJustification(int $attId): bool
-{
-    try {
-        $pdo = safeGetDBConnection('parentHasAccessToJustification');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in parentHasAccessToJustification");
-            return false;
-        }
-
-        // First get the student ID for this attendance record
-        $stmt = $pdo->prepare("
-            SELECT s.student_id
-            FROM attendance a
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN students s ON e.student_id = s.student_id
-            WHERE a.att_id = ?
-        ");
-        $stmt->execute([$attId]);
-
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$result) return false;
-
-        // Now check if parent has access to this student
-        return parentHasAccessToStudent($result['student_id']);
-    } catch (PDOException $e) {
-        logDBError("Error in parentHasAccessToJustification: " . $e->getMessage());
-        return false;
-    }
-}
-
-/**
- * Get justification details
- *
- * Retrieves detailed information about a specific justification
- * that the parent has access to
- *
- * @param int $attId Attendance record ID
- * @return array|null Justification details or null if not found/no access
- */
-function getJustificationDetails(int $attId): ?array
-{
-    // Verify parent has access to this justification
-    if (!parentHasAccessToJustification($attId)) return null;
-
-    try {
-        $pdo = safeGetDBConnection('getJustificationDetails');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getJustificationDetails");
-            return null;
-        }
-
-        $query = "
-            SELECT a.att_id, a.status, a.justification, a.approved, a.reject_reason,
-                   a.justification_file,
-                   p.period_id, p.period_date, p.period_label,
-                   s.student_id, s.first_name, s.last_name,
-                   c.class_code, c.title as class_title,
-                   subj.name as subject_name
-            FROM attendance a
-            JOIN periods p ON a.period_id = p.period_id
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN students s ON e.student_id = s.student_id
-            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
-            JOIN classes c ON cs.class_id = c.class_id
-            JOIN subjects subj ON cs.subject_id = subj.subject_id
-            WHERE a.att_id = ?
-        ";
-
-        $stmt = $pdo->prepare($query);
-        $stmt->execute([$attId]);
-
-        $justification = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$justification) return null;
-
-        return $justification;
-    } catch (PDOException $e) {
-        logDBError("Error in getJustificationDetails: " . $e->getMessage());
-        return null;
-    }
-}
-
-/**
- * Get all justifications for a student
- *
- * Retrieves all justifications for absences submitted by a student
- * that the parent has access to
- *
- * @param int $studentId Student ID
- * @return array Array of justification records
- */
-function getStudentJustifications(int $studentId): array
-{
-    // Verify parent has access to this student
-    if (!parentHasAccessToStudent($studentId)) return [];
-
-    try {
-        $pdo = safeGetDBConnection('getStudentJustifications');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getStudentJustifications");
-            return [];
-        }
-
-        $query = "
-            SELECT a.att_id, a.justification as reason, a.approved, 
-                   p.period_date as absence_date,
-                   p.period_date as submitted_date,
-                   CASE 
-                      WHEN a.approved IS NULL THEN 'pending'
-                      WHEN a.approved = 1 THEN 'approved'
-                      ELSE 'rejected'
-                   END as status,
-                   a.reject_reason,
-                   subj.name as subject_name
-            FROM attendance a
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN periods p ON a.period_id = p.period_id
-            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
-            JOIN subjects subj ON cs.subject_id = subj.subject_id
-            WHERE e.student_id = ? AND a.justification IS NOT NULL
-            ORDER BY p.period_date DESC
-        ";
-
-        $stmt = $pdo->prepare($query);
-        $stmt->execute([$studentId]);
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        logDBError("Error in getStudentJustifications: " . $e->getMessage());
-        return [];
-    }
-}
-
-/**
- * Creates the HTML for the parent's dashboard widget, showing their children's attendance statistics and recent absences
+ * Creates the HTML for the parent's attendance dashboard widget
  *
  * @return string HTML content for the widget
  */
@@ -541,8 +183,8 @@ function renderParentAttendanceWidget(): string
         $html = '<div class="d-flex flex-column gap-lg" style="overflow-y: auto; max-height: 400px;">'; // Scrollable container for children
 
         if (empty($children)) $html .= renderPlaceholderWidget('Na vaš račun ni povezanih otrok.'); else foreach ($children as $child) {
-            // Fetch stats (simplified from original for brevity, assuming logic is sound)
-            $statsQuery = "SELECT COUNT(*) as total, SUM(IF(status = 'P', 1, 0)) as present, SUM(IF(status = 'A', 1, 0)) as absent, SUM(IF(status = 'L', 1, 0)) as late, SUM(IF(status = 'A' AND approved = 1, 1, 0)) as justified, SUM(IF(status = 'A' AND justification IS NOT NULL AND approved IS NULL, 1, 0)) as pending, SUM(IF(status = 'A' AND approved = 0, 1, 0)) as rejected FROM attendance a JOIN enrollments e ON a.enroll_id = e.enroll_id WHERE e.student_id = :student_id";
+            // Fetch stats (simplified)
+            $statsQuery = "SELECT COUNT(*) as total, SUM(IF(status = 'P', 1, 0)) as present, SUM(IF(status = 'A', 1, 0)) as absent, SUM(IF(status = 'L', 1, 0)) as late, SUM(IF(status = 'A' AND approved = 1, 1, 0)) as justified, SUM(IF(status = 'A' AND justification IS NOT NULL AND approved IS NULL, 1, 0)) as pending, SUM(IF(status = 'A' AND approved = 0, 1, 0)) as rejected, SUM(IF(status = 'A' AND justification IS NULL AND approved IS NULL, 1, 0)) as needs_justification FROM attendance a JOIN enrollments e ON a.enroll_id = e.enroll_id WHERE e.student_id = :student_id";
             $statsStmt = $db->prepare($statsQuery);
             $statsStmt->bindParam(':student_id', $child['student_id'], PDO::PARAM_INT);
             $statsStmt->execute();
@@ -610,7 +252,6 @@ function renderParentAttendanceWidget(): string
     }
 }
 
-
 /**
  * Creates the HTML for the parent's view of their child's class averages
  *
@@ -631,8 +272,8 @@ function renderParentChildClassAveragesWidget(): string
     $html = '<div class="d-flex flex-column gap-lg" style="overflow-y: auto; max-height: 400px;">'; // Scrollable container
 
     foreach ($children as $child) {
-        // Fetch grades (simplified from original, assuming logic is sound)
-        $query = "SELECT s.name AS subject_name, c.title AS class_title, AVG(CASE WHEN gi.max_points > 0 THEN (g.points / gi.max_points) * 100 END) AS student_avg_score, (SELECT AVG(CASE WHEN gi_c.max_points > 0 THEN (g_c.points / gi_c.max_points) * 100 END) FROM enrollments e_c JOIN grades g_c ON e_c.enroll_id = g_c.enroll_id JOIN grade_items gi_c ON g_c.item_id = gi_c.item_id WHERE gi_c.class_subject_id = cs.class_subject_id) AS class_avg_score FROM enrollments e JOIN classes c ON e.class_id = c.class_id JOIN class_subjects cs ON c.class_id = cs.class_id JOIN subjects s ON cs.subject_id = s.subject_id LEFT JOIN grade_items gi ON gi.class_subject_id = cs.class_subject_id LEFT JOIN grades g ON g.item_id = gi.item_id AND e.enroll_id = g.enroll_id WHERE e.student_id = :student_id GROUP BY s.subject_id, s.name, c.class_id, c.title, cs.class_subject_id ORDER BY s.name";
+        // Fetch grades (simplified)
+        $query = "SELECT s.name AS subject_name, c.title AS class_title, cs.class_subject_id, AVG(CASE WHEN g_student.points IS NOT NULL AND gi_student.max_points > 0 THEN (g_student.points / gi_student.max_points) * 100 END) AS student_avg_score, (SELECT AVG(CASE WHEN gi_class.max_points > 0 THEN (g_class.points / gi_class.max_points) * 100 END) FROM enrollments e_class JOIN grades g_class ON e_class.enroll_id = g_class.enroll_id JOIN grade_items gi_class ON g_class.item_id = gi_class.item_id WHERE gi_class.class_subject_id = cs.class_subject_id) AS class_avg_score FROM enrollments e JOIN classes c ON e.class_id = c.class_id JOIN class_subjects cs ON c.class_id = cs.class_id JOIN subjects s ON cs.subject_id = s.subject_id LEFT JOIN grade_items gi_student ON gi_student.class_subject_id = cs.class_subject_id LEFT JOIN grades g_student ON g_student.item_id = gi_student.item_id AND e.enroll_id = g_student.enroll_id WHERE e.student_id = :student_id GROUP BY s.subject_id, s.name, c.class_id, c.title, cs.class_subject_id ORDER BY s.name";
         $stmt = $db->prepare($query);
         $stmt->bindParam(':student_id', $child['student_id'], PDO::PARAM_INT);
         $stmt->execute();
@@ -648,18 +289,29 @@ function renderParentChildClassAveragesWidget(): string
         if (empty($childGrades) || !array_filter($childGrades, static fn($g) => $g['student_avg_score'] !== null)) $html .= '<div class="p-md text-center"><p class="m-0 text-secondary">Ni podatkov o ocenah.</p></div>'; else {
             $html .= '<div class="table-responsive">';
             $html .= '<table class="data-table w-100 text-sm">';
-            $html .= '<thead><tr><th>Predmet</th><th class="text-center">Povprečje</th><th class="text-center">Povprečje razreda</th></tr></thead>';
-            $html .= '<tbody>';
+            $html .= '<thead><tr><th>Predmet (Razred)</th><th class="text-center">Povprečje</th><th class="text-center">Povp. razreda</th><th class="text-center">Razlika</th></tr></thead><tbody>';
             foreach ($childGrades as $grade) {
                 if ($grade['student_avg_score'] === null && $grade['class_avg_score'] === null) continue;
-                $sAvg = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) . '%' : 'N/A';
-                $cAvg = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) . '%' : 'N/A';
-                $sClass = $grade['student_avg_score'] === null ? '' : ($grade['student_avg_score'] >= 80 ? 'grade-high' : ($grade['student_avg_score'] >= 60 ? 'grade-medium' : 'grade-low'));
-                $html .= '<tr>';
-                $html .= '<td>' . htmlspecialchars($grade['subject_name']) . '<br><small class="text-disabled">' . htmlspecialchars($grade['class_title']) . '</small></td>';
-                $html .= '<td class="text-center ' . $sClass . '">' . $sAvg . '</td>';
-                $html .= '<td class="text-center">' . $cAvg . '</td>';
-                $html .= '</tr>';
+                $sAvgF = $grade['student_avg_score'] !== null ? number_format($grade['student_avg_score'], 1) . '%' : 'N/A';
+                $cAvgF = $grade['class_avg_score'] !== null ? number_format($grade['class_avg_score'], 1) . '%' : 'N/A';
+                $sClass = '';
+                $compText = '-';
+                $compClass = 'text-secondary';
+                if ($grade['student_avg_score'] !== null) {
+                    $sClass = $grade['student_avg_score'] >= 80 ? 'grade-high' : ($grade['student_avg_score'] >= 60 ? 'grade-medium' : 'grade-low');
+                    if ($grade['class_avg_score'] !== null) {
+                        $diff = $grade['student_avg_score'] - $grade['class_avg_score'];
+                        $diffF = number_format($diff, 1);
+                        if ($diff > 2) {
+                            $compText = '+' . $diffF . '%';
+                            $compClass = 'text-success';
+                        } elseif ($diff < -2) {
+                            $compText = $diffF . '%';
+                            $compClass = 'text-error';
+                        } else $compText = '≈';
+                    }
+                }
+                $html .= '<tr><td>' . htmlspecialchars($grade['subject_name']) . '<br><small class="text-disabled">' . htmlspecialchars($grade['class_title']) . '</small></td><td class="text-center ' . $sClass . '">' . $sAvgF . '</td><td class="text-center">' . $cAvgF . '</td><td class="text-center ' . $compClass . '">' . $compText . '</td></tr>';
             }
             $html .= '</tbody></table></div>';
         }

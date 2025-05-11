@@ -158,9 +158,9 @@ function getRoleName(?int $roleId): string
 
     $roleNames = [
         ROLE_ADMIN => 'Administrator',
-        ROLE_TEACHER => 'Teacher',
-        ROLE_STUDENT => 'Student',
-        ROLE_PARENT => 'Parent/Guardian'
+        ROLE_TEACHER => 'Učitelj',
+        ROLE_STUDENT => 'Dijak',
+        ROLE_PARENT => 'Starš/Skrbnik'
     ];
 
     if (isset($roleNames[$roleId])) return $roleNames[$roleId];
@@ -171,14 +171,14 @@ function getRoleName(?int $roleId): string
         $pdo = safeGetDBConnection('getRoleName');
         if ($pdo === null) {
             logDBError("Failed to establish database connection in getRoleName");
-            return 'Unknown';
+            return 'Neznano';
         }
 
         $stmt = $pdo->prepare("SELECT name FROM roles WHERE role_id = ? LIMIT 1");
         $stmt->execute([$roleId]);
         $role = $stmt->fetch();
 
-        return $role ? $role['name'] : 'Unknown';
+        return $role ? $role['name'] : 'Neznano';
     } catch (PDOException $e) {
         logDBError("Error in getRoleName: " . $e->getMessage());
         return 'Unknown';

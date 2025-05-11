@@ -39,6 +39,7 @@
  */
 
 require_once __DIR__ . '/auth.php';
+require_once __DIR__ . '/db.php';
 
 /**
  * Retrieves comprehensive user profile with role-specific data (teacher_id, student
@@ -626,38 +627,6 @@ function getGradeLetter(float $percentage): string
 }
 
 /**
- * Get information about a saved justification file
- *
- * @param int $absenceId Attendance record ID
- * @return string|null Filename or null if no file exists
- */
-function getJustificationFileInfo(int $absenceId): ?string
-{
-    try {
-        $pdo = safeGetDBConnection('getJustificationFileInfo');
-
-        if ($pdo === null) {
-            logDBError("Failed to establish database connection in getJustificationFileInfo");
-            return null;
-        }
-
-        $stmt = $pdo->prepare("
-            SELECT justification_file
-            FROM attendance
-            WHERE att_id = ?
-        ");
-        $stmt->execute([$absenceId]);
-
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $result && isset($result['justification_file']) && $result['justification_file'] ? $result['justification_file'] : null;
-    } catch (PDOException $e) {
-        logDBError("Error in getJustificationFileInfo: " . $e->getMessage());
-        return null;
-    }
-}
-
-/**
  * Validates date format (YYYY-MM-DD)
  *
  * @param string $date Date string to validate
@@ -761,4 +730,1150 @@ function renderHeaderCard(string $title, string $description, string $role, ?str
         </div>
     </div>
 HTML;
+}
+
+/****************************
+ * ATTENDANCE FUNCTIONS
+ ****************************/
+
+/**
+ * Gets attendance records for a student with optional date filtering
+ *
+ * @param int $studentId Student ID to retrieve attendance for
+ * @param string|null $startDate Optional start date for filtering (YYYY-MM-DD format)
+ * @param string|null $endDate Optional end date for filtering (YYYY-MM-DD format)
+ * @param bool $checkAccess Whether to check if current user has access to this student's data
+ * @return array Array of attendance records
+ */
+function getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null, bool $checkAccess = true): array
+{
+    // Check if current user has access to this student's data
+    if ($checkAccess) {
+        $userId = getUserId();
+        $userRole = getUserRole();
+
+        if (!$userId || !$userRole) return [];
+
+        // Student can only access their own data
+        if ($userRole === ROLE_STUDENT) {
+            $currentStudentId = getStudentId();
+            if ($currentStudentId !== $studentId) return [];
+        }
+
+        // Parent can only access their children's data
+        if ($userRole === ROLE_PARENT && !parentHasAccessToStudent($studentId)) return [];
+
+        // Teacher and admin can access all student data
+    }
+
+    try {
+        $pdo = safeGetDBConnection('getStudentAttendance');
+        if ($pdo === null) return [];
+
+        $params = [$studentId];
+        $dateCondition = '';
+
+        if ($startDate) {
+            $dateCondition .= " AND p.period_date >= ?";
+            $params[] = $startDate;
+        }
+
+        if ($endDate) {
+            $dateCondition .= " AND p.period_date <= ?";
+            $params[] = $endDate;
+        }
+
+        $query = "
+            SELECT a.att_id, a.status, a.justification, a.approved, a.reject_reason,
+                   a.justification_file,
+                   p.period_id, p.period_date as date, p.period_label,
+                   c.class_code, c.title as class_title, c.class_id,
+                   s.name as subject_name, s.subject_id,
+                   CONCAT(c.title, ' - ', s.name) as class_name
+            FROM students st
+            JOIN enrollments e ON st.student_id = e.student_id
+            JOIN attendance a ON e.enroll_id = a.enroll_id
+            JOIN periods p ON a.period_id = p.period_id
+            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+            JOIN classes c ON cs.class_id = c.class_id
+            JOIN subjects s ON cs.subject_id = s.subject_id
+            WHERE st.student_id = ? $dateCondition
+            ORDER BY p.period_date DESC, p.period_label";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute($params);
+
+        $attendance = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Add status labels
+        foreach ($attendance as &$record) $record['status_label'] = getAttendanceStatusLabel($record['status']);
+
+        return $attendance;
+    } catch (PDOException $e) {
+        logDBError("Error in getStudentAttendance: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Retrieves attendance status for all students in a period
+ *
+ * @param int $periodId Period ID to retrieve attendance for
+ * @return array Array of attendance records with student details
+ */
+function getPeriodAttendance(int $periodId): array
+{
+    try {
+        $pdo = safeGetDBConnection('getPeriodAttendance');
+        if ($pdo === null) return [];
+
+        // Get class_subject_id for this period
+        $stmt = $pdo->prepare("
+            SELECT class_subject_id
+            FROM periods
+            WHERE period_id = ?
+        ");
+        $stmt->execute([$periodId]);
+        $period = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$period || !isset($period['class_subject_id'])) return [];
+
+        // Check if teacher has access to this class-subject
+        if (getUserRole() === ROLE_TEACHER && !teacherHasAccessToClassSubject($period['class_subject_id'])) return [];
+
+        $query = "
+            SELECT a.att_id, a.enroll_id, a.status, a.justification, a.approved,
+                   a.reject_reason, a.justification_file,
+                   s.student_id, s.first_name, s.last_name, e.class_id
+            FROM periods p
+            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+            JOIN enrollments e ON cs.class_id = e.class_id
+            LEFT JOIN attendance a ON e.enroll_id = a.enroll_id AND a.period_id = p.period_id
+            JOIN students s ON e.student_id = s.student_id
+            WHERE p.period_id = ?
+            ORDER BY s.last_name, s.first_name
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$periodId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getPeriodAttendance: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Creates a new period entry and initializes attendance records for all enrolled students
+ *
+ * @param int $classSubjectId Class-Subject ID
+ * @param string $periodDate Date in YYYY-MM-DD format
+ * @param string $periodLabel Label for the period (e.g., "1", "2", etc.)
+ * @return int|false Period ID on success, false on failure
+ */
+function addPeriod(int $classSubjectId, string $periodDate, string $periodLabel): int|false
+{
+    // Verify date format
+    if (!validateDate($periodDate)) {
+        logDBError("Invalid date format in addPeriod: $periodDate");
+        return false;
+    }
+
+    // Check if current user is a teacher and has access to this class-subject
+    if (getUserRole() === ROLE_TEACHER && !teacherHasAccessToClassSubject($classSubjectId)) return false;
+
+    try {
+        $pdo = safeGetDBConnection('addPeriod');
+        if ($pdo === null) return false;
+
+        $pdo->beginTransaction();
+
+        // Create the period
+        $stmt = $pdo->prepare("
+            INSERT INTO periods (class_subject_id, period_date, period_label)
+            VALUES (?, ?, ?)
+        ");
+        $stmt->execute([$classSubjectId, $periodDate, $periodLabel]);
+
+        $periodId = (int)$pdo->lastInsertId();
+
+        // Get the class ID for this class-subject
+        $stmt = $pdo->prepare("
+            SELECT class_id
+            FROM class_subjects
+            WHERE class_subject_id = ?
+        ");
+        $stmt->execute([$classSubjectId]);
+        $classSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$classSubject) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        // Get all enrollments for this class
+        $stmt = $pdo->prepare("
+            SELECT enroll_id
+            FROM enrollments
+            WHERE class_id = ?
+        ");
+        $stmt->execute([$classSubject['class_id']]);
+        $enrollments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Initialize attendance records for all enrolled students
+        $stmt = $pdo->prepare("
+            INSERT INTO attendance (enroll_id, period_id, status)
+            VALUES (?, ?, 'P')
+        ");
+
+        foreach ($enrollments as $enrollment) $stmt->execute([$enrollment['enroll_id'], $periodId]);
+
+        $pdo->commit();
+        return $periodId;
+    } catch (PDOException $e) {
+        if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
+        logDBError("Error in addPeriod: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Updates or creates an attendance record for a student in a specific period
+ *
+ * @param int $enrollId Enrollment ID
+ * @param int $periodId Period ID
+ * @param string $status Attendance status (P, A, L)
+ * @return bool Success or failure
+ */
+function saveAttendance(int $enrollId, int $periodId, string $status): bool
+{
+    // Validate status
+    if (!in_array($status, ['P', 'A', 'L'], true)) return false;
+
+    try {
+        $pdo = safeGetDBConnection('saveAttendance');
+        if ($pdo === null) return false;
+
+        // First verify teacher has access to this period
+        $stmt = $pdo->prepare("
+            SELECT p.class_subject_id
+            FROM periods p
+            WHERE p.period_id = ?
+        ");
+        $stmt->execute([$periodId]);
+        $period = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$period) return false;
+
+        // Check if current user is a teacher and has access to this class-subject
+        if (getUserRole() === ROLE_TEACHER && !teacherHasAccessToClassSubject($period['class_subject_id'])) return false;
+
+        // Check if attendance record already exists
+        $stmt = $pdo->prepare("
+            SELECT att_id
+            FROM attendance
+            WHERE enroll_id = ? AND period_id = ?
+        ");
+        $stmt->execute([$enrollId, $periodId]);
+        $attendance = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($attendance) {
+            // Update existing record
+            $stmt = $pdo->prepare("
+                UPDATE attendance
+                SET status = ?
+                WHERE enroll_id = ? AND period_id = ?
+            ");
+            $stmt->execute([$status, $enrollId, $periodId]);
+        } else {
+            // Create new record
+            $stmt = $pdo->prepare("
+                INSERT INTO attendance (enroll_id, period_id, status)
+                VALUES (?, ?, ?)
+            ");
+            $stmt->execute([$enrollId, $periodId, $status]);
+        }
+
+        return true;
+    } catch (PDOException $e) {
+        logDBError("Error in saveAttendance: " . $e->getMessage());
+        return false;
+    }
+}
+
+/****************************
+ * GRADE FUNCTIONS
+ ****************************/
+
+/**
+ * Retrieves all grade items defined for a specific class-subject
+ *
+ * @param int $classSubjectId Class-Subject ID
+ * @return array Array of grade item records
+ */
+function getGradeItems(int $classSubjectId): array
+{
+    // Verify teacher has access to this class-subject if user is a teacher
+    if (getUserRole() === ROLE_TEACHER && !teacherHasAccessToClassSubject($classSubjectId)) return [];
+
+    try {
+        $pdo = safeGetDBConnection('getGradeItems');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT item_id, name, max_points, weight
+            FROM grade_items
+            WHERE class_subject_id = ?
+            ORDER BY item_id
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$classSubjectId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getGradeItems: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Retrieves grades for all students and grade items in a class-subject
+ *
+ * @param int $classSubjectId Class-Subject ID
+ * @return array Array of grade records grouped by student with grade items and grades
+ */
+function getClassGrades(int $classSubjectId): array
+{
+    // Verify teacher has access to this class-subject if user is a teacher
+    if (getUserRole() === ROLE_TEACHER && !teacherHasAccessToClassSubject($classSubjectId)) return [];
+
+    try {
+        $pdo = safeGetDBConnection('getClassGrades');
+        if ($pdo === null) return [];
+
+        // Get class ID for this class-subject
+        $stmt = $pdo->prepare("
+            SELECT class_id
+            FROM class_subjects
+            WHERE class_subject_id = ?
+        ");
+        $stmt->execute([$classSubjectId]);
+        $classSubject = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$classSubject || !isset($classSubject['class_id'])) return [];
+
+        // Get all students in this class
+        $students = getClassStudents($classSubject['class_id']);
+
+        // Get all grade items for this class-subject
+        $gradeItems = getGradeItems($classSubjectId);
+
+        $result = [
+            'students' => $students,
+            'grade_items' => $gradeItems,
+            'grades' => []
+        ];
+
+        // Get all grades for these students and grade items
+        $stmt = $pdo->prepare("
+            SELECT g.grade_id, g.enroll_id, g.item_id, g.points, g.comment
+            FROM grades g
+            JOIN enrollments e ON g.enroll_id = e.enroll_id
+            WHERE e.class_id = ? AND g.item_id IN (
+                SELECT item_id FROM grade_items WHERE class_subject_id = ?
+            )
+        ");
+        $stmt->execute([$classSubject['class_id'], $classSubjectId]);
+        $grades = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Organize grades by enrollment and item
+        foreach ($grades as $grade) {
+            if (!isset($result['grades'][$grade['enroll_id']])) $result['grades'][$grade['enroll_id']] = [];
+            $result['grades'][$grade['enroll_id']][$grade['item_id']] = [
+                'points' => $grade['points'],
+                'comment' => $grade['comment']
+            ];
+        }
+
+        return $result;
+    } catch (PDOException $e) {
+        logDBError("Error in getClassGrades: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Creates a new grade item entry for a class-subject
+ *
+ * @param int $classSubjectId Class-Subject ID
+ * @param string $name Name of the grade item
+ * @param float $maxPoints Maximum points possible
+ * @param float $weight Weight of the grade item (default: 1.00)
+ * @return int|false Grade item ID on success, false on failure
+ */
+function addGradeItem(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): int|false
+{
+    // Check if current user is a teacher and has access to this class-subject
+    if (getUserRole() === ROLE_TEACHER && !teacherHasAccessToClassSubject($classSubjectId)) return false;
+
+    try {
+        $pdo = safeGetDBConnection('addGradeItem');
+        if ($pdo === null) return false;
+
+        $stmt = $pdo->prepare("
+            INSERT INTO grade_items (class_subject_id, name, max_points, weight)
+            VALUES (?, ?, ?, ?)
+        ");
+        $stmt->execute([$classSubjectId, $name, $maxPoints, $weight]);
+
+        return (int)$pdo->lastInsertId();
+    } catch (PDOException $e) {
+        logDBError("Error in addGradeItem: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Updates or creates a grade record for a student and grade item
+ *
+ * @param int $enrollId Enrollment ID
+ * @param int $itemId Grade Item ID
+ * @param float $points Points earned
+ * @param string|null $comment Optional comment/feedback
+ * @return bool Success or failure
+ */
+function saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool
+{
+    try {
+        $pdo = safeGetDBConnection('saveGrade');
+        if ($pdo === null) return false;
+
+        // Verify teacher has access to this grade item
+        $stmt = $pdo->prepare("
+            SELECT gi.class_subject_id
+            FROM grade_items gi
+            WHERE gi.item_id = ?
+        ");
+        $stmt->execute([$itemId]);
+        $gradeItem = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$gradeItem) return false;
+
+        // Check if current user is a teacher and has access to this class-subject
+        if (getUserRole() === ROLE_TEACHER && !teacherHasAccessToClassSubject($gradeItem['class_subject_id'])) return false;
+
+        // Check if points exceed maximum
+        $stmt = $pdo->prepare("SELECT max_points FROM grade_items WHERE item_id = ?");
+        $stmt->execute([$itemId]);
+        $maxPoints = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$maxPoints || $points > $maxPoints['max_points']) return false;
+
+        // Check if grade already exists
+        $stmt = $pdo->prepare("
+            SELECT grade_id
+            FROM grades
+            WHERE enroll_id = ? AND item_id = ?
+        ");
+        $stmt->execute([$enrollId, $itemId]);
+        $grade = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($grade) {
+            // Update existing grade
+            $stmt = $pdo->prepare("
+                UPDATE grades
+                SET points = ?, comment = ?
+                WHERE enroll_id = ? AND item_id = ?
+            ");
+            $stmt->execute([$points, $comment, $enrollId, $itemId]);
+        } else {
+            // Create new grade
+            $stmt = $pdo->prepare("
+                INSERT INTO grades (enroll_id, item_id, points, comment)
+                VALUES (?, ?, ?, ?)
+            ");
+            $stmt->execute([$enrollId, $itemId, $points, $comment]);
+        }
+
+        return true;
+    } catch (PDOException $e) {
+        logDBError("Error in saveGrade: " . $e->getMessage());
+        return false;
+    }
+}
+
+/****************************
+ * JUSTIFICATION FUNCTIONS
+ ****************************/
+
+/**
+ * Get information about a saved justification file
+ *
+ * @param int $absenceId Attendance record ID
+ * @return string|null Filename or null if no file exists or access denied
+ */
+function getJustificationFileInfo(int $absenceId): ?string
+{
+    try {
+        $pdo = safeGetDBConnection('getJustificationFileInfo');
+        if ($pdo === null) return null;
+
+        // Get the student ID for this absence to check access
+        $stmt = $pdo->prepare("
+            SELECT s.student_id
+            FROM attendance a
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            JOIN students s ON e.student_id = s.student_id
+            WHERE a.att_id = ?
+        ");
+        $stmt->execute([$absenceId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$result) return null;
+
+        $userRole = getUserRole();
+
+        // Access control based on role
+        if ($userRole === ROLE_STUDENT) {
+            $currentStudentId = getStudentId();
+            if ($currentStudentId !== $result['student_id']) return null;
+        } else if ($userRole === ROLE_PARENT) if (!parentHasAccessToStudent($result['student_id'])) return null; else
+            // Admin can access all files
+
+            // Get the file info
+            $stmt = $pdo->prepare("
+            SELECT justification_file
+            FROM attendance
+            WHERE att_id = ?
+        ");
+        $stmt->execute([$absenceId]);
+        $fileInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $fileInfo && !empty($fileInfo['justification_file']) ? $fileInfo['justification_file'] : null;
+    } catch (PDOException $e) {
+        logDBError("Error in getJustificationFileInfo: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Upload justification for an absence
+ *
+ * @param int $absenceId Absence ID
+ * @param string $justification Justification text
+ * @return bool Success status
+ */
+function uploadJustification(int $absenceId, string $justification): bool
+{
+    // Check if user is logged in
+    $userId = getUserId();
+    if (!$userId) return false;
+
+    try {
+        $pdo = safeGetDBConnection('uploadJustification');
+        if ($pdo === null) return false;
+
+        // Verify the current user (student) owns this absence record
+        $verifyQuery = "
+            SELECT a.att_id
+            FROM attendance a
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            JOIN students s ON e.student_id = s.student_id
+            WHERE a.att_id = :absence_id
+            AND s.user_id = :user_id";
+
+        $verifyStmt = $pdo->prepare($verifyQuery);
+        $verifyStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
+        $verifyStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $verifyStmt->execute();
+
+        if ($verifyStmt->rowCount() === 0) {
+            error_log("User $userId attempted to upload justification for unowned absence ID $absenceId.");
+            return false; // User does not own this absence record
+        }
+
+        // Proceed with update
+        $updateQuery = "
+            UPDATE attendance
+            SET justification = :justification,
+                approved = NULL, -- Reset approval status when new justification is submitted
+                reject_reason = NULL -- Clear previous rejection reason
+            WHERE att_id = :absence_id";
+
+        $updateStmt = $pdo->prepare($updateQuery);
+        $updateStmt->bindParam(':justification', $justification);
+        $updateStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
+
+        return $updateStmt->execute();
+    } catch (PDOException $e) {
+        logDBError("PDOException in uploadJustification for absence ID $absenceId: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Validate justification file
+ *
+ * @param array $file Uploaded file data from $_FILES superglobal
+ * @return bool Validation result
+ */
+function validateJustificationFile(array $file): bool
+{
+    // Check for upload errors
+    if (!isset($file['error']) || is_array($file['error'])) {
+        error_log("Invalid parameters received for file upload validation.");
+        return false; // Invalid parameters
+    }
+
+    switch ($file['error']) {
+        case UPLOAD_ERR_OK:
+            break; // No error, continue validation
+        case UPLOAD_ERR_NO_FILE:
+            error_log("No file sent during justification upload.");
+            return false; // Or handle as needed, maybe allow text-only justification
+        case UPLOAD_ERR_INI_SIZE:
+        case UPLOAD_ERR_FORM_SIZE:
+            error_log("Exceeded filesize limit during justification upload.");
+            return false;
+        default:
+            error_log("Unknown upload error: " . $file['error']);
+            return false;
+    }
+
+    // Check file size (e.g., 5MB maximum)
+    $maxSize = 5 * 1024 * 1024;
+    if (!isset($file['size']) || $file['size'] > $maxSize) {
+        error_log("File size exceeds limit ($maxSize bytes) or size not available.");
+        return false;
+    }
+    if ($file['size'] === 0) {
+        error_log("Uploaded file is empty.");
+        return false;
+    }
+
+    // Check MIME type
+    $allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
+    if (!isset($file['tmp_name']) || !file_exists($file['tmp_name'])) {
+        error_log("Temporary file path is missing or file does not exist.");
+        return false;
+    }
+
+    try {
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($file['tmp_name']);
+
+        if ($mimeType === false) {
+            error_log("Could not determine MIME type for uploaded file.");
+            return false; // Could not determine type
+        }
+
+        if (!in_array($mimeType, $allowedTypes, true)) {
+            error_log("Invalid file type uploaded: " . $mimeType);
+            return false; // Disallowed type
+        }
+    } catch (Exception $e) {
+        error_log("Error checking file MIME type: " . $e->getMessage());
+        return false;
+    }
+
+    return true; // File is valid
+}
+
+/**
+ * Save uploaded justification file
+ *
+ * @param array $file Uploaded file data from $_FILES
+ * @param int $absenceId Absence ID
+ * @return string|false Returns the saved filename on success, false on failure
+ */
+function saveJustificationFile(array $file, int $absenceId): string|false
+{
+    // First, validate the file
+    if (!validateJustificationFile($file)) {
+        error_log("Justification file validation failed for absence ID $absenceId.");
+        return false;
+    }
+
+    // Check if user is logged in
+    $userId = getUserId();
+    if (!$userId) {
+        error_log("User ID not found in session during justification file save.");
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('saveJustificationFile');
+        if ($pdo === null) return false;
+
+        // Verify the current user (student) owns this absence record
+        $verifyQuery = "
+            SELECT a.att_id, a.justification_file
+            FROM attendance a
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            JOIN students s ON e.student_id = s.student_id
+            WHERE a.att_id = :absence_id
+            AND s.user_id = :user_id";
+
+        $verifyStmt = $pdo->prepare($verifyQuery);
+        $verifyStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
+        $verifyStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $verifyStmt->execute();
+        $attendanceRecord = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$attendanceRecord) {
+            error_log("User $userId attempted to save justification file for unowned absence ID $absenceId.");
+            return false; // User does not own this absence record
+        }
+
+        // Set up upload directory
+        $projectRoot = dirname(__DIR__);
+        $uploadDir = $projectRoot . '/uploads/justifications/';
+
+        // Ensure the upload directory exists and is writable
+        if (!is_dir($uploadDir)) if (!mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+            error_log(sprintf('Failed to create upload directory: "%s"', $uploadDir));
+            return false; // Directory creation failed
+        }
+
+        if (!is_writable($uploadDir)) {
+            error_log(sprintf('Upload directory is not writable: "%s"', $uploadDir));
+            return false;
+        }
+
+        // Generate a unique filename
+        $originalName = $file['name'];
+        $fileExtension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        $safeExtension = preg_replace('/[^a-z0-9]/', '', $fileExtension);
+        if (empty($safeExtension)) $safeExtension = 'bin';
+
+        $newFilename = 'justification_' . $absenceId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $safeExtension;
+        $targetPath = $uploadDir . $newFilename;
+
+        // Move the uploaded file
+        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+            error_log("Failed to move uploaded file to $targetPath.");
+            return false;
+        }
+
+        // Delete old file if it exists
+        $oldFilename = $attendanceRecord['justification_file'];
+        if (!empty($oldFilename)) {
+            $oldFilePath = $uploadDir . $oldFilename;
+            if (file_exists($oldFilePath)) unlink($oldFilePath);
+        }
+
+        // Update the database record
+        $updateQuery = "
+            UPDATE attendance
+            SET justification_file = :filename,
+                approved = NULL,
+                reject_reason = NULL
+            WHERE att_id = :absence_id";
+
+        $updateStmt = $pdo->prepare($updateQuery);
+        $updateStmt->bindParam(':filename', $newFilename);
+        $updateStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
+
+        if ($updateStmt->execute()) return $newFilename; else {
+            error_log("Database update failed after saving justification file $newFilename for absence ID $absenceId.");
+            if (file_exists($targetPath)) unlink($targetPath);
+            return false;
+        }
+    } catch (PDOException $e) {
+        logDBError("Error in saveJustificationFile for absence ID $absenceId: " . $e->getMessage());
+        if (isset($targetPath) && file_exists($targetPath)) unlink($targetPath);
+        return false;
+    } catch (Exception $e) {
+        error_log("General Exception in saveJustificationFile for absence ID $absenceId: " . $e->getMessage());
+        if (isset($targetPath) && file_exists($targetPath)) unlink($targetPath);
+        return false;
+    }
+}
+
+/**
+ * Retrieves all absence justifications pending approval for classes taught by a specific teacher
+ *
+ * @param int|null $teacherId Teacher ID (null for current user)
+ * @return array Array of pending justification records
+ */
+function getPendingJustifications(?int $teacherId = null): array
+{
+    if ($teacherId === null) $teacherId = getTeacherId();
+
+    if (!$teacherId) return [];
+
+    try {
+        $pdo = safeGetDBConnection('getPendingJustifications');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT a.att_id, a.status, a.justification, a.justification_file,
+                   p.period_id, p.period_date, p.period_label,
+                   s.first_name, s.last_name, s.student_id,
+                   c.class_code, c.title as class_title,
+                   subj.name as subject_name
+            FROM attendance a
+            JOIN periods p ON a.period_id = p.period_id
+            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            JOIN students s ON e.student_id = s.student_id
+            JOIN classes c ON e.class_id = c.class_id
+            JOIN subjects subj ON cs.subject_id = subj.subject_id
+            WHERE cs.teacher_id = ?
+              AND a.status = 'A'
+              AND a.justification IS NOT NULL
+              AND a.approved IS NULL
+            ORDER BY p.period_date DESC, c.class_code
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$teacherId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getPendingJustifications: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Get detailed information about a specific justification
+ *
+ * @param int $absenceId Attendance record ID
+ * @return array|null Justification details or null if not found or no access
+ */
+function getJustificationById(int $absenceId): ?array
+{
+    try {
+        $pdo = safeGetDBConnection('getJustificationById');
+        if ($pdo === null) return null;
+
+        $query = "
+            SELECT a.att_id, a.status, a.justification, a.justification_file,
+                   p.period_id, p.period_date, p.period_label,
+                   s.first_name, s.last_name, s.student_id,
+                   c.class_code, c.title as class_title,
+                   subj.name as subject_name,
+                   cs.class_subject_id, cs.teacher_id
+            FROM attendance a
+            JOIN periods p ON a.period_id = p.period_id
+            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            JOIN students s ON e.student_id = s.student_id
+            JOIN classes c ON e.class_id = c.class_id
+            JOIN subjects subj ON cs.subject_id = subj.subject_id
+            WHERE a.att_id = ?
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$absenceId]);
+
+        $justification = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$justification) return null;
+
+        // Access control based on role
+        $userRole = getUserRole();
+
+        if ($userRole === ROLE_TEACHER) {
+            $teacherId = getTeacherId();
+            if ($teacherId === null || $justification['teacher_id'] != $teacherId) return null;
+        } else if ($userRole === ROLE_STUDENT) {
+            $studentId = getStudentId();
+            if ($studentId !== $justification['student_id']) return null;
+        } else if ($userRole === ROLE_PARENT) if (!parentHasAccessToStudent($justification['student_id'])) return null;
+        // Admin can access all justifications
+
+        return $justification;
+    } catch (PDOException $e) {
+        logDBError("Error in getJustificationById: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Sets the approved flag to true for an absence justification
+ *
+ * @param int $absenceId Attendance record ID
+ * @return bool Success or failure
+ */
+function approveJustification(int $absenceId): bool
+{
+    // Verify teacher has access to this justification
+    $justification = getJustificationById($absenceId);
+    if (!$justification) return false;
+
+    try {
+        $pdo = safeGetDBConnection('approveJustification');
+        if ($pdo === null) return false;
+
+        $stmt = $pdo->prepare("
+            UPDATE attendance
+            SET approved = 1, reject_reason = NULL
+            WHERE att_id = ?
+        ");
+        $stmt->execute([$absenceId]);
+
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        logDBError("Error in approveJustification: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Sets the approved flag to false and adds a rejection reason
+ *
+ * @param int $absenceId Attendance record ID
+ * @param string $reason Reason for rejection
+ * @return bool Success or failure
+ */
+function rejectJustification(int $absenceId, string $reason): bool
+{
+    // Verify teacher has access to this justification
+    $justification = getJustificationById($absenceId);
+    if (!$justification) return false;
+
+    if (empty($reason)) return false;
+
+    try {
+        $pdo = safeGetDBConnection('rejectJustification');
+        if ($pdo === null) return false;
+
+        $stmt = $pdo->prepare("
+            UPDATE attendance
+            SET approved = 0, reject_reason = ?
+            WHERE att_id = ?
+        ");
+        $stmt->execute([$reason, $absenceId]);
+
+        return $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        logDBError("Error in rejectJustification: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Gets attendance records for a student on a specific date
+ *
+ * @param int $studentId Student ID
+ * @param string $date Date in YYYY-MM-DD format
+ * @return array Array of attendance records
+ */
+function getStudentAttendanceByDate(int $studentId, string $date): array
+{
+    try {
+        $pdo = safeGetDBConnection('getStudentAttendanceByDate');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT a.att_id, a.status, a.justification,
+                   p.period_date as date, p.period_label,
+                   s.name as subject_name
+            FROM attendance a
+            JOIN periods p ON a.period_id = p.period_id
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+            JOIN subjects s ON cs.subject_id = s.subject_id
+            WHERE e.student_id = ?
+            AND DATE(p.period_date) = ?
+            ORDER BY p.period_date, p.period_label
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$studentId, $date]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getStudentAttendanceByDate: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Retrieves all students enrolled in a specific class
+ *
+ * @param int $classId Class ID to retrieve students for
+ * @return array Array of student records
+ */
+function getClassStudents(int $classId): array
+{
+    try {
+        $pdo = safeGetDBConnection('getClassStudents');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT e.enroll_id, s.student_id, s.first_name, s.last_name,
+                   u.username, u.user_id
+            FROM enrollments e
+            JOIN students s ON e.student_id = s.student_id
+            JOIN users u ON s.user_id = u.user_id
+            WHERE e.class_id = ?
+            ORDER BY s.last_name, s.first_name
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$classId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getClassStudents: " . $e->getMessage());
+        return [];
+    }
+}
+
+/****************************
+ * API HANDLER FUNCTIONS
+ ****************************/
+
+/**
+ * API handler for saving attendance record
+ *
+ * @return void Outputs JSON response
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleSaveAttendanceApi(): void
+{
+    // Ensure POST request with required parameters
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'attendance.php/handleSaveAttendanceApi');
+
+    // Extract and validate request parameters
+    $enrollId = filter_input(INPUT_POST, 'enroll_id', FILTER_VALIDATE_INT);
+    $periodId = filter_input(INPUT_POST, 'period_id', FILTER_VALIDATE_INT);
+    $status = filter_input(INPUT_POST, 'status');
+
+    if (!$enrollId || !$periodId || !in_array($status, ['P', 'A', 'L'], true)) sendJsonErrorResponse('Missing or invalid parameters', 400, 'attendance.php/handleSaveAttendanceApi');
+
+    // Verify CSRF token
+    $token = filter_input(INPUT_POST, 'csrf_token');
+    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'attendance.php/handleSaveAttendanceApi');
+
+    // Call the business logic function
+    $result = saveAttendance($enrollId, $periodId, $status);
+
+    // Return appropriate response
+    if ($result) echo json_encode(['success' => true, 'message' => 'Attendance saved successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to save attendance', 500, 'attendance.php/handleSaveAttendanceApi');
+}
+
+/**
+ * API handler for adding grade item
+ *
+ * @return void Outputs JSON response
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleAddGradeItemApi(): void
+{
+    // Ensure POST request with required parameters
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'grades.php/handleAddGradeItemApi');
+
+    // Extract and validate request parameters
+    $classSubjectId = filter_input(INPUT_POST, 'class_subject_id', FILTER_VALIDATE_INT);
+    $name = filter_input(INPUT_POST, 'name');
+    $maxPoints = filter_input(INPUT_POST, 'max_points', FILTER_VALIDATE_FLOAT);
+    $weight = filter_input(INPUT_POST, 'weight', FILTER_VALIDATE_FLOAT) ?: 1.00;
+
+    if (!$classSubjectId || !$name || !$maxPoints) sendJsonErrorResponse('Missing or invalid parameters', 400, 'grades.php/handleAddGradeItemApi');
+
+    // Verify CSRF token
+    $token = filter_input(INPUT_POST, 'csrf_token');
+    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'grades.php/handleAddGradeItemApi');
+
+    // Call the business logic function
+    $result = addGradeItem($classSubjectId, $name, $maxPoints, $weight);
+
+    // Return appropriate response
+    if ($result) echo json_encode(['success' => true, 'item_id' => $result, 'message' => 'Grade item added successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to add grade item', 500, 'grades.php/handleAddGradeItemApi');
+}
+
+/**
+ * API handler for saving grade
+ *
+ * @return void Outputs JSON response
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleSaveGradeApi(): void
+{
+    // Ensure POST request with required parameters
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'grades.php/handleSaveGradeApi');
+
+    // Extract and validate request parameters
+    $enrollId = filter_input(INPUT_POST, 'enroll_id', FILTER_VALIDATE_INT);
+    $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
+    $points = filter_input(INPUT_POST, 'points', FILTER_VALIDATE_FLOAT);
+    $comment = filter_input(INPUT_POST, 'comment');
+
+    if (!$enrollId || !$itemId || $points === false) sendJsonErrorResponse('Missing or invalid parameters', 400, 'grades.php/handleSaveGradeApi');
+
+    // Verify CSRF token
+    $token = filter_input(INPUT_POST, 'csrf_token');
+    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'grades.php/handleSaveGradeApi');
+
+    // Call the business logic function
+    $result = saveGrade($enrollId, $itemId, $points, $comment);
+
+    // Return appropriate response
+    if ($result) echo json_encode(['success' => true, 'message' => 'Grade saved successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to save grade', 500, 'grades.php/handleSaveGradeApi');
+}
+
+/**
+ * API handler for approving justification
+ *
+ * @return void Outputs JSON response
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleApproveJustificationApi(): void
+{
+    // Ensure POST request with required parameters
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'justifications.php/handleApproveJustificationApi');
+
+    // Extract and validate request parameters
+    $absenceId = filter_input(INPUT_POST, 'att_id', FILTER_VALIDATE_INT);
+
+    if (!$absenceId) sendJsonErrorResponse('Missing or invalid parameters', 400, 'justifications.php/handleApproveJustificationApi');
+
+    // Verify CSRF token
+    $token = filter_input(INPUT_POST, 'csrf_token');
+    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'justifications.php/handleApproveJustificationApi');
+
+    // Call the business logic function
+    $result = approveJustification($absenceId);
+
+    // Return appropriate response
+    if ($result) echo json_encode(['success' => true, 'message' => 'Justification approved successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to approve justification', 500, 'justifications.php/handleApproveJustificationApi');
+}
+
+/**
+ * API handler for rejecting justification
+ *
+ * @return void Outputs JSON response
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleRejectJustificationApi(): void
+{
+    // Ensure POST request with required parameters
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'justifications.php/handleRejectJustificationApi');
+
+    // Extract and validate request parameters
+    $absenceId = filter_input(INPUT_POST, 'att_id', FILTER_VALIDATE_INT);
+    $reason = filter_input(INPUT_POST, 'reason');
+
+    if (!$absenceId || !$reason) sendJsonErrorResponse('Missing or invalid parameters', 400, 'justifications.php/handleRejectJustificationApi');
+
+    // Verify CSRF token
+    $token = filter_input(INPUT_POST, 'csrf_token');
+    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'justifications.php/handleRejectJustificationApi');
+
+    // Call the business logic function
+    $result = rejectJustification($absenceId, $reason);
+
+    // Return appropriate response
+    if ($result) echo json_encode(['success' => true, 'message' => 'Justification rejected successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to reject justification', 500, 'justifications.php/handleRejectJustificationApi');
 }
