@@ -6,6 +6,12 @@
  *
  * Handles CRUD operations for grade data via AJAX requests.
  * Returns JSON responses for client-side processing.
+ *
+ * Endpoints:
+ * - handleGetGradeItemsApi(): void - API handler for retrieving grade items
+ * - handleGetClassGradesApi(): void - API handler for retrieving class grades
+ * - handleAddGradeItemApi(): void - API handler for adding grade item
+ * - handleSaveGradeApi(): void - API handler for saving grade
  */
 
 declare(strict_types=1);

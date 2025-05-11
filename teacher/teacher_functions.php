@@ -6,6 +6,12 @@
  *
  * Provides teacher-specific helper functions and dashboard widgets.
  * Core attendance, grade, and justification functions are now in /includes/functions.php.
+ *
+ * Dashboard Widgets:
+ * - renderTeacherClassOverviewWidget(): string - Creates the HTML for the teacher's class overview dashboard widget
+ * - renderTeacherAttendanceWidget(): string - Shows attendance status for today's classes taught by the teacher
+ * - renderTeacherPendingJustificationsWidget(): string - Shows absence justifications waiting for teacher approval
+ * - renderTeacherClassAveragesWidget(): string - Creates the HTML for the teacher's class averages dashboard widget
  */
 
 require_once __DIR__ . '/../includes/db.php';

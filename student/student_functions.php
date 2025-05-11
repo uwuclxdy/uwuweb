@@ -6,6 +6,15 @@
  *
  * Provides student-specific helper functions and dashboard widgets.
  * Core attendance, grade, and justification functions are now in /includes/functions.php.
+ *
+ * Grade Functions:
+ * - calculateGradeStatistics(array $grades): array - Calculate grade statistics grouped by subject and class
+ *
+ * Dashboard Widgets:
+ * - renderStudentGradesWidget(): string - Creates the HTML for the student's grades dashboard widget
+ * - renderStudentAttendanceWidget(): string - Creates the HTML for the student's attendance dashboard widget
+ * - renderStudentClassAveragesWidget(): string - Creates the HTML for the student's class averages dashboard widget
+ * - renderUpcomingClassesWidget(): string - Creates the HTML for a student's upcoming classes widget
  */
 
 require_once __DIR__ . '/../includes/db.php';

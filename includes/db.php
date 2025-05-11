@@ -2,14 +2,16 @@
 /**
  * Database Connection Handler
  *
- * Establishes and provides a PDO connection to the uwuweb database
- * Used by all data access operations throughout the application
+ * File path: /includes/db.php
+ *
+ * Establishes and provides PDO connections to the uwuweb database.
+ * Used by all data access operations throughout the application.
  *
  * Functions:
- * - getDBConnection() - Creates and returns a PDO database connection
- * - safeGetDBConnection() - Gets a PDO connection or dies with an error message
- * - testDBConnection() - Tests database connectivity and returns status
- * - logDBError() - Logs database connection errors
+ * - logDBError(string $error): void - Logs database errors to a file
+ * - getDBConnection(): ?PDO - Creates and returns a PDO database connection
+ * - safeGetDBConnection(string $context = '', bool $terminate = true): ?PDO - Gets a PDO connection or terminates with error message
+ * - testDBConnection(): string - Tests database connectivity and returns status
  */
 
 ini_set('display_errors', 1);

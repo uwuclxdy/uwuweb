@@ -2,11 +2,68 @@
 /**
  * Core Utility Functions Library
  *
+ * File path: /includes/functions.php
+ *
  * This file contains the core utility functions for the uwuweb application.
  * It serves as a central repository for common functionality that is reused
  * across different parts of the application by all user roles.
  *
- * File path: /includes/functions.php
+ * User Management Functions:
+ * - getUserInfo(int $userId): ?array - Retrieves comprehensive user profile with role-specific data
+ * - getStudentId(): ?int - Retrieves the student ID associated with the current user
+ * - getTeacherId(?int $userId = null): ?int - Retrieves the teacher ID associated with a user
+ * - getParentId(): ?int - Retrieves the parent ID associated with the current user
+ * - parentHasAccessToStudent(int $studentId, ?int $parentId = null): bool - Checks if a parent has access to a student
+ * - teacherHasAccessToClassSubject(int $classSubjectId, ?int $teacherId = null): bool - Checks teacher access to class-subject
+ *
+ * Navigation & UI Functions:
+ * - getNavItemsByRole(int $role): array - Returns navigation menu items based on user role
+ * - getWidgetsByRole(int $role): array - Returns dashboard widgets based on user role
+ * - renderPlaceholderWidget(string $message = ''): string - Renders a placeholder widget when data is unavailable
+ * - renderHeaderCard(string $title, string $description, string $role, ?string $roleText = null): void - Renders a header card
+ * - renderRecentActivityWidget(): string - Renders the recent activity widget
+ *
+ * Class/Subject Functions:
+ * - getTeacherClasses(int $teacherId): array - Retrieves all classes assigned to a teacher
+ * - getClassStudents(int $classId): array - Gets all students enrolled in a specific class
+ * - getClassPeriods(int $classSubjectId): array - Retrieves periods for a specific class-subject
+ * - getParentStudents(?int $parentId = null): array - Retrieves students linked to a parent
+ * - getStudentClasses(int $studentId): array - Gets classes and subjects for a specific student
+ *
+ * Attendance Functions:
+ * - getAttendanceStatusLabel(string $status): string - Translates attendance status code to readable label
+ * - calculateAttendanceStats(array $attendance): array - Calculates statistics from attendance records
+ * - getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null, bool $checkAccess = true): array - Gets attendance for a student
+ * - getStudentAttendanceByDate(int $studentId, string $date): array - Gets student attendance for a specific date
+ * - getPeriodAttendance(int $periodId): array - Retrieves attendance for all students in a period
+ * - addPeriod(int $classSubjectId, string $periodDate, string $periodLabel): int|false - Creates a new period
+ * - saveAttendance(int $enrollId, int $periodId, string $status): bool - Updates or creates an attendance record
+ *
+ * Grade Functions:
+ * - getGradeItems(int $classSubjectId): array - Gets grade items for a class-subject
+ * - getClassGrades(int $classSubjectId): array - Gets grades for all students and grade items in a class-subject
+ * - addGradeItem(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): int|false - Creates a new grade item
+ * - saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool - Updates or creates a grade
+ * - calculateWeightedAverage(array $grades): float - Calculate weighted average for a set of grades
+ * - calculateClassAverage(array $grades): float - Calculate overall grade average for a class
+ * - getGradeLetter(float $percentage): string - Converts a numerical percentage to a letter grade
+ *
+ * Justification Functions:
+ * - getJustificationFileInfo(int $absenceId): ?string - Gets information about a justification file
+ * - uploadJustification(int $absenceId, string $justification): bool - Uploads a justification for an absence
+ * - validateJustificationFile(array $file): bool - Validates an uploaded justification file
+ * - saveJustificationFile(array $file, int $absenceId): string|false - Saves an uploaded justification file
+ * - getPendingJustifications(?int $teacherId = null): array - Gets pending justifications for a teacher
+ * - getJustificationById(int $absenceId): ?array - Gets detailed information about a justification
+ * - approveJustification(int $absenceId): bool - Approves a justification
+ * - rejectJustification(int $absenceId, string $reason): bool - Rejects a justification
+ *
+ * Utility Functions:
+ * - validateDate(string $date): bool - Validates a date format (YYYY-MM-DD)
+ * - formatDateDisplay(string $date): string - Formats date for display (YYYY-MM-DD to DD.MM.YYYY)
+ * - formatDateTimeDisplay(string $datetime): string - Formats datetime for display
+ * - formatFileSize(int $bytes): string - Formats file size to human-readable string
+ * - sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never - Sends standardized JSON error response
  */
 
 require_once __DIR__ . '/db.php';

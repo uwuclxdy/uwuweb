@@ -6,6 +6,13 @@
  *
  * Handles CRUD operations for absence justifications via AJAX requests.
  * Returns JSON responses for client-side processing.
+ *
+ * Endpoints:
+ * - handleSubmitJustificationApi(): void - API handler for submitting justification
+ * - handleApproveJustificationApi(): void - API handler for approving justification
+ * - handleRejectJustificationApi(): void - API handler for rejecting justification
+ * - handleGetJustificationsApi(): void - API handler for retrieving justifications
+ * - handleGetJustificationDetailsApi(): void - API handler for getting justification details
  */
 
 declare(strict_types=1);

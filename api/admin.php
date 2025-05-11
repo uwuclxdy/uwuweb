@@ -8,9 +8,9 @@
  * class management, teacher assignments, and system settings.
  *
  * Endpoints:
- * - getClassDetails - Returns detailed information about a class including enrolled students and subject assignments
- * - getSubjectDetails - Returns detailed information about a subject including assigned classes
- * - getTeacherDetails - Returns detailed information about a teacher including assigned classes and subjects
+ * - handleGetClassDetails(): void - Returns detailed information about a class including enrolled students and subject assignments
+ * - handleGetSubjectDetails(): void - Returns detailed information about a subject including assigned classes
+ * - handleGetTeacherDetails(): void - Returns detailed information about a teacher including assigned classes and subjects
  */
 
 declare(strict_types=1);

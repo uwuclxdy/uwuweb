@@ -6,6 +6,12 @@
  *
  * Handles CRUD operations for attendance data via AJAX requests.
  * Returns JSON responses for client-side processing.
+ *
+ * Endpoints:
+ * - handleAddPeriodApi(): void - API handler for adding a new period
+ * - handleGetPeriodAttendanceApi(): void - API handler for getting period attendance
+ * - handleGetStudentAttendanceApi(): void - API handler for getting student attendance
+ * - handleSaveAttendanceApi(): void - API handler for saving attendance record
  */
 
 declare(strict_types=1);

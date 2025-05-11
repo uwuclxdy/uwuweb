@@ -2,7 +2,7 @@
 /**
  * Authentication and Session Management
  *
- * File: /includes/auth.php
+ * File path: /includes/auth.php
  *
  * Provides functions for user authentication, session management,
  * and role-based access control.
@@ -17,7 +17,7 @@
  * - getUserRole(): int|null - Returns the current user's role ID from session
  * - getUserId(): int|null - Returns the current user's ID from session
  * - hasRole(int $roleId): bool - Checks if current user has a specific role
- * - getRoleName(int $roleId): string - Returns the name of a role by ID
+ * - getRoleName(?int $roleId): string - Returns the name of a role by ID
  *
  * Access Control:
  * - requireRole(int $roleId): bool - Restricts page access to users with specific role

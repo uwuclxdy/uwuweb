@@ -6,6 +6,10 @@
  *
  * Provides parent-specific helper functions and dashboard widgets.
  * Core attendance, grade, and justification functions are now in /includes/functions.php.
+ *
+ * Dashboard Widgets:
+ * - renderParentAttendanceWidget(): string - Creates the HTML for the parent's attendance dashboard widget
+ * - renderParentChildClassAveragesWidget(): string - Creates the HTML for the parent's view of their child's class averages
  */
 
 require_once __DIR__ . '/../includes/db.php';

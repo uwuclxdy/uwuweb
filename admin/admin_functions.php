@@ -1,64 +1,65 @@
 <?php
 /**
  * Admin Functions Library
- * /admin/admin_functions.php
+ *
+ * File path: /admin/admin_functions.php
  *
  * Provides centralized functions for administrative operations
  * including user management, system settings, class-subject assignments,
  * and dashboard widgets.
  *
  * User Management Functions:
- * - getAllUsers(): array - Returns all users with role information.
- * - displayUserList(): void - Renders user management table with action buttons.
- * - getUserDetails(int $userId): ?array - Returns detailed user information with role-specific data.
- * - createNewUser(array $userData): bool|int - Creates user with role. Returns user_id or false.
- * - updateUser(int $userId, array $userData): bool - Updates user information. Returns success status.
- * - resetUserPassword(int $userId, string $newPassword): bool - Sets new user password. Returns success status.
- * - deleteUser(int $userId): bool - Removes user if no dependencies exist. Returns success status.
- * - handleCreateUser(): void - Processes user creation form submission.
- * - handleUpdateUser(): void - Processes user update form submission.
- * - handleResetPassword(): void - Processes password reset form submission.
- * - handleDeleteUser(): void - Processes user deletion confirmation.
+ * - getAllUsers(): array - Returns all users with role information
+ * - displayUserList(): void - Renders user management table with action buttons
+ * - getUserDetails(int $userId): ?array - Returns detailed user information with role-specific data
+ * - createNewUser(array $userData): bool|int - Creates user with role. Returns user_id or false
+ * - updateUser(int $userId, array $userData): bool - Updates user information. Returns success status
+ * - resetUserPassword(int $userId, string $newPassword): bool - Sets new user password. Returns success status
+ * - deleteUser(int $userId): bool - Removes user if no dependencies exist. Returns success status
+ * - handleCreateUser(): void - Processes user creation form submission
+ * - handleUpdateUser(): void - Processes user update form submission
+ * - handleResetPassword(): void - Processes password reset form submission
+ * - handleDeleteUser(): void - Processes user deletion confirmation
  *
  * Subject Management Functions:
- * - getAllSubjects(): array - Returns all subjects from the database.
- * - displaySubjectsList(): void - Renders subject management table with actions.
- * - getSubjectDetails(int $subjectId): ?array - Returns detailed subject information or null if not found.
- * - createSubject(array $subjectData): bool|int - Creates subject. Returns subject_id or false.
- * - updateSubject(int $subjectId, array $subjectData): bool - Updates subject information. Returns success status.
- * - deleteSubject(int $subjectId): bool - Removes subject if not in use. Returns success status.
+ * - getAllSubjects(): array - Returns all subjects from the database
+ * - displaySubjectsList(): void - Renders subject management table with actions
+ * - getSubjectDetails(int $subjectId): ?array - Returns detailed subject information or null if not found
+ * - createSubject(array $subjectData): bool|int - Creates subject. Returns subject_id or false
+ * - updateSubject(int $subjectId, array $subjectData): bool - Updates subject information. Returns success status
+ * - deleteSubject(int $subjectId): bool - Removes subject if not in use. Returns success status
  *
  * Class Management Functions:
- * - getAllClasses(): array - Returns all classes with homeroom teacher information.
- * - displayClassesList(): void - Renders class management table with actions.
- * - getClassDetails(int $classId): ?array - Returns detailed class information or null if not found.
- * - createClass(array $classData): bool|int - Creates class. Returns class_id or false.
- * - updateClass(int $classId, array $classData): bool - Updates class information. Returns success status.
- * - deleteClass(int $classId): bool - Removes class if no dependencies exist. Returns success status.
+ * - getAllClasses(): array - Returns all classes with homeroom teacher information
+ * - displayClassesList(): void - Renders class management table with actions
+ * - getClassDetails(int $classId): ?array - Returns detailed class information or null if not found
+ * - createClass(array $classData): bool|int - Creates class. Returns class_id or false
+ * - updateClass(int $classId, array $classData): bool - Updates class information. Returns success status
+ * - deleteClass(int $classId): bool - Removes class if no dependencies exist. Returns success status
  *
  * Class-Subject Assignment Functions:
- * - assignSubjectToClass(array $assignmentData): bool|int - Assigns subject to class with teacher. Returns assignment_id or false.
- * - updateClassSubjectAssignment(int $assignmentId, array $assignmentData): bool - Updates class-subject assignment. Returns success status.
- * - removeSubjectFromClass(int $assignmentId): bool - Removes subject assignment from class. Returns success status.
- * - getAllClassSubjectAssignments(): array - Returns all class-subject assignments with related information.
- * - getAllTeachers(): array - Returns all teachers with their basic information.
+ * - assignSubjectToClass(array $assignmentData): bool|int - Assigns subject to class with teacher. Returns assignment_id or false
+ * - updateClassSubjectAssignment(int $assignmentId, array $assignmentData): bool - Updates class-subject assignment. Returns success status
+ * - removeSubjectFromClass(int $assignmentId): bool - Removes subject assignment from class. Returns success status
+ * - getAllClassSubjectAssignments(): array - Returns all class-subject assignments with related information
+ * - getAllTeachers(): array - Returns all teachers with their basic information
  *
  * System Settings Functions:
- * - getSystemSettings(): array - Retrieves system-wide settings.
- * - updateSystemSettings(array $settings): bool - Updates system-wide settings. Returns success status.
+ * - getSystemSettings(): array - Retrieves system-wide settings
+ * - updateSystemSettings(array $settings): bool - Updates system-wide settings. Returns success status
  *
  * Dashboard Widget Functions:
- * - renderAdminUserStatsWidget(): string - Displays user statistics by role with counts and recent registrations.
- * - renderAdminSystemStatusWidget(): string - Shows system status including database stats, active sessions, and PHP configuration.
- * - renderAdminAttendanceWidget(): string - Visualizes school-wide attendance metrics with charts and highlights best-performing class.
+ * - renderAdminUserStatsWidget(): string - Displays user statistics by role with counts and recent registrations
+ * - renderAdminSystemStatusWidget(): string - Shows system status including database stats, active sessions, and PHP configuration
+ * - renderAdminAttendanceWidget(): string - Visualizes school-wide attendance metrics with charts and highlights best-performing class
  *
  * Validation and Utility Functions:
- * - getAllStudentsBasicInfo(): array - Retrieves basic information for all students.
- * - validateUserForm(array $userData): bool|string - Validates user form data based on role. Returns true or error message.
- * - usernameExists(string $username, ?int $excludeUserId = null): bool - Checks if username already exists, optionally excluding a user.
- * - subjectExists(int $subjectId): bool - Checks if subject exists. Returns true if found.
- * - studentExists(int $studentId): bool - Checks if student exists. Returns true if found.
- * - classCodeExists(string $classCode): bool - Checks if class code exists. Returns true if found.
+ * - getAllStudentsBasicInfo(): array - Retrieves basic information for all students
+ * - validateUserForm(array $userData): bool|string - Validates user form data based on role. Returns true or error message
+ * - usernameExists(string $username, ?int $excludeUserId = null): bool - Checks if username already exists, optionally excluding a user
+ * - subjectExists(int $subjectId): bool - Checks if subject exists. Returns true if found
+ * - studentExists(int $studentId): bool - Checks if student exists. Returns true if found
+ * - classCodeExists(string $classCode): bool - Checks if class code exists. Returns true if found
  */
 
 require_once __DIR__ . '/../includes/db.php';
