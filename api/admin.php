@@ -1,9 +1,16 @@
 <?php
 /**
  * Admin API Endpoints
- * /api/admin.php
  *
- * Provides API endpoints for admin-related operations in the uwuweb system.
+ * File path: /api/admin.php
+ *
+ * Provides centralized API endpoints for administrator operations, including
+ * class management, teacher assignments, and system settings.
+ *
+ * Endpoints:
+ * - getClassDetails - Returns detailed information about a class including enrolled students and subject assignments
+ * - getSubjectDetails - Returns detailed information about a subject including assigned classes
+ * - getTeacherDetails - Returns detailed information about a teacher including assigned classes and subjects
  */
 
 declare(strict_types=1);
@@ -16,26 +23,112 @@ require_once '../admin/admin_functions.php';
 // Ensure only authenticated administrators can access these endpoints
 requireRole(ROLE_ADMIN);
 
+header('Content-Type: application/json');
+
+// Verify CSRF token for non-GET requests
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+    $requestData = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR) ?? [];
+    $providedToken = $requestData['csrf_token'] ?? null;
+
+    if (!$providedToken || !verifyCSRFToken($providedToken)) sendJsonErrorResponse('Neveljaven varnostni žeton', 403, 'admin.php');
+}
+
 // Process API requests
 $action = $_GET['action'] ?? '';
 
-if ($action === 'getClassDetails') {
-    $classId = (int)($_GET['id'] ?? 0);
+try {
+    switch ($action) {
+        case 'getClassDetails':
+            handleGetClassDetails();
+            break;
 
-    if ($classId <= 0) sendJsonErrorResponse('Neveljaven ID razreda.');
+        case 'getSubjectDetails':
+            handleGetSubjectDetails();
+            break;
+
+        case 'getTeacherDetails':
+            handleGetTeacherDetails();
+            break;
+
+        default:
+            sendJsonErrorResponse('Neveljavna akcija zahtevana', 400, 'admin.php');
+    }
+} catch (PDOException $e) {
+    error_log('Database error (admin.php): ' . $e->getMessage());
+    sendJsonErrorResponse('Napaka baze podatkov', 500, 'admin.php');
+} catch (Exception $e) {
+    error_log('API Error (admin.php): ' . $e->getMessage());
+    sendJsonErrorResponse('Napaka strežnika: ' . $e->getMessage(), 500, 'admin.php');
+}
+
+/**
+ * Handles the getClassDetails API endpoint
+ * Returns detailed information about a class including students and subjects
+ *
+ * @return void Outputs JSON response directly
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleGetClassDetails(): void
+{
+    $classId = filter_var($_GET['id'] ?? 0, FILTER_VALIDATE_INT);
+
+    if (!$classId || $classId <= 0) sendJsonErrorResponse('Neveljaven ID razreda', 400, 'admin.php');
 
     $classDetails = getClassDetails($classId);
 
-    if (!$classDetails) sendJsonErrorResponse('Razred ni bil najden.');
+    if (!$classDetails) sendJsonErrorResponse('Razred ni bil najden', 404, 'admin.php');
 
-    header('Content-Type: application/json');
-    try {
-        echo json_encode([
-            'success' => true,
-            'class' => $classDetails
-        ], JSON_THROW_ON_ERROR);
-    } catch (JsonException $e) {
-        sendJsonErrorResponse('Napaka pri kodiranju JSON.');
-    }
-    exit;
-} else sendJsonErrorResponse('Zahtevana akcija ni veljavna.');
+    echo json_encode([
+        'success' => true,
+        'data' => $classDetails
+    ], JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Handles the getSubjectDetails API endpoint
+ * Returns detailed information about a subject including assigned classes
+ *
+ * @return void Outputs JSON response directly
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleGetSubjectDetails(): void
+{
+    $subjectId = filter_var($_GET['id'] ?? 0, FILTER_VALIDATE_INT);
+
+    if (!$subjectId || $subjectId <= 0) sendJsonErrorResponse('Neveljaven ID predmeta', 400, 'admin.php');
+
+    $subjectDetails = getSubjectDetails($subjectId);
+
+    if (!$subjectDetails) sendJsonErrorResponse('Predmet ni bil najden', 404, 'admin.php');
+
+    echo json_encode([
+        'success' => true,
+        'data' => $subjectDetails
+    ], JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Handles the getTeacherDetails API endpoint
+ * Returns detailed information about a teacher including classes and assignments
+ *
+ * @return void Outputs JSON response directly
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleGetTeacherDetails(): void
+{
+    $teacherId = filter_var($_GET['id'] ?? 0, FILTER_VALIDATE_INT);
+
+    if (!$teacherId || $teacherId <= 0) sendJsonErrorResponse('Neveljaven ID učitelja', 400, 'admin.php');
+
+    $teacherDetails = getUserDetails($teacherId);
+
+    if (!$teacherDetails || $teacherDetails['role_id'] != ROLE_TEACHER) sendJsonErrorResponse('Učitelj ni bil najden', 404, 'admin.php');
+
+    echo json_encode([
+        'success' => true,
+        'data' => $teacherDetails
+    ], JSON_THROW_ON_ERROR);
+}
