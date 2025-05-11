@@ -1,25 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AIIgnoreSettings">
+    <option name="aiignore_enabled" value="false" />
+  </component>
   <component name="AutoImportSettings">
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="upload unfinished - it is what it is">
-      <change afterPath="$PROJECT_DIR$/docs/teacher-checklist.md" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/teacher/download_justification.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/copilot-instructions.md" beforeDir="false" afterPath="$PROJECT_DIR$/.github/copilot-instructions.md" afterDir="false" />
+    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="update teacher dashboard widgets">
       <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/admin_functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/admin_functions.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/manage_assignments.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/manage_assignments.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/manage_classes.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/manage_classes.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/manage_subjects.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/manage_subjects.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/system_settings.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/system_settings.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/users.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/users.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/attendance.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/grades.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/js/main.js" beforeDir="false" afterPath="$PROJECT_DIR$/assets/js/main.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/api/justifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/justifications.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/seed_demo.sql" beforeDir="false" afterPath="$PROJECT_DIR$/db/seed_demo.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/design/modal-examples.php" beforeDir="false" afterPath="$PROJECT_DIR$/design/modal-examples.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/design/uwuweb-logo.png" beforeDir="false" afterPath="$PROJECT_DIR$/design/uwuweb-logo-old.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/alert-guidelines.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/alert-guidelines.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/css-readme.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/css-readme.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/project-functions.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/project-functions.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/project-outline.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/project-outline.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/includes/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/functions.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parent/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/grades.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/parent/parent_functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/parent_functions.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/student/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/student/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/grades.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/student/justification.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/justification.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/student/student_functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/student_functions.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/teacher/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/attendance.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/teacher/gradebook.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/gradebook.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/teacher/justifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/justifications.php" afterDir="false" />
@@ -76,50 +89,51 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "Database Script.seed_demo.sql.executor": "Run",
-    "Database Script.system_settings.sql.executor": "Run",
-    "Database Script.uwuweb.sql.executor": "Run",
-    "DefaultHtmlFileTemplate": "HTML File",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ChatTagsLlmMigration": "true",
-    "RunOnceActivity.CodyAccountHistoryMigration": "true",
-    "RunOnceActivity.CodyAccountsIdsRefresh": "true",
-    "RunOnceActivity.CodyAssignOrphanedChatsToActiveAccount": "true",
-    "RunOnceActivity.CodyConvertUrlToCodebaseName": "true",
-    "RunOnceActivity.CodyHistoryLlmMigration": "true",
-    "RunOnceActivity.CodyMigrateChatHistory-v2": "true",
-    "RunOnceActivity.CodyProjectSettingsMigration": "true",
-    "RunOnceActivity.DeprecatedChatLlmMigration": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.ToggleCodyToolWindowAfterMigration": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "SHELLCHECK.PATH": "/home/uwuclxdy/.local/share/JetBrains/PhpStorm2025.1/Shell Script/shellcheck",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "/home/uwuclxdy/PhpstormProjects/uwuweb",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.standard": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.standard": "",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "reference.settings.ide.settings.file-colors",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
+    &quot;Database Script.seed_demo.sql.executor&quot;: &quot;Run&quot;,
+    &quot;Database Script.system_settings.sql.executor&quot;: &quot;Run&quot;,
+    &quot;Database Script.uwuweb.sql.executor&quot;: &quot;Run&quot;,
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ChatTagsLlmMigration&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.CodyAccountHistoryMigration&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.CodyAccountsIdsRefresh&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.CodyAssignOrphanedChatsToActiveAccount&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.CodyConvertUrlToCodebaseName&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.CodyHistoryLlmMigration&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.CodyMigrateChatHistory-v2&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.CodyProjectSettingsMigration&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.DeprecatedChatLlmMigration&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ToggleCodyToolWindowAfterMigration&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;SHELLCHECK.PATH&quot;: &quot;/home/uwuclxdy/.local/share/JetBrains/PhpStorm2025.1/Shell Script/shellcheck&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/uwuclxdy/PhpstormProjects/uwuweb/design&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.standard&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.standard&quot;: &quot;&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.LLMConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "mysql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;mysql&quot;
     ],
-    "RunConfigurationTargetLRU": [
-      "a79c5948-f716-4edb-ba8d-1ab0002eca4d/schema/\"uwuweb\"",
-      "a79c5948-f716-4edb-ba8d-1ab0002eca4d"
+    &quot;RunConfigurationTargetLRU&quot;: [
+      &quot;a79c5948-f716-4edb-ba8d-1ab0002eca4d/schema/\&quot;uwuweb\&quot;&quot;,
+      &quot;a79c5948-f716-4edb-ba8d-1ab0002eca4d&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="QodanaProblemsViewState">
     <option name="showBaselineProblems" value="true" />
   </component>
@@ -162,8 +176,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-f27c65a3e318-JavaScript-PS-251.23774.466" />
-        <option value="bundled-php-predefined-a98d8de5180a-aaeaa8632555-com.jetbrains.php.sharedIndexes-PS-251.23774.466" />
+        <option value="bundled-js-predefined-d6986cc7102b-6a121458b545-JavaScript-PS-251.25410.64" />
+        <option value="bundled-php-predefined-a98d8de5180a-c5828cf854d9-com.jetbrains.php.sharedIndexes-PS-251.25410.64" />
       </set>
     </attachedChunks>
   </component>
@@ -207,23 +221,15 @@
       <workItem from="1746677292128" duration="4452000" />
       <workItem from="1746707841429" duration="439000" />
       <workItem from="1746708290674" duration="13338000" />
-      <workItem from="1746721640860" duration="33512000" />
-    </task>
-    <task id="LOCAL-00032" summary="update functions.php">
-      <option name="closed" value="true" />
-      <created>1746474286817</created>
-      <option name="number" value="00032" />
-      <option name="presentableId" value="LOCAL-00032" />
-      <option name="project" value="LOCAL" />
-      <updated>1746474286817</updated>
-    </task>
-    <task id="LOCAL-00033" summary="refactor and translate">
-      <option name="closed" value="true" />
-      <created>1746636725341</created>
-      <option name="number" value="00033" />
-      <option name="presentableId" value="LOCAL-00033" />
-      <option name="project" value="LOCAL" />
-      <updated>1746636725341</updated>
+      <workItem from="1746721640860" duration="33659000" />
+      <workItem from="1746802610963" duration="4697000" />
+      <workItem from="1746897616906" duration="451000" />
+      <workItem from="1746909349401" duration="3301000" />
+      <workItem from="1746955003826" duration="5000" />
+      <workItem from="1746955123323" duration="21000" />
+      <workItem from="1746956221269" duration="508000" />
+      <workItem from="1746957215547" duration="773000" />
+      <workItem from="1746958164097" duration="6066000" />
     </task>
     <task id="LOCAL-00034" summary="update">
       <option name="closed" value="true" />
@@ -601,7 +607,23 @@
       <option name="project" value="LOCAL" />
       <updated>1746750839849</updated>
     </task>
-    <option name="localTasksCounter" value="81" />
+    <task id="LOCAL-00081" summary="upload unfinished - it is what it is">
+      <option name="closed" value="true" />
+      <created>1746760278845</created>
+      <option name="number" value="00081" />
+      <option name="presentableId" value="LOCAL-00081" />
+      <option name="project" value="LOCAL" />
+      <updated>1746760278845</updated>
+    </task>
+    <task id="LOCAL-00082" summary="update teacher dashboard widgets">
+      <option name="closed" value="true" />
+      <created>1746911376841</created>
+      <option name="number" value="00082" />
+      <option name="presentableId" value="LOCAL-00082" />
+      <option name="project" value="LOCAL" />
+      <updated>1746911376842</updated>
+    </task>
+    <option name="localTasksCounter" value="83" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -633,7 +655,6 @@
   <component name="VcsManagerConfiguration">
     <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN" value="false" />
-    <MESSAGE value="update modal stuff" />
     <MESSAGE value="small update to modal docs" />
     <MESSAGE value="lazy ahh copilot fix" />
     <MESSAGE value="manage_classes.php fully functional" />
@@ -658,7 +679,8 @@
     <MESSAGE value="parent module - hopefully it works" />
     <MESSAGE value="teacher module - by copilot" />
     <MESSAGE value="upload unfinished - it is what it is" />
-    <option name="LAST_COMMIT_MESSAGE" value="upload unfinished - it is what it is" />
+    <MESSAGE value="update teacher dashboard widgets" />
+    <option name="LAST_COMMIT_MESSAGE" value="update teacher dashboard widgets" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />

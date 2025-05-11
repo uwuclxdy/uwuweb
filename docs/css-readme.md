@@ -6,30 +6,6 @@ This stylesheet provides a comprehensive design system for the uwuweb Grade Mana
 theme and includes responsive components, utility classes, and role-based styling for all user types (admin, teacher,
 student, parent).
 
-## Table of Contents
-
-1. [Design System Variables](#design-system-variables)
-2. [Base Elements](#base-elements)
-3. [Layout System](#layout-system)
-4. [UI Components](#ui-components)
-5. [Role-specific Styling](#role-specific-styling)
-6. [Status & State Indicators](#status--indicators)
-7. [Animations](#animations)
-8. [Utility Classes]()
-  - [Spacing Utilities](#spacing-utilities)
-  - [Display Utilities](#display-utilities)
-  - [Flex Utilities](#flex-utilities)
-  - [Text Utilities](#text-utilities)
-  - [Visual Utilities](#visual-utilities)
-9. [Additional UI Elements]()
-  - [Alerts](#alerts)
-  - [Modals](#modals)
-  - [Badges](#badges)
-  - [Dark Mode Toggle]()
-10. [Responsive Design](#responsive-design)
-11. [Accessibility](#accessibility)
-12. [Print Styles](#print-styles)
-
 ## Design System Variables
 
 The stylesheet uses CSS variables for consistent theming. Key variable categories include:
@@ -141,6 +117,13 @@ Basic styling is applied to HTML elements without classes:
 - `.navbar-link.active`: Active/current page link styling
 - `.navbar-toggle`: Mobile menu toggle
 - `.navbar-toggle.active`: Active state for toggle (hamburger to X)
+
+### Tabs
+
+- `.tab-btn`: Tab button with hover effects and smooth transitions
+- `.tab-btn.active`: Currently selected tab styling with accent border
+- `.tab-content`: Content panel associated with a tab
+- `.tab-content.active`: Currently visible tab content
 
 ## Alerts
 

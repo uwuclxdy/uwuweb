@@ -25,6 +25,7 @@
  * - getNavItemsByRole(int $role): array - Returns navigation items based on user role
  * - getWidgetsByRole(int $role): array - Returns dashboard widgets based on user role
  * - renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string - Renders a placeholder widget
+ * - renderHeaderCard(string $title, string $description, string $role, ?string $roleText = null): void - Renders a header card with title and description
  *
  * Activity Widgets:
  * - renderRecentActivityWidget(): string - Renders the recent activity widget
@@ -729,5 +730,35 @@ function formatFileSize(int $bytes): string
     $units = ['B', 'KB', 'MB', 'GB', 'TB'];
     $factor = floor((strlen($bytes) - 1) / 3);
 
-    return sprintf("%.2f %s", $bytes / pow(1024, $factor), $units[$factor]);
+    return sprintf("%.2f %s", $bytes / (1024 ** $factor), $units[$factor]);
+}
+
+/**
+ * Renders a Header Card component with title, description and role badge
+ *
+ * @param string $title The title for the header card (h1 element)
+ * @param string $description The description text for the header card (p element)
+ * @param string $role The user role to display in the badge (e.g., 'admin', 'teacher')
+ * @param string|null $roleText Optional custom text for the role badge (defaults to capitalized role)
+ * @return void Outputs the HTML directly
+ */
+function renderHeaderCard(string $title, string $description, string $role, ?string $roleText = null): void
+{
+    $roleClass = strtolower($role);
+    if ($roleClass === 'administrator') $roleClass = 'admin';
+
+    $displayRoleText = $roleText ?? ucfirst($role);
+
+    echo <<<HTML
+    <!-- Header Card -->
+    <div class="card shadow mb-lg page-transition">
+        <div class="card__content p-md d-flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold mt-0 mb-xs">$title</h1>
+                <p class="text-secondary mt-0 mb-0">$description</p>
+            </div>
+            <div class="role-badge role-$roleClass">$displayRoleText</div>
+        </div>
+    </div>
+HTML;
 }

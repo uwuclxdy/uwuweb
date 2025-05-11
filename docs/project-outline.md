@@ -208,6 +208,7 @@ files.
 - NO inline comments.
 - Short description of each function in the function header (max 1-2 lines), including datatypes of function arguments
   and datatypes of what a function returns.
+- Simple comment above each larger code section
 - Functions consolidated in role-specific `[subfolder]_functions.php` files (e.g., `admin_functions.php` for admin
   subfolder).
 - Each page file includes the appropriate centralized functions file and contains only processing logic with function

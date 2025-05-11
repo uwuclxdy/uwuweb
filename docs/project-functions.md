@@ -28,6 +28,8 @@ Common Utility Functions Library
 - `getWidgetsByRole(int $role): array` - Returns dashboard widgets configuration appropriate for user role.
 - `renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string` - Creates a simple placeholder
   card for widgets without data.
+- `renderHeaderCard(string $title, string $description, string $role, ?string $roleText = null): void` - Renders a
+  header card with title and description`
 
 ### Activity Widgets:
 
@@ -68,7 +70,7 @@ justifications.
 - `uploadJustification(int $absenceId, string $justification): bool` - Stores absence explanation text.
 - `validateJustificationFile(array $file): bool` - Checks justification file validity.
 - `saveJustificationFile(array $file, int $absenceId): bool|string` - Stores justification file securely.
-- `getJustificationFileInfo(int $absenceId): ?string` - Returns justification file metadata.
+- `getJustificationFileInfoStudent(int $absenceId): ?string` - Returns justification file metadata.
 
 ### Dashboard Widgets:
 

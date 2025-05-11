@@ -148,9 +148,9 @@ function generateAlert(string $message, string $type = 'info', bool $animate = t
         'error' => '✕',
         'info' => 'ℹ',
     ];
-    
+
     $icon = $iconMap[$type] ?? $iconMap['info'];
-    
+
     return <<<HTML
     <div class="alert status-{$type}{$animClass}">
         <div class="alert-icon">{$icon}</div>
