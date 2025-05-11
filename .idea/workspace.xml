@@ -7,7 +7,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="update teacher dashboard widgets">
+    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="update docs and make a header function">
       <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
@@ -15,22 +15,24 @@
       <change beforePath="$PROJECT_DIR$/admin/manage_assignments.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/manage_assignments.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/admin/manage_classes.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/manage_classes.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/admin/manage_subjects.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/manage_subjects.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/settings.php" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/admin/system_settings.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/system_settings.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/admin/users.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/users.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/attendance.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/grades.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/api/justifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/justifications.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/db/seed_demo.sql" beforeDir="false" afterPath="$PROJECT_DIR$/db/seed_demo.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/system_settings.sql" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/design/modal-examples.php" beforeDir="false" afterPath="$PROJECT_DIR$/design/modal-examples.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/design/uwuweb-logo.png" beforeDir="false" afterPath="$PROJECT_DIR$/design/uwuweb-logo-old.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/alert-guidelines.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/alert-guidelines.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/css-readme.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/css-readme.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/project-functions.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/project-functions.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docs/project-outline.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/project-outline.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/functions.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/includes/auth.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/auth.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/includes/footer.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/footer.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/parent/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/attendance.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parent/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/grades.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parent/parent_functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/parent_functions.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/student/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/attendance.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/student/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/grades.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/student/justification.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/justification.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/student/student_functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/student_functions.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/teacher/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/attendance.php" afterDir="false" />
@@ -229,15 +231,7 @@
       <workItem from="1746955123323" duration="21000" />
       <workItem from="1746956221269" duration="508000" />
       <workItem from="1746957215547" duration="773000" />
-      <workItem from="1746958164097" duration="6066000" />
-    </task>
-    <task id="LOCAL-00034" summary="update">
-      <option name="closed" value="true" />
-      <created>1746636768355</created>
-      <option name="number" value="00034" />
-      <option name="presentableId" value="LOCAL-00034" />
-      <option name="project" value="LOCAL" />
-      <updated>1746636768355</updated>
+      <workItem from="1746958164097" duration="7014000" />
     </task>
     <task id="LOCAL-00035" summary="update">
       <option name="closed" value="true" />
@@ -623,7 +617,15 @@
       <option name="project" value="LOCAL" />
       <updated>1746911376842</updated>
     </task>
-    <option name="localTasksCounter" value="83" />
+    <task id="LOCAL-00083" summary="update docs and make a header function">
+      <option name="closed" value="true" />
+      <created>1746964788474</created>
+      <option name="number" value="00083" />
+      <option name="presentableId" value="LOCAL-00083" />
+      <option name="project" value="LOCAL" />
+      <updated>1746964788475</updated>
+    </task>
+    <option name="localTasksCounter" value="84" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -655,7 +657,6 @@
   <component name="VcsManagerConfiguration">
     <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN" value="false" />
-    <MESSAGE value="small update to modal docs" />
     <MESSAGE value="lazy ahh copilot fix" />
     <MESSAGE value="manage_classes.php fully functional" />
     <MESSAGE value="update sql" />
@@ -680,7 +681,8 @@
     <MESSAGE value="teacher module - by copilot" />
     <MESSAGE value="upload unfinished - it is what it is" />
     <MESSAGE value="update teacher dashboard widgets" />
-    <option name="LAST_COMMIT_MESSAGE" value="update teacher dashboard widgets" />
+    <MESSAGE value="update docs and make a header function" />
+    <option name="LAST_COMMIT_MESSAGE" value="update docs and make a header function" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
