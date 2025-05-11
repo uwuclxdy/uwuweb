@@ -88,15 +88,12 @@ try {
 ?>
 
 <div class="container mt-lg">
-    <div class="card shadow mb-lg page-transition">
-        <div class="card__content p-md d-flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold mt-0 mb-xs">Sistemske Nastavitve</h1>
-                <p class="text-secondary mt-0 mb-0">Upravljanje sistemskih nastavitev aplikacije.</p>
-            </div>
-            <div class="role-badge role-admin">Administrator</div>
-        </div>
-    </div>
+    <?php renderHeaderCard(
+        'Sistemske Nastavitve',
+        'Upravljanje sistemskih nastavitev aplikacije.',
+        'admin',
+        'Administrator'
+    ); ?>
 
     <?php if (!empty($message)): ?>
         <div class="alert status-<?= $messageType === 'success' ? 'success' : 'error' ?> mb-lg d-flex items-center gap-sm">
