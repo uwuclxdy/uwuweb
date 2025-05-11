@@ -189,6 +189,7 @@ Administrative API endpoints.
 - `handleGetClassDetails(): void` - Returns detailed information about a class including students and subjects
 - `handleGetSubjectDetails(): void` - Returns detailed information about a subject including assigned classes
 - `handleGetTeacherDetails(): void` - Returns detailed information about a teacher including classes and assignments
+- `handleGetUserDetails(): void` - Returns detailed information about any user for the admin panel
 
 ## /api/attendance.php
 

@@ -1,11 +1,10 @@
 <?php
 /**
  * Purpose: Admin User Management Page
+ * /uwuweb/admin/users.php
+ *
  * Description: Provides functionality for administrators to manage users in the system
- * Path: /uwuweb/admin/users.php
  */
-
-use Random\RandomException;
 
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
@@ -13,7 +12,7 @@ require_once '../includes/functions.php';
 require_once 'admin_functions.php';
 require_once '../includes/header.php';
 
-// Ensure only administrators can access this page
+// Require admin role for this page
 requireRole(ROLE_ADMIN);
 
 // Initialize variables
@@ -24,36 +23,47 @@ $userDetails = null;
 // Get database connection
 $pdo = safeGetDBConnection('admin/users.php');
 
-// Process form submissions
+// Handle POST actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
     $message = 'Invalid form submission. Please try again.';
     $messageType = 'error';
 } else if (isset($_POST['create_user'])) handleCreateUser(); else if (isset($_POST['update_user'])) handleUpdateUser(); else if (isset($_POST['reset_password'])) handleResetPassword(); else if (isset($_POST['delete_user'])) handleDeleteUser();
 
-// Handle JSON request for user details
-if (isset($_GET['action'], $_GET['user_id'], $_GET['format']) && $_GET['action'] === 'edit' && $_GET['format'] === 'json') {
-    $userId = (int)$_GET['user_id'];
-    $userData = getUserDetails($userId);
+// Replace this section in users.php
 
+// Handle AJAX request for user details
+if (isset($_GET['action'], $_GET['user_id'], $_GET['format']) &&
+    $_GET['action'] === 'edit' && $_GET['format'] === 'json') {
+
+    // Set content type header immediately - do this first
     header('Content-Type: application/json');
 
-    if ($userData)
-        try {
-            echo json_encode($userData, JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            sendJsonErrorResponse('Error encoding JSON', 500, 'admin/users.php AJAX get_user_details');
-        }
+    try {
+        $userId = (int)$_GET['user_id'];
 
-    if (!$userData)
-        try {
-            echo json_encode(['error' => 'User not found'], JSON_THROW_ON_ERROR);
-        } catch (JsonException $e) {
-            sendJsonErrorResponse('Error encoding JSON', 500, 'admin/users.php AJAX get_user_details');
+        // Get user details
+        $userData = getUserDetails($userId);
+
+        // Simple response - no nested conditions or multiple try/catch blocks
+        if ($userData) {
+            $jsonData = json_encode($userData);
+            if ($jsonData === false) {
+                throw new Exception('JSON encoding failed: ' . json_last_error_msg());
+            }
+            echo $jsonData;
+        } else {
+            echo json_encode(['error' => 'User not found']);
         }
+    } catch (Exception $e) {
+        // Log the error
+        error_log('Error in user edit JSON endpoint: ' . $e->getMessage());
+        // Return a proper JSON error response
+        echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
+    }
     exit;
 }
 
-// Handle edit, reset, or delete requests
+// Get user details for edit/reset/delete actions
 if (isset($_GET['action'], $_GET['user_id'])) {
     $userId = (int)$_GET['user_id'];
     $action = $_GET['action'];
@@ -67,8 +77,10 @@ if (isset($_GET['action'], $_GET['user_id'])) {
     }
 }
 
-// Get all users and apply role filter if specified
+// Get all users
 $users = getAllUsers();
+
+// Filter users by role if a role filter is selected
 $roleFilter = $_GET['role'] ?? 'all';
 if ($roleFilter !== 'all') $users = array_filter($users, static function ($user) use ($roleFilter) {
     if ($roleFilter === 'admin' && strtolower($user['role_name']) === 'administrator') return true;
@@ -76,178 +88,27 @@ if ($roleFilter !== 'all') $users = array_filter($users, static function ($user)
 });
 
 // Generate CSRF token
-$csrfToken = ''; // Initialize with default value
 try {
     $csrfToken = generateCSRFToken();
-} catch (RandomException $e) {
+} catch (Exception $e) {
     $message = 'Error generating security token. Please try again.';
     $messageType = 'error';
+    $csrfToken = '';
 }
 
-// Get necessary data for forms
+// Get additional data needed for the forms
 $allClasses = getAllClasses();
 $allSubjects = getAllSubjects();
 $allStudents = getAllStudentsBasicInfo();
-
-/**
- * Creates a new user based on form data
- * @return void
- */
-function handleCreateUser(): void
-{
-    global $message, $messageType;
-
-    $userData = [
-        'username' => $_POST['username'] ?? '',
-        'password' => $_POST['password'] ?? '',
-        'email' => $_POST['email'] ?? '',
-        'first_name' => $_POST['first_name'] ?? '',
-        'last_name' => $_POST['last_name'] ?? '',
-        'role_id' => (int)($_POST['role_id'] ?? 0)
-    ];
-
-    // Validate password length
-    if (strlen($userData['password']) < 6) {
-        $message = 'Password must be at least 6 characters long.';
-        $messageType = 'error';
-        return;
-    }
-
-    // Add role-specific fields
-    if ($userData['role_id'] === ROLE_STUDENT) {
-        $userData['class_code'] = $_POST['student_class'] ?? '';
-        $userData['dob'] = $_POST['dob'] ?? '';
-        if (empty($userData['dob'])) {
-            $message = 'Date of birth is required for students.';
-            $messageType = 'error';
-            return;
-        }
-    } elseif ($userData['role_id'] === ROLE_TEACHER) $userData['teacher_subjects'] = $_POST['teacher_subjects'] ?? [];
-    elseif ($userData['role_id'] === ROLE_PARENT) $userData['student_ids'] = $_POST['parent_children'] ?? [];
-
-    // Validate and create user
-    $validationResult = validateUserForm($userData);
-    if ($validationResult !== true) {
-        $message = $validationResult;
-        $messageType = 'error';
-    } else if (createNewUser($userData)) {
-        $message = 'User created successfully.';
-        $messageType = 'success';
-    } else {
-        $message = 'Error creating user. Please check the form and try again.';
-        $messageType = 'error';
-    }
-}
-
-/**
- * Updates an existing user based on form data
- * @return void
- */
-function handleUpdateUser(): void
-{
-    global $message, $messageType;
-
-    $userId = (int)($_POST['user_id'] ?? 0);
-    $userData = [
-        'username' => $_POST['username'] ?? '',
-        'email' => $_POST['email'] ?? '',
-        'first_name' => $_POST['first_name'] ?? '',
-        'last_name' => $_POST['last_name'] ?? '',
-        'role_id' => (int)($_POST['role_id'] ?? 0)
-    ];
-
-    // Add role-specific fields
-    if ($userData['role_id'] === ROLE_STUDENT) {
-        $userData['class_code'] = $_POST['student_class'] ?? '';
-        $userData['dob'] = $_POST['dob'] ?? '';
-        if (empty($userData['dob'])) {
-            $message = 'Date of birth is required for students.';
-            $messageType = 'error';
-            return;
-        }
-    } elseif ($userData['role_id'] === ROLE_TEACHER) $userData['teacher_subjects'] = $_POST['teacher_subjects'] ?? [];
-    elseif ($userData['role_id'] === ROLE_PARENT) $userData['student_ids'] = $_POST['parent_children'] ?? [];
-
-    // Validate and update user
-    $validationResult = validateUserForm($userData);
-    if ($validationResult !== true) {
-        $message = $validationResult;
-        $messageType = 'error';
-    } else if (updateUser($userId, $userData)) {
-        $message = 'User updated successfully.';
-        $messageType = 'success';
-    } else {
-        $message = 'Error updating user. Please check the form and try again.';
-        $messageType = 'error';
-    }
-}
-
-/**
- * Resets a user's password
- * @return void
- */
-function handleResetPassword(): void
-{
-    global $message, $messageType;
-
-    $userId = (int)($_POST['user_id'] ?? 0);
-    $newPassword = $_POST['new_password'] ?? '';
-    $confirmPassword = $_POST['confirm_password'] ?? '';
-
-    if ($newPassword !== $confirmPassword) {
-        $message = 'Passwords do not match. Please try again.';
-        $messageType = 'error';
-    } else if (strlen($newPassword) < 6) {
-        $message = 'Password must be at least 6 characters long.';
-        $messageType = 'error';
-    } else if (resetUserPassword($userId, $newPassword)) {
-        $message = 'Password reset successfully.';
-        $messageType = 'success';
-    } else {
-        $message = 'Error resetting password. Please try again.';
-        $messageType = 'error';
-    }
-}
-
-/**
- * Deletes a user after confirmation
- * @return void
- */
-function handleDeleteUser(): void
-{
-    global $message, $messageType;
-
-    $userId = (int)($_POST['user_id'] ?? 0);
-    $confirmation = $_POST['delete_confirmation'] ?? '';
-
-    if ($confirmation !== 'DELETE') {
-        $message = 'Invalid confirmation. User was not deleted.';
-        $messageType = 'error';
-    } else if ($userId == $_SESSION['user_id']) {
-        $message = 'You cannot delete your own account.';
-        $messageType = 'error';
-    } else if (deleteUser($userId)) {
-        $message = 'User deleted successfully.';
-        $messageType = 'success';
-    } else {
-        $message = 'Error deleting user. The user may have associated data that prevents deletion.';
-        $messageType = 'error';
-    }
-}
-
 ?>
 
 <div class="container mt-lg">
-    <!-- Header Card -->
-    <div class="card shadow mb-lg page-transition">
-        <div class="card__content p-md d-flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold mt-0 mb-xs">User Management</h1>
-                <p class="text-secondary mt-0 mb-0">Manage user accounts across the system.</p>
-            </div>
-            <div class="role-badge role-admin">Administrator</div>
-        </div>
-    </div>
+    <?php renderHeaderCard(
+        'User Management',
+        'Manage user accounts across the system.',
+        'admin',
+        'Administrator'
+    ); ?>
 
     <!-- Status Message -->
     <?php if (!empty($message)): ?>
@@ -276,7 +137,7 @@ function handleDeleteUser(): void
                     <input type="text" id="searchInput" class="form-input"
                            placeholder="Search users by name, username, or email...">
                 </div>
-                <button id="createUserBtn" class="btn btn-primary">
+                <button id="createUserBtn" data-open-modal="createUserModal" class="btn btn-primary">
                     <span class="btn-icon">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -343,29 +204,35 @@ function handleDeleteUser(): void
                             if ($roleClass === 'administrator') $roleClass = 'admin';
                             ?>
                             <tr data-role="<?= strtolower($user['role_name']) ?>"
-                                data-search-terms="<?= strtolower(htmlspecialchars($user['username'] . ' ' . $user['first_name'] . ' ' . $user['last_name'] . ' ' . ($user['email'] ?? ''))) ?>">
+                                data-search-terms="<?= strtolower(htmlspecialchars($user['username'] . ' ' . ($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '') . ' ' . ($user['email'] ?? ''))) ?>">
                                 <td><?= htmlspecialchars($user['username']) ?></td>
-                                <td><?= htmlspecialchars($user['first_name'] . ' ' . $user['last_name']) ?></td>
+                                <td><?= htmlspecialchars(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')) ?></td>
                                 <td>
-                                        <span class="role-badge role-<?= $roleClass ?>">
-                                            <?= htmlspecialchars(ucfirst($user['role_name'])) ?>
-                                        </span>
+                                    <span class="role-badge role-<?= $roleClass ?>">
+                                        <?= htmlspecialchars(ucfirst($user['role_name'])) ?>
+                                    </span>
                                 </td>
                                 <td><?= htmlspecialchars($user['email'] ?? 'N/A') ?></td>
                                 <td><?= date('M d, Y', strtotime($user['created_at'])) ?></td>
                                 <td>
                                     <div class="d-flex gap-xs justify-center">
-                                        <button class="btn btn-secondary btn-sm edit-user-btn"
-                                                data-id="<?= $user['user_id'] ?>">Edit
+                                        <button class="btn btn-secondary btn-sm"
+                                                data-open-modal="editUserModal"
+                                                data-id="<?= $user['user_id'] ?>">
+                                            <span class="text-md">✎</span> Edit
                                         </button>
-                                        <button class="btn btn-secondary btn-sm reset-pwd-btn"
+                                        <button class="btn btn-secondary btn-sm"
+                                                data-open-modal="resetPasswordModal"
                                                 data-id="<?= $user['user_id'] ?>"
-                                                data-username="<?= htmlspecialchars($user['username']) ?>">Reset PW
+                                                data-username="<?= htmlspecialchars($user['username']) ?>">
+                                            Reset PW
                                         </button>
                                         <?php if ($user['user_id'] != $_SESSION['user_id']): ?>
-                                            <button class="btn btn-error btn-sm delete-user-btn"
+                                            <button class="btn btn-error btn-sm"
+                                                    data-open-modal="deleteUserModal"
                                                     data-id="<?= $user['user_id'] ?>"
-                                                    data-username="<?= htmlspecialchars($user['username']) ?>">Delete
+                                                    data-name="<?= htmlspecialchars($user['username']) ?>">
+                                                <span class="text-md">🗑</span> Delete
                                             </button>
                                         <?php endif; ?>
                                     </div>
@@ -503,6 +370,8 @@ function handleDeleteUser(): void
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                 <input type="hidden" name="update_user" value="1">
                 <input type="hidden" id="edit_user_id" name="user_id" value="">
+                <!-- Add an original username field to help with validation -->
+                <input type="hidden" id="edit_original_username" name="original_username" value="">
 
                 <div class="form-group">
                     <label class="form-label" for="edit_username">Username:</label>
@@ -539,7 +408,7 @@ function handleDeleteUser(): void
                     </select>
                 </div>
 
-                <!-- Role-specific fields (similar to create modal) -->
+                <!-- Role-specific fields -->
                 <div id="edit_teacherFields" class="role-fields" style="display: none;">
                     <div class="form-group">
                         <label class="form-label" for="edit_teacher_subjects">Subjects:</label>
@@ -624,8 +493,7 @@ function handleDeleteUser(): void
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary" id="resetPasswordSubmitBtn" disabled>Reset Password
-                </button>
+                <button type="submit" class="btn btn-primary" id="resetPasswordSubmitBtn">Reset Password</button>
             </div>
         </form>
     </div>
@@ -636,42 +504,41 @@ function handleDeleteUser(): void
     <div class="modal-overlay" aria-hidden="true"></div>
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="deleteUserModalTitle">
         <div class="modal-header">
-            <h3 class="modal-title" id="deleteUserModalTitle">Delete User</h3>
+            <h3 class="modal-title" id="deleteUserModalTitle">Potrditev izbrisa</h3>
         </div>
         <div class="modal-body">
             <div class="alert status-warning mb-md">
-                <p>Ali ste prepričani, da želite uporabnika <strong id="deleteClassModal_name"></strong>?</p>
+                <div class="alert-icon">⚠</div>
+                <div class="alert-content">
+                    <p>Ali ste prepričani, da želite izbrisati uporabnika <strong id="deleteUserModal_name"></strong>?
+                    </p>
+                </div>
             </div>
             <div class="alert status-error font-bold">
-                <p>Tega dejanja ni mogoče razveljaviti.</p>
+                <div class="alert-icon">✕</div>
+                <div class="alert-content">
+                    <p>Tega dejanja ni mogoče razveljaviti.</p>
+                </div>
             </div>
-            <input type="hidden" id="delete_user_id" value="">
+            <input type="hidden" id="deleteUserModal_id" value="">
         </div>
-        <p class="text-disabled ml-xl">Izbris bo mogoče le, če uporabnik ni v nobeni povezavi.</p>
+        <p class="text-disabled ml-xl mr-xl">Izbris bo mogoče le, če uporabnik ni v nobeni povezavi.</p>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-            <button type="button" class="btn btn-error" id="confirmDeleteBtn">Delete</button>
+            <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+            <button type="button" class="btn btn-error" id="confirmDeleteBtn">Izbriši</button>
         </div>
     </div>
 </div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // --- Constants ---
         const ROLE_TEACHER = <?= ROLE_TEACHER ?>;
         const ROLE_STUDENT = <?= ROLE_STUDENT ?>;
         const ROLE_PARENT = <?= ROLE_PARENT ?>;
 
-        // --- Modal Elements ---
-        const modals = {
-            create: document.getElementById('createUserModal'),
-            edit: document.getElementById('editUserModal'),
-            reset: document.getElementById('resetPasswordModal'),
-            delete: document.getElementById('deleteUserModal')
-        };
-
-        // --- Helper Functions ---
-        const openModal = (modal) => {
+        // Modal Management Functions
+        const openModal = (modalId) => {
+            const modal = document.getElementById(modalId);
             if (modal) {
                 modal.classList.add('open');
                 // Focus the first focusable element
@@ -681,17 +548,17 @@ function handleDeleteUser(): void
         };
 
         const closeModal = (modal) => {
+            if (typeof modal === 'string') {
+                modal = document.getElementById(modal);
+            }
+
             if (modal) {
                 modal.classList.remove('open');
-                // Reset forms and fields
-                modal.querySelectorAll('form').forEach(form => form.reset());
-                modal.querySelectorAll('.role-fields').forEach(field => {
-                    if (field && field.style) {
-                        field.style.display = 'none';
-                    }
-                });
+                // Reset forms if present
+                const form = modal.querySelector('form');
+                if (form) form.reset();
 
-                // Hide error messages
+                // Clear any error messages
                 const errorMsgs = modal.querySelectorAll('.feedback-error');
                 errorMsgs.forEach(msg => {
                     if (msg && msg.style) {
@@ -699,16 +566,16 @@ function handleDeleteUser(): void
                     }
                 });
 
-                // Reset buttons
-                const deleteBtn = modal.querySelector('#deleteUserSubmitBtn');
-                if (deleteBtn) deleteBtn.disabled = true;
-
-                const resetPwdBtn = modal.querySelector('#resetPasswordSubmitBtn');
-                if (resetPwdBtn) resetPwdBtn.disabled = true;
+                // Hide role-specific fields
+                modal.querySelectorAll('.role-fields').forEach(field => {
+                    if (field && field.style) {
+                        field.style.display = 'none';
+                    }
+                });
             }
         };
 
-        // Updates role-specific fields visibility
+        // Function to update role-specific fields visibility based on selected role
         const updateRoleSpecificFields = (selectElement, prefix) => {
             if (!selectElement) return;
 
@@ -718,35 +585,36 @@ function handleDeleteUser(): void
             const parentFields = document.getElementById(`${prefix}_parentFields`);
             const nameFieldsRow = document.getElementById(`${prefix}_nameFields`);
 
+            // Show/hide role-specific fields
             if (teacherFields) teacherFields.style.display = (roleId === ROLE_TEACHER) ? 'block' : 'none';
             if (studentFields) studentFields.style.display = (roleId === ROLE_STUDENT) ? 'block' : 'none';
             if (parentFields) parentFields.style.display = (roleId === ROLE_PARENT) ? 'block' : 'none';
 
-            // Show name fields for teachers, students, and parents (all roles except admin)
-            if (nameFieldsRow) nameFieldsRow.style.display = (roleId === ROLE_TEACHER || roleId === ROLE_STUDENT || roleId === ROLE_PARENT) ? 'flex' : 'none';
+            // Show name fields for all roles except admin
+            if (nameFieldsRow) {
+                nameFieldsRow.style.display = (roleId === ROLE_TEACHER || roleId === ROLE_STUDENT || roleId === ROLE_PARENT) ? 'flex' : 'none';
+            }
 
-            // Update required attributes
+            // Set required fields based on role
             const studentClass = document.getElementById(`${prefix}_student_class`);
             const dob = document.getElementById(`${prefix}_dob`);
             const firstName = document.getElementById(`${prefix}_first_name`);
             const lastName = document.getElementById(`${prefix}_last_name`);
 
+            // Make fields required based on role
             if (studentClass) studentClass.required = (roleId === ROLE_STUDENT);
             if (dob) dob.required = (roleId === ROLE_STUDENT);
-
-            // First name and last name are required for teachers and students
             if (firstName) firstName.required = (roleId === ROLE_STUDENT || roleId === ROLE_TEACHER);
             if (lastName) lastName.required = (roleId === ROLE_STUDENT || roleId === ROLE_TEACHER);
-        }
+        };
 
-        // --- Search Functionality ---
+        // User search functionality
         const searchInput = document.getElementById('searchInput');
         const usersTable = document.getElementById('usersTable');
 
         if (searchInput && usersTable) {
             searchInput.addEventListener('input', function () {
-                const searchTermValue = this.value || '';
-                const searchTerm = searchTermValue.toLowerCase().trim();
+                const searchTerm = this.value.toLowerCase().trim();
                 const rows = usersTable.querySelectorAll('tbody tr');
 
                 rows.forEach(row => {
@@ -754,16 +622,13 @@ function handleDeleteUser(): void
 
                     const searchTerms = (row.dataset.searchTerms || '').toLowerCase();
                     const visible = searchTerm === '' || searchTerms.includes(searchTerm);
-
-                    if (row.style) {
-                        row.style.display = visible ? '' : 'none';
-                    }
+                    row.style.display = visible ? '' : 'none';
                 });
 
-                // Check if we need to show "no results" message
+                // Show "no results" message if no rows are visible
                 const visibleRows = Array.from(rows).filter(row =>
                     !row.classList.contains('no-results') &&
-                    (!row.style || row.style.display !== 'none')
+                    row.style.display !== 'none'
                 );
 
                 let noResultsRow = usersTable.querySelector('.no-results');
@@ -782,132 +647,158 @@ function handleDeleteUser(): void
             });
         }
 
-        // --- Event Listeners ---
-
-        // Create User Button
-        const createUserBtn = document.getElementById('createUserBtn');
-        if (createUserBtn) {
-            createUserBtn.addEventListener('click', () => {
-                openModal(modals.create);
-            });
-        }
-
-        // Edit User Buttons
-        document.querySelectorAll('.edit-user-btn').forEach(btn => {
+        // Event Listeners for modal buttons
+        document.querySelectorAll('[data-open-modal]').forEach(btn => {
             btn.addEventListener('click', function () {
-                const userId = this.dataset.id;
-                if (!userId) return;
+                const modalId = this.dataset.openModal;
+                openModal(modalId);
 
-                // Get the user from the table row instead of using AJAX
-                const row = this.closest('tr');
-                const username = row.querySelector('td:nth-child(1)').textContent;
-                const fullName = row.querySelector('td:nth-child(2)').textContent;
-                const roleId = parseInt(row.dataset.role === 'administrator' ? '1' :
-                    row.dataset.role === 'teacher' ? '2' :
-                        row.dataset.role === 'student' ? '3' :
-                            row.dataset.role === 'parent' ? '4' : '0');
-                const email = row.querySelector('td:nth-child(4)').textContent;
+                // Handle additional data attributes
+                const dataId = this.dataset.id;
+                const dataName = this.dataset.name;
+                const dataUsername = this.dataset.username;
 
-                // Populate the edit form
-                document.getElementById('edit_user_id').value = userId;
-                document.getElementById('edit_username').value = username;
-                document.getElementById('edit_email').value = email === 'N/A' ? '' : email;
+                if (dataId) {
+                    const idField = document.getElementById(`${modalId}_id`);
+                    if (idField) idField.value = dataId;
+                }
 
-                // Split full name into first and last name
-                const nameParts = fullName.split(' ');
-                document.getElementById('edit_first_name').value = nameParts[0] || '';
-                document.getElementById('edit_last_name').value = nameParts.slice(1).join(' ') || '';
+                if (dataName) {
+                    const nameDisplay = document.getElementById(`${modalId}_name`);
+                    if (nameDisplay) nameDisplay.textContent = dataName;
+                }
 
-                // Set role
-                document.getElementById('edit_role').value = roleId;
+                if (dataUsername) {
+                    const usernameDisplay = document.getElementById('resetUsername');
+                    if (usernameDisplay) usernameDisplay.textContent = dataUsername;
+                }
 
-                // Update fields visibility based on role
-                updateRoleSpecificFields(document.getElementById('edit_role'), 'edit');
+                // If opening edit modal, fetch user data and populate form
+                if (modalId === 'editUserModal' && dataId) {
+                    // Set the user ID immediately so it's not forgotten
+                    const userIdField = document.getElementById('edit_user_id');
+                    if (userIdField) userIdField.value = dataId;
 
-                // For full details, we'll need to redirect to get the data
-                // This opens the modal with basic info immediately
-                openModal(modals.edit);
-
-                // Then fetch additional role-specific data
-                fetch(`users.php?action=edit&user_id=${userId}&format=json`)
-                    .then(response => response.json())
-                    .then(userData => {
-                        // Populate role-specific fields if data is available
-                        if (userData.role_id === ROLE_STUDENT) {
-                            const studentClassField = document.getElementById('edit_student_class');
-                            const dobField = document.getElementById('edit_dob');
-
-                            if (studentClassField && userData.class_code) {
-                                studentClassField.value = userData.class_code;
-                            }
-
-                            if (dobField && userData.dob) {
-                                dobField.value = userData.dob;
-                            }
-                        } else if (userData.role_id === ROLE_TEACHER && userData.subjects) {
-                            const subjectSelect = document.getElementById('edit_teacher_subjects');
-                            if (subjectSelect) {
-                                const optionElements = subjectSelect.querySelectorAll('option');
-                                optionElements.forEach(option => {
-                                    option.selected = userData.subjects.includes(parseInt(option.value));
+                    fetch(`../api/admin.php?action=getUserDetails&id=${dataId}`)
+                        .then(response => {
+                            // Check if response is OK
+                            if (!response.ok) {
+                                return response.json().then(data => {
+                                    throw new Error(data.error || `HTTP error ${response.status}`);
+                                }).catch(e => {
+                                    // If JSON parsing failed, provide a clearer error
+                                    if (e instanceof SyntaxError) {
+                                        throw new Error(`Invalid server response (not JSON): ${response.status}`);
+                                    }
+                                    throw e;
                                 });
                             }
-                        } else if (userData.role_id === ROLE_PARENT && userData.children) {
-                            const childrenSelect = document.getElementById('edit_parent_children');
-                            if (childrenSelect) {
-                                const optionElements = childrenSelect.querySelectorAll('option');
-                                optionElements.forEach(option => {
-                                    option.selected = userData.children.includes(parseInt(option.value));
-                                });
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Response data:', data);
+
+                            // Check if data contains an error
+                            if (data.error) {
+                                throw new Error(data.error);
                             }
-                        }
-                    })
-                    .catch(() => {
-                        console.log('Could not load additional user details. Some fields may need to be filled in manually.');
-                    });
+
+                            // Double-check that user_id is set correctly
+                            document.getElementById('edit_user_id').value = dataId;
+
+                            // Store the original username for validation
+                            if (data.username) {
+                                document.getElementById('edit_original_username').value = data.username;
+                            }
+
+                            // Populate user data into form fields
+                            const fields = {
+                                'edit_username': data.username || '',
+                                'edit_email': data.email || '',
+                                'edit_first_name': data.first_name || '',
+                                'edit_last_name': data.last_name || '',
+                                'edit_role': data.role_id || ''
+                            };
+
+                            // Set each field value
+                            Object.keys(fields).forEach(id => {
+                                const field = document.getElementById(id);
+                                if (field) field.value = fields[id];
+                            });
+
+                            // Update visible fields based on role
+                            updateRoleSpecificFields(document.getElementById('edit_role'), 'edit');
+
+                            // Populate role-specific fields
+                            if (data.role_id === ROLE_STUDENT) {
+                                const studentClassField = document.getElementById('edit_student_class');
+                                const dobField = document.getElementById('edit_dob');
+
+                                if (studentClassField && data.class_code) {
+                                    studentClassField.value = data.class_code;
+                                }
+
+                                if (dobField && data.dob) {
+                                    dobField.value = data.dob;
+                                }
+                            } else if (data.role_id === ROLE_TEACHER && data.subjects) {
+                                const subjectSelect = document.getElementById('edit_teacher_subjects');
+                                if (subjectSelect) {
+                                    const optionElements = subjectSelect.querySelectorAll('option');
+                                    optionElements.forEach(option => {
+                                        option.selected = data.subjects.includes(parseInt(option.value));
+                                    });
+                                }
+                            } else if (data.role_id === ROLE_PARENT && data.children) {
+                                const childrenSelect = document.getElementById('edit_parent_children');
+                                if (childrenSelect) {
+                                    const optionElements = childrenSelect.querySelectorAll('option');
+                                    optionElements.forEach(option => {
+                                        option.selected = data.children.includes(parseInt(option.value));
+                                    });
+                                }
+                            }
+
+                            console.log('Successfully loaded user data for ID:', dataId);
+                        })
+                        .catch(error => {
+                            console.error('Error fetching user details:', error);
+                            // Show the actual error message from the server if available
+                            alert(`Error loading user data: ${error.message || 'Please try again.'}`);
+                        });
+                }
             });
         });
 
-        // Reset Password Buttons
-        document.querySelectorAll('.reset-pwd-btn').forEach(btn => {
+        // Close modal buttons
+        document.querySelectorAll('[data-close-modal]').forEach(btn => {
             btn.addEventListener('click', function () {
-                const userId = this.dataset.id;
-                const username = this.dataset.username;
-                if (!userId) return;
-
-                const userIdField = document.getElementById('reset_user_id');
-                const usernameDisplay = document.getElementById('resetUsername');
-
-                if (userIdField) userIdField.value = userId;
-                if (usernameDisplay) usernameDisplay.textContent = username || 'this user';
-
-                openModal(modals.reset);
+                closeModal(this.closest('.modal'));
             });
         });
 
-        // Delete User Buttons
-        document.querySelectorAll('.delete-user-btn').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const userId = this.dataset.id;
-                const username = this.dataset.username;
-                if (!userId) return;
-
-                const userIdField = document.getElementById('delete_user_id');
-                const usernameDisplay = document.getElementById('deleteUsername');
-
-                if (userIdField) userIdField.value = userId;
-                if (usernameDisplay) usernameDisplay.textContent = username || 'this user';
-
-                openModal(modals.delete);
+        // Close modals when clicking the overlay
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+            overlay.addEventListener('click', function () {
+                closeModal(this.closest('.modal'));
             });
         });
 
-        // Confirm Delete Button
+        // Close modals with Escape key
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal.open').forEach(modal => {
+                    closeModal(modal);
+                });
+            }
+        });
+
+        // Handle delete user button
         document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
-            const userId = document.getElementById('delete_user_id').value;
+            const userId = document.getElementById('deleteUserModal_id').value;
             if (!userId) return;
 
-            // Create and submit form
+            // Create and submit form for delete action
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = window.location.href;
@@ -927,42 +818,14 @@ function handleDeleteUser(): void
             idInput.name = 'user_id';
             idInput.value = userId;
 
-            // Add DELETE confirmation for backward compatibility with server-side validation
-            const confirmInput = document.createElement('input');
-            confirmInput.type = 'hidden';
-            confirmInput.name = 'delete_confirmation';
-            confirmInput.value = 'DELETE';
-
             form.appendChild(csrfInput);
             form.appendChild(actionInput);
             form.appendChild(idInput);
-            form.appendChild(confirmInput);
             document.body.appendChild(form);
             form.submit();
         });
 
-        // Close Modal Buttons
-        document.querySelectorAll('[data-close-modal]').forEach(btn => {
-            btn.addEventListener('click', function () {
-                closeModal(this.closest('.modal'));
-            });
-        });
-
-        // Close Modal on Overlay Click
-        document.querySelectorAll('.modal-overlay').forEach(overlay => {
-            overlay.addEventListener('click', function () {
-                closeModal(this.closest('.modal'));
-            });
-        });
-
-        // Close Modal on Escape Key
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                document.querySelectorAll('.modal.open').forEach(closeModal);
-            }
-        });
-
-        // Role Select Change Handlers
+        // Role change handlers
         const createRoleSelect = document.getElementById('create_role');
         const editRoleSelect = document.getElementById('edit_role');
 
@@ -978,7 +841,7 @@ function handleDeleteUser(): void
             });
         }
 
-        // Password Validation
+        // Password validation for reset password form
         const validatePasswords = () => {
             const newPwd = document.getElementById('new_password');
             const confirmPwd = document.getElementById('confirm_password');
@@ -990,7 +853,6 @@ function handleDeleteUser(): void
             const newPwdValue = newPwd.value || '';
             const confirmPwdValue = confirmPwd.value || '';
 
-            // Check password length - require minimum 6 characters
             const minLength = 6;
             if (newPwdValue.length < minLength) {
                 errorMsg.textContent = `Password must be at least ${minLength} characters.`;
@@ -999,7 +861,6 @@ function handleDeleteUser(): void
                 return;
             }
 
-            // Check if passwords match
             if (newPwdValue && confirmPwdValue) {
                 if (newPwdValue !== confirmPwdValue) {
                     errorMsg.textContent = 'Passwords do not match!';
@@ -1011,26 +872,19 @@ function handleDeleteUser(): void
                 }
             } else {
                 errorMsg.style.display = 'none';
-                submitBtn.disabled = true;
+                submitBtn.disabled = newPwdValue.length === 0 || confirmPwdValue.length === 0;
             }
         };
 
+        // Add password validation listeners
         const newPasswordField = document.getElementById('new_password');
         const confirmPasswordField = document.getElementById('confirm_password');
 
         if (newPasswordField) newPasswordField.addEventListener('input', validatePasswords);
         if (confirmPasswordField) confirmPasswordField.addEventListener('input', validatePasswords);
 
-        // Delete Confirmation Validation
-        const deleteConfirmInput = document.getElementById('delete_confirmation');
-        const deleteSubmitBtn = document.getElementById('deleteUserSubmitBtn');
-
-        if (deleteConfirmInput && deleteSubmitBtn) {
-            deleteConfirmInput.addEventListener('input', function () {
-                const inputValue = this.value || '';
-                deleteSubmitBtn.disabled = inputValue !== 'DELETE';
-            });
-        }
+        // Initialize password validation
+        validatePasswords();
     });
 </script>
 

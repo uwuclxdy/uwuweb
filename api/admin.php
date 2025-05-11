@@ -11,6 +11,7 @@
  * - handleGetClassDetails(): void - Returns detailed information about a class including enrolled students and subject assignments
  * - handleGetSubjectDetails(): void - Returns detailed information about a subject including assigned classes
  * - handleGetTeacherDetails(): void - Returns detailed information about a teacher including assigned classes and subjects
+ * - handleGetUserDetails(): void - Returns detailed information about any user for the admin panel
  */
 
 declare(strict_types=1);
@@ -48,6 +49,10 @@ try {
 
         case 'getTeacherDetails':
             handleGetTeacherDetails();
+            break;
+
+        case 'getUserDetails':
+            handleGetUserDetails();
             break;
 
         default:
@@ -131,4 +136,24 @@ function handleGetTeacherDetails(): void
         'success' => true,
         'data' => $teacherDetails
     ], JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Handles the getUserDetails API endpoint
+ * Returns detailed information about any user for admin panel operations
+ *
+ * @return void Outputs JSON response directly
+ * @throws JsonException
+ */
+function handleGetUserDetails(): void
+{
+    $userId = filter_var($_GET['id'] ?? 0, FILTER_VALIDATE_INT);
+
+    if (!$userId || $userId <= 0) sendJsonErrorResponse('Neveljaven ID uporabnika', 400, 'admin.php');
+
+    $userDetails = getUserDetails($userId);
+
+    if (!$userDetails) sendJsonErrorResponse('Uporabnik ni bil najden', 404, 'admin.php');
+
+    echo json_encode($userDetails, JSON_THROW_ON_ERROR);
 }

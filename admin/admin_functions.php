@@ -175,32 +175,57 @@ function getUserDetails(int $userId): ?array
                 $stmt = $pdo->prepare("SELECT * FROM students WHERE user_id = ?");
                 $stmt->execute([$userId]);
                 $roleData = $stmt->fetch(PDO::FETCH_ASSOC);
-                $user['student_data'] = $roleData;
+
+                if ($roleData) {
+                    // Add the student data directly to the user array
+                    $user['first_name'] = $roleData['first_name'];
+                    $user['last_name'] = $roleData['last_name'];
+                    $user['dob'] = $roleData['dob'];
+                    $user['class_code'] = $roleData['class_code'];
+                }
                 break;
 
             case ROLE_TEACHER:
                 $stmt = $pdo->prepare("SELECT * FROM teachers WHERE user_id = ?");
                 $stmt->execute([$userId]);
                 $roleData = $stmt->fetch(PDO::FETCH_ASSOC);
-                $user['teacher_data'] = $roleData;
+
+                if ($roleData) {
+                    // Add the teacher data directly to the user array
+                    $user['first_name'] = $roleData['first_name'];
+                    $user['last_name'] = $roleData['last_name'];
+                    $user['teacher_id'] = $roleData['teacher_id'];
+
+                    // Get teacher's subjects
+                    $stmt = $pdo->prepare("
+                        SELECT DISTINCT s.subject_id 
+                        FROM subjects s
+                        JOIN class_subjects cs ON s.subject_id = cs.subject_id
+                        WHERE cs.teacher_id = ?
+                    ");
+                    $stmt->execute([$roleData['teacher_id']]);
+                    $subjects = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    $user['subjects'] = $subjects;
+                }
                 break;
 
             case ROLE_PARENT:
                 $stmt = $pdo->prepare("SELECT * FROM parents WHERE user_id = ?");
                 $stmt->execute([$userId]);
                 $roleData = $stmt->fetch(PDO::FETCH_ASSOC);
-                $user['parent_data'] = $roleData;
 
                 if ($roleData) {
+                    $user['parent_id'] = $roleData['parent_id'];
+
+                    // Get linked students
                     $stmt = $pdo->prepare("
-                        SELECT s.*, u.username
-                        FROM students s
-                        JOIN users u ON s.user_id = u.user_id
-                        JOIN student_parent sp ON s.student_id = sp.student_id
+                        SELECT sp.student_id
+                        FROM student_parent sp
                         WHERE sp.parent_id = ?
                     ");
                     $stmt->execute([$roleData['parent_id']]);
-                    $user['linked_students'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $children = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    $user['children'] = $children;
                 }
                 break;
         }
@@ -323,6 +348,7 @@ function updateUser(int $userId, array $userData): bool
 
         $pdo->beginTransaction();
 
+        // Update username and role in users table
         if (!empty($userData['username']) || isset($userData['role_id'])) {
             $updates = [];
             $params = [];
@@ -346,6 +372,7 @@ function updateUser(int $userId, array $userData): bool
             }
         }
 
+        // Get current user role
         $stmt = $pdo->prepare("SELECT role_id FROM users WHERE user_id = ?");
         $stmt->execute([$userId]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -355,6 +382,7 @@ function updateUser(int $userId, array $userData): bool
             return false;
         }
 
+        // Handle role-specific data
         switch ($user['role_id']) {
             case ROLE_STUDENT:
                 $updates = [];
@@ -381,28 +409,110 @@ function updateUser(int $userId, array $userData): bool
                 }
 
                 if (!empty($updates)) {
-                    $query = "UPDATE students SET " . implode(", ", $updates) . " WHERE user_id = ?";
-                    $params[] = $userId;
+                    // Check if student record exists
+                    $stmt = $pdo->prepare("SELECT student_id FROM students WHERE user_id = ?");
+                    $stmt->execute([$userId]);
+                    $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                    $stmt = $pdo->prepare($query);
-                    $stmt->execute($params);
+                    if ($student) {
+                        // Update existing student record
+                        $query = "UPDATE students SET " . implode(", ", $updates) . " WHERE user_id = ?";
+                        $params[] = $userId;
+
+                        $stmt = $pdo->prepare($query);
+                        $stmt->execute($params);
+                    } else {
+                        // Create new student record if changed from another role
+                        $stmt = $pdo->prepare("INSERT INTO students (user_id, first_name, last_name, dob, class_code) VALUES (?, ?, ?, ?, ?)");
+                        $stmt->execute([
+                            $userId,
+                            $userData['first_name'] ?? '',
+                            $userData['last_name'] ?? '',
+                            $userData['dob'] ?? '',
+                            $userData['class_code'] ?? ''
+                        ]);
+                    }
+                }
+                break;
+
+            case ROLE_TEACHER:
+                // Handle teacher data
+                $updates = [];
+                $params = [];
+
+                if (!empty($userData['first_name'])) {
+                    $updates[] = "first_name = ?";
+                    $params[] = $userData['first_name'];
+                }
+
+                if (!empty($userData['last_name'])) {
+                    $updates[] = "last_name = ?";
+                    $params[] = $userData['last_name'];
+                }
+
+                if (!empty($updates)) {
+                    // Check if teacher record exists
+                    $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = ?");
+                    $stmt->execute([$userId]);
+                    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($teacher) {
+                        // Update existing teacher record
+                        $query = "UPDATE teachers SET " . implode(", ", $updates) . " WHERE user_id = ?";
+                        $params[] = $userId;
+
+                        $stmt = $pdo->prepare($query);
+                        $stmt->execute($params);
+
+                        // Handle teacher subjects if provided
+                        if (isset($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) {
+                            // We would need to manage subject assignments here
+                            // This would typically involve updating entries in a linking table
+                            // The exact implementation depends on how subjects are related to teachers in the database
+                        }
+                    } else {
+                        // Create new teacher record if changed from another role
+                        $stmt = $pdo->prepare("INSERT INTO teachers (user_id, first_name, last_name) VALUES (?, ?, ?)");
+                        $stmt->execute([
+                            $userId,
+                            $userData['first_name'] ?? '',
+                            $userData['last_name'] ?? ''
+                        ]);
+
+                        // Handle teacher subjects if provided (for new teacher)
+                        if (isset($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) {
+                            // Similar to above, would need implementation based on database structure
+                        }
+                    }
                 }
                 break;
 
             case ROLE_PARENT:
-                if (isset($userData['student_ids']) && is_array($userData['student_ids'])) {
+                // Handle parent data
+                $stmt = $pdo->prepare("SELECT parent_id FROM parents WHERE user_id = ?");
+                $stmt->execute([$userId]);
+                $parent = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$parent) {
+                    // Create new parent record if it doesn't exist
+                    $stmt = $pdo->prepare("INSERT INTO parents (user_id) VALUES (?)");
+                    $stmt->execute([$userId]);
+
+                    // Get the newly created parent_id
                     $stmt = $pdo->prepare("SELECT parent_id FROM parents WHERE user_id = ?");
                     $stmt->execute([$userId]);
                     $parent = $stmt->fetch(PDO::FETCH_ASSOC);
+                }
 
-                    if ($parent) {
-                        $stmt = $pdo->prepare("DELETE FROM student_parent WHERE parent_id = ?");
-                        $stmt->execute([$parent['parent_id']]);
+                if ($parent && isset($userData['student_ids']) && is_array($userData['student_ids'])) {
+                    // Delete existing relationships
+                    $stmt = $pdo->prepare("DELETE FROM student_parent WHERE parent_id = ?");
+                    $stmt->execute([$parent['parent_id']]);
 
-                        if (!empty($userData['student_ids'])) {
-                            $stmt = $pdo->prepare("INSERT INTO student_parent (student_id, parent_id) VALUES (?, ?)");
-                            foreach ($userData['student_ids'] as $studentId) $stmt->execute([$studentId, $parent['parent_id']]);
-                        }
+                    // Add new relationships
+                    if (!empty($userData['student_ids'])) {
+                        $stmt = $pdo->prepare("INSERT INTO student_parent (student_id, parent_id) VALUES (?, ?)");
+                        foreach ($userData['student_ids'] as $studentId) $stmt->execute([$studentId, $parent['parent_id']]);
                     }
                 }
                 break;
@@ -618,7 +728,14 @@ function handleUpdateUser(): void
     global $message, $messageType;
 
     $userId = (int)($_POST['user_id'] ?? 0);
+    if (!$userId) {
+        $message = 'Invalid user ID.';
+        $messageType = 'error';
+        return;
+    }
+
     $userData = [
+        'user_id' => $userId, // Make sure user_id is included in userData
         'username' => $_POST['username'] ?? '',
         'email' => $_POST['email'] ?? '',
         'first_name' => $_POST['first_name'] ?? '',
@@ -1788,7 +1905,7 @@ function validateUserForm(array $userData): bool|string
 
     if (!isset($userData['user_id']) && usernameExists($userData['username'])) return 'Uporabniško ime je že zasedeno.';
     // Check if username exists when updating, excluding self
-    if (isset($userData['user_id']) && usernameExists($userData['username'], $userData['user_id'])) return 'Uporabniško ime je že zasedeno.';
+    if (isset($userData['user_id']) && !empty($userData['user_id']) && usernameExists($userData['username'], (int)$userData['user_id'])) return 'Uporabniško ime je že zasedeno.';
 
     if (empty($userData['role_id']) || !in_array($userData['role_id'], [ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT, ROLE_PARENT], true)) return 'Izbrana je neveljavna vloga.';
 

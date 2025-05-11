@@ -133,15 +133,12 @@ $pdo = getDBConnection();
 ?>
 
 <div class="container mt-lg">
-    <div class="card shadow mb-lg page-transition">
-        <div class="card__content p-md d-flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold mt-0 mb-xs">Upravljanje Predmetov</h1>
-                <p class="text-secondary mt-0 mb-0">Dodajanje, urejanje, in brisanje predmetov.</p>
-            </div>
-            <div class="role-badge role-admin">Administrator</div>
-        </div>
-    </div>
+    <?php renderHeaderCard(
+        'Upravljanje Predmetov',
+        'Dodajanje, urejanje, in brisanje predmetov.',
+        'admin',
+        'Administrator'
+    ); ?>
 
     <?php if (!empty($message)): ?>
         <div class="alert status-<?= $messageType === 'success' ? 'success' : 'error' ?> page-transition mb-lg"
