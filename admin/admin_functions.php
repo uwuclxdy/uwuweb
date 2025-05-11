@@ -15,6 +15,10 @@
  * - updateUser(int $userId, array $userData): bool - Updates user information. Returns success status.
  * - resetUserPassword(int $userId, string $newPassword): bool - Sets new user password. Returns success status.
  * - deleteUser(int $userId): bool - Removes user if no dependencies exist. Returns success status.
+ * - handleCreateUser(): void - Processes user creation form submission.
+ * - handleUpdateUser(): void - Processes user update form submission.
+ * - handleResetPassword(): void - Processes password reset form submission.
+ * - handleDeleteUser(): void - Processes user deletion confirmation.
  *
  * Subject Management Functions:
  * - getAllSubjects(): array - Returns all subjects from the database.
@@ -554,6 +558,147 @@ function deleteUser(int $userId): bool
         if (isset($pdo) && $pdo instanceof PDO && $pdo->inTransaction()) $pdo->rollBack();
         logDBError("Napaka pri brisanju uporabnika: " . $e->getMessage());
         return false;
+    }
+}
+
+/**
+ * Creates a new user based on form data
+ * @return void
+ */
+function handleCreateUser(): void
+{
+    global $message, $messageType;
+
+    $userData = [
+        'username' => $_POST['username'] ?? '',
+        'password' => $_POST['password'] ?? '',
+        'email' => $_POST['email'] ?? '',
+        'first_name' => $_POST['first_name'] ?? '',
+        'last_name' => $_POST['last_name'] ?? '',
+        'role_id' => (int)($_POST['role_id'] ?? 0)
+    ];
+
+    if (strlen($userData['password']) < 6) {
+        $message = 'Password must be at least 6 characters long.';
+        $messageType = 'error';
+        return;
+    }
+
+    if ($userData['role_id'] === ROLE_STUDENT) {
+        $userData['class_code'] = $_POST['student_class'] ?? '';
+        $userData['dob'] = $_POST['dob'] ?? '';
+        if (empty($userData['dob'])) {
+            $message = 'Date of birth is required for students.';
+            $messageType = 'error';
+            return;
+        }
+    } elseif ($userData['role_id'] === ROLE_TEACHER) $userData['teacher_subjects'] = $_POST['teacher_subjects'] ?? [];
+    elseif ($userData['role_id'] === ROLE_PARENT) $userData['student_ids'] = $_POST['parent_children'] ?? [];
+
+    $validationResult = validateUserForm($userData);
+    if ($validationResult !== true) {
+        $message = $validationResult;
+        $messageType = 'error';
+    } else if (createNewUser($userData)) {
+        $message = 'User created successfully.';
+        $messageType = 'success';
+    } else {
+        $message = 'Error creating user. Please check the form and try again.';
+        $messageType = 'error';
+    }
+}
+
+/**
+ * Updates an existing user based on form data
+ * @return void
+ */
+function handleUpdateUser(): void
+{
+    global $message, $messageType;
+
+    $userId = (int)($_POST['user_id'] ?? 0);
+    $userData = [
+        'username' => $_POST['username'] ?? '',
+        'email' => $_POST['email'] ?? '',
+        'first_name' => $_POST['first_name'] ?? '',
+        'last_name' => $_POST['last_name'] ?? '',
+        'role_id' => (int)($_POST['role_id'] ?? 0)
+    ];
+
+    if ($userData['role_id'] === ROLE_STUDENT) {
+        $userData['class_code'] = $_POST['student_class'] ?? '';
+        $userData['dob'] = $_POST['dob'] ?? '';
+        if (empty($userData['dob'])) {
+            $message = 'Date of birth is required for students.';
+            $messageType = 'error';
+            return;
+        }
+    } elseif ($userData['role_id'] === ROLE_TEACHER) $userData['teacher_subjects'] = $_POST['teacher_subjects'] ?? [];
+    elseif ($userData['role_id'] === ROLE_PARENT) $userData['student_ids'] = $_POST['parent_children'] ?? [];
+
+    $validationResult = validateUserForm($userData);
+    if ($validationResult !== true) {
+        $message = $validationResult;
+        $messageType = 'error';
+    } else if (updateUser($userId, $userData)) {
+        $message = 'User updated successfully.';
+        $messageType = 'success';
+    } else {
+        $message = 'Error updating user. Please check the form and try again.';
+        $messageType = 'error';
+    }
+}
+
+/**
+ * Resets a user's password
+ * @return void
+ */
+function handleResetPassword(): void
+{
+    global $message, $messageType;
+
+    $userId = (int)($_POST['user_id'] ?? 0);
+    $newPassword = $_POST['new_password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
+
+    if ($newPassword !== $confirmPassword) {
+        $message = 'Passwords do not match. Please try again.';
+        $messageType = 'error';
+    } else if (strlen($newPassword) < 6) {
+        $message = 'Password must be at least 6 characters long.';
+        $messageType = 'error';
+    } else if (resetUserPassword($userId, $newPassword)) {
+        $message = 'Password reset successfully.';
+        $messageType = 'success';
+    } else {
+        $message = 'Error resetting password. Please try again.';
+        $messageType = 'error';
+    }
+}
+
+/**
+ * Deletes a user after confirmation
+ * @return void
+ */
+function handleDeleteUser(): void
+{
+    global $message, $messageType;
+
+    $userId = (int)($_POST['user_id'] ?? 0);
+    $confirmation = $_POST['delete_confirmation'] ?? '';
+
+    if ($confirmation !== 'DELETE') {
+        $message = 'Invalid confirmation. User was not deleted.';
+        $messageType = 'error';
+    } else if ($userId == $_SESSION['user_id']) {
+        $message = 'You cannot delete your own account.';
+        $messageType = 'error';
+    } else if (deleteUser($userId)) {
+        $message = 'User deleted successfully.';
+        $messageType = 'success';
+    } else {
+        $message = 'Error deleting user. The user may have associated data that prevents deletion.';
+        $messageType = 'error';
     }
 }
 
@@ -1256,9 +1401,9 @@ function updateSystemSettings(array $settings): bool
 
         if ($settingsExist) {
             // Update existing settings
-            $sql = "UPDATE system_settings SET 
+            $sql = "UPDATE system_settings SET
                     school_name = :school_name,
-                    current_year = :current_year, 
+                    current_year = :current_year,
                     school_address = :school_address,
                     session_timeout = :session_timeout,
                     grade_scale = :grade_scale,
@@ -1278,12 +1423,12 @@ function updateSystemSettings(array $settings): bool
 
         // Insert new settings
         $sql = "INSERT INTO system_settings (
-                school_name, current_year, school_address, 
-                session_timeout, grade_scale, maintenance_mode, 
-                created_at, updated_at) 
+                school_name, current_year, school_address,
+                session_timeout, grade_scale, maintenance_mode,
+                created_at, updated_at)
                VALUES (
-                :school_name, :current_year, :school_address, 
-                :session_timeout, :grade_scale, :maintenance_mode, 
+                :school_name, :current_year, :school_address,
+                :session_timeout, :grade_scale, :maintenance_mode,
                 NOW(), NOW())";
 
         $stmt = $pdo->prepare($sql);

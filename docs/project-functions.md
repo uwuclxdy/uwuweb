@@ -175,6 +175,10 @@ settings, and class-subject assignments.
 - `updateUser(int $userId, array $userData): bool` - Updates user information. Returns success status.
 - `resetUserPassword(int $userId, string $newPassword): bool` - Sets new user password. Returns success status.
 - `deleteUser(int $userId): bool` - Removes user if no dependencies exist. Returns success status.
+- `handleCreateUser(): void` - Processes user creation form submission.
+- `handleUpdateUser(): void` - Processes user update form submission.
+- `handleResetPassword(): void` - Processes password reset form submission.
+- `handleDeleteUser(): void` - Processes user deletion confirmation.
 
 ### Subject Management Functions:
 

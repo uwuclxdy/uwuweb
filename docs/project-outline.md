@@ -65,7 +65,6 @@ uwuweb/
 ├── db/
 │ ├── migrate_system_settings.sh # Settings migration script
 │ ├── seed_demo.sql # Demo data population script
-│ ├── system_settings.sql # System settings structure
 │ └── uwuweb.sql # Main database schema
 ├── design/
 │ ├── modal-examples.php # Examples of modal dialog implementations
