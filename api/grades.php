@@ -101,3 +101,65 @@ function handleGetClassGradesApi(): void
         'data' => $gradesData
     ], JSON_THROW_ON_ERROR);
 }
+
+/**
+ * API handler for adding grade item
+ *
+ * @return void Outputs JSON response
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleAddGradeItemApi(): void
+{
+    // Ensure POST request with required parameters
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'grades.php/handleAddGradeItemApi');
+
+    // Extract and validate request parameters
+    $classSubjectId = filter_input(INPUT_POST, 'class_subject_id', FILTER_VALIDATE_INT);
+    $name = filter_input(INPUT_POST, 'name');
+    $maxPoints = filter_input(INPUT_POST, 'max_points', FILTER_VALIDATE_FLOAT);
+    $weight = filter_input(INPUT_POST, 'weight', FILTER_VALIDATE_FLOAT) ?: 1.00;
+
+    if (!$classSubjectId || !$name || !$maxPoints) sendJsonErrorResponse('Missing or invalid parameters', 400, 'grades.php/handleAddGradeItemApi');
+
+    // Verify CSRF token
+    $token = filter_input(INPUT_POST, 'csrf_token');
+    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'grades.php/handleAddGradeItemApi');
+
+    // Call the business logic function
+    $result = addGradeItem($classSubjectId, $name, $maxPoints, $weight);
+
+    // Return appropriate response
+    if ($result) echo json_encode(['success' => true, 'item_id' => $result, 'message' => 'Grade item added successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to add grade item', 500, 'grades.php/handleAddGradeItemApi');
+}
+
+/**
+ * API handler for saving grade
+ *
+ * @return void Outputs JSON response
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleSaveGradeApi(): void
+{
+    // Ensure POST request with required parameters
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'grades.php/handleSaveGradeApi');
+
+    // Extract and validate request parameters
+    $enrollId = filter_input(INPUT_POST, 'enroll_id', FILTER_VALIDATE_INT);
+    $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
+    $points = filter_input(INPUT_POST, 'points', FILTER_VALIDATE_FLOAT);
+    $comment = filter_input(INPUT_POST, 'comment');
+
+    if (!$enrollId || !$itemId || $points === false) sendJsonErrorResponse('Missing or invalid parameters', 400, 'grades.php/handleSaveGradeApi');
+
+    // Verify CSRF token
+    $token = filter_input(INPUT_POST, 'csrf_token');
+    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'grades.php/handleSaveGradeApi');
+
+    // Call the business logic function
+    $result = saveGrade($enrollId, $itemId, $points, $comment);
+
+    // Return appropriate response
+    if ($result) echo json_encode(['success' => true, 'message' => 'Grade saved successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to save grade', 500, 'grades.php/handleSaveGradeApi');
+}

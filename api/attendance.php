@@ -145,3 +145,33 @@ function handleGetStudentAttendanceApi(): void
         'stats' => $stats
     ], JSON_THROW_ON_ERROR);
 }
+
+/**
+ * API handler for saving attendance record
+ *
+ * @return void Outputs JSON response
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleSaveAttendanceApi(): void
+{
+    // Ensure POST request with required parameters
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'attendance.php/handleSaveAttendanceApi');
+
+    // Extract and validate request parameters
+    $enrollId = filter_input(INPUT_POST, 'enroll_id', FILTER_VALIDATE_INT);
+    $periodId = filter_input(INPUT_POST, 'period_id', FILTER_VALIDATE_INT);
+    $status = filter_input(INPUT_POST, 'status');
+
+    if (!$enrollId || !$periodId || !in_array($status, ['P', 'A', 'L'], true)) sendJsonErrorResponse('Missing or invalid parameters', 400, 'attendance.php/handleSaveAttendanceApi');
+
+    // Verify CSRF token
+    $token = filter_input(INPUT_POST, 'csrf_token');
+    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'attendance.php/handleSaveAttendanceApi');
+
+    // Call the business logic function
+    $result = saveAttendance($enrollId, $periodId, $status);
+
+    // Return appropriate response
+    if ($result) echo json_encode(['success' => true, 'message' => 'Attendance saved successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to save attendance', 500, 'attendance.php/handleSaveAttendanceApi');
+}

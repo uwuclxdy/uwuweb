@@ -175,3 +175,60 @@ function handleGetJustificationDetailsApi(): void
         'justification' => $justification
     ], JSON_THROW_ON_ERROR);
 }
+
+/**
+ * API handler for approving justification
+ *
+ * @return void Outputs JSON response
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleApproveJustificationApi(): void
+{
+    // Ensure POST request with required parameters
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'justifications.php/handleApproveJustificationApi');
+
+    // Extract and validate request parameters
+    $absenceId = filter_input(INPUT_POST, 'att_id', FILTER_VALIDATE_INT);
+
+    if (!$absenceId) sendJsonErrorResponse('Missing or invalid parameters', 400, 'justifications.php/handleApproveJustificationApi');
+
+    // Verify CSRF token
+    $token = filter_input(INPUT_POST, 'csrf_token');
+    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'justifications.php/handleApproveJustificationApi');
+
+    // Call the business logic function
+    $result = approveJustification($absenceId);
+
+    // Return appropriate response
+    if ($result) echo json_encode(['success' => true, 'message' => 'Justification approved successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to approve justification', 500, 'justifications.php/handleApproveJustificationApi');
+}
+
+/**
+ * API handler for rejecting justification
+ *
+ * @return void Outputs JSON response
+ * @throws JsonException
+ * @throws JsonException
+ */
+function handleRejectJustificationApi(): void
+{
+    // Ensure POST request with required parameters
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'justifications.php/handleRejectJustificationApi');
+
+    // Extract and validate request parameters
+    $absenceId = filter_input(INPUT_POST, 'att_id', FILTER_VALIDATE_INT);
+    $reason = filter_input(INPUT_POST, 'reason');
+
+    if (!$absenceId || !$reason) sendJsonErrorResponse('Missing or invalid parameters', 400, 'justifications.php/handleRejectJustificationApi');
+
+    // Verify CSRF token
+    $token = filter_input(INPUT_POST, 'csrf_token');
+    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'justifications.php/handleRejectJustificationApi');
+
+    // Call the business logic function
+    $result = rejectJustification($absenceId, $reason);
+
+    // Return appropriate response
+    if ($result) echo json_encode(['success' => true, 'message' => 'Justification rejected successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to reject justification', 500, 'justifications.php/handleRejectJustificationApi');
+}

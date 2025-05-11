@@ -1,52 +1,26 @@
-<?php /** @noinspection PhpUnused */
+<?php
 /**
- * Common Utility Functions Library
+ * Core Utility Functions Library
  *
- * This file contains utility functions used throughout the uwuweb application.
- * It serves as a central repository for common functionality that can be reused
- * across different parts of the application.
+ * This file contains the core utility functions for the uwuweb application.
+ * It serves as a central repository for common functionality that is reused
+ * across different parts of the application by all user roles.
  *
  * File path: /includes/functions.php
- *
- * Functions:
- * User and Role Management:
- * - getUserInfo(int $userId): ?array - Retrieves comprehensive user profile with role-specific data (teacher_id, student details, parent_id with children)
- *
- * Security Functions:
- * - sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never - Sends a standardized JSON error response and exits
- * - validateDate(string $date): bool - Validates date format (YYYY-MM-DD)
- *
- * Formatting Functions:
- * - formatDateDisplay(string $date): string - Formats date from YYYY-MM-DD to DD.MM.YYYY
- * - formatDateTimeDisplay(string $datetime): string - Formats datetime to DD.MM.YYYY
- * - formatFileSize(int $bytes): string - Formats byte size to KB, MB with appropriate units
- *
- * Navigation and Widgets:
- * - getNavItemsByRole(int $role): array - Returns navigation items based on user role
- * - getWidgetsByRole(int $role): array - Returns dashboard widgets based on user role
- * - renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string - Renders a placeholder widget
- * - renderHeaderCard(string $title, string $description, string $role, ?string $roleText = null): void - Renders a header card with title and description
- *
- * Activity Widgets:
- * - renderRecentActivityWidget(): string - Renders the recent activity widget
- *
- * Attendance Utilities:
- * - getAttendanceStatusLabel(string $status): string - Translates attendance status code to readable label
- * - calculateAttendanceStats(array $attendance): array - Calculates attendance statistics from a set of records
- * - calculateClassAverage(array $grades): float - Calculates overall grade average for a class
- * - getGradeLetter(float $percentage): string - Converts numerical percentage to letter grade
- * - getJustificationFileInfo(int $absenceId): ?string - Gets info about a justification file
  */
 
-require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/auth.php';
+
+/************************
+ * USER MANAGEMENT FUNCTIONS
+ ************************/
 
 /**
- * Retrieves comprehensive user profile with role-specific data (teacher_id, student
- * details, parent_id with children)
+ * Retrieves comprehensive user profile with role-specific data
  *
- * @param int $userId The user ID to look up
- * @return array|null User information array or null if not found
+ * @param int $userId The user ID to retrieve
+ * @return array|null User information or null if not found
  */
 function getUserInfo(int $userId): ?array
 {
@@ -73,19 +47,19 @@ function getUserInfo(int $userId): ?array
         }
 
         switch ($user['role_id']) {
-            case 2: // Teacher
-                $teacherQuery = "SELECT t.teacher_id
+            case ROLE_TEACHER:
+                $teacherQuery = "SELECT t.teacher_id, t.first_name, t.last_name
                                FROM teachers t
                                WHERE t.user_id = :user_id";
                 $teacherStmt = $db->prepare($teacherQuery);
                 $teacherStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
                 $teacherStmt->execute();
                 $teacherInfo = $teacherStmt->fetch(PDO::FETCH_ASSOC);
-                if ($teacherInfo) $user['teacher_id'] = $teacherInfo['teacher_id'];
+                if ($teacherInfo) $user = array_merge($user, $teacherInfo);
                 break;
 
-            case 3: // Student
-                $studentQuery = "SELECT s.student_id, s.first_name, s.last_name, s.class_code
+            case ROLE_STUDENT:
+                $studentQuery = "SELECT s.student_id, s.first_name, s.last_name, s.class_code, s.dob
                                 FROM students s
                                 WHERE s.user_id = :user_id";
                 $studentStmt = $db->prepare($studentQuery);
@@ -95,7 +69,7 @@ function getUserInfo(int $userId): ?array
                 if ($studentInfo) $user = array_merge($user, $studentInfo);
                 break;
 
-            case 4: // Parent
+            case ROLE_PARENT:
                 $parentQuery = "SELECT p.parent_id
                               FROM parents p
                               WHERE p.user_id = :user_id";
@@ -133,16 +107,182 @@ function getUserInfo(int $userId): ?array
 
     } catch (PDOException $e) {
         if (isset($db) && $db->inTransaction()) $db->rollBack();
-        error_log("Database error in getUserInfo: " . $e->getMessage());
+        logDBError("Error in getUserInfo: " . $e->getMessage());
         return null;
     }
 }
 
 /**
- * Returns an array of navigation menu items customized for the user's role
+ * Retrieves the student ID associated with the current user
  *
- * @param int $role The user's role ID
- * @return array Array of navigation items with title, URL and icon
+ * @return int|null Student ID or null if not found
+ */
+function getStudentId(): ?int
+{
+    $userId = getUserId();
+    if (!$userId) return null;
+
+    static $studentIdCache = null;
+    if ($studentIdCache !== null && isset($studentIdCache[$userId])) return $studentIdCache[$userId];
+
+    try {
+        $pdo = safeGetDBConnection('getStudentId');
+        if ($pdo === null) return null;
+
+        $stmt = $pdo->prepare("SELECT student_id FROM students WHERE user_id = ?");
+        $stmt->execute([$userId]);
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $id = $result ? (int)$result['student_id'] : null;
+
+        if ($studentIdCache === null) $studentIdCache = [];
+        $studentIdCache[$userId] = $id;
+
+        return $id;
+    } catch (PDOException $e) {
+        logDBError("Error in getStudentId: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Retrieves the teacher ID associated with the current user
+ *
+ * @param int|null $userId Optional user ID, uses current user if null
+ * @return int|null Teacher ID or null if not found
+ */
+function getTeacherId(?int $userId = null): ?int
+{
+    if ($userId === null) $userId = getUserId();
+    if (!$userId) return null;
+
+    static $teacherIdCache = null;
+    if ($teacherIdCache !== null && isset($teacherIdCache[$userId])) return $teacherIdCache[$userId];
+
+    try {
+        $pdo = safeGetDBConnection('getTeacherId');
+        if ($pdo === null) return null;
+
+        $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = ?");
+        $stmt->execute([$userId]);
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $id = $result ? (int)$result['teacher_id'] : null;
+
+        if ($teacherIdCache === null) $teacherIdCache = [];
+        $teacherIdCache[$userId] = $id;
+
+        return $id;
+    } catch (PDOException $e) {
+        logDBError("Error in getTeacherId: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Retrieves the parent ID associated with the current user
+ *
+ * @return int|null Parent ID or null if not found
+ */
+function getParentId(): ?int
+{
+    $userId = getUserId();
+    if (!$userId) return null;
+
+    static $parentIdCache = null;
+    if ($parentIdCache !== null && isset($parentIdCache[$userId])) return $parentIdCache[$userId];
+
+    try {
+        $pdo = safeGetDBConnection('getParentId');
+        if ($pdo === null) return null;
+
+        $stmt = $pdo->prepare("SELECT parent_id FROM parents WHERE user_id = ?");
+        $stmt->execute([$userId]);
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $id = $result ? (int)$result['parent_id'] : null;
+
+        if ($parentIdCache === null) $parentIdCache = [];
+        $parentIdCache[$userId] = $id;
+
+        return $id;
+    } catch (PDOException $e) {
+        logDBError("Error in getParentId: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Checks if a parent has access to a specific student's data
+ *
+ * @param int $studentId Student ID to check
+ * @param int|null $parentId Optional parent ID, uses current user if null
+ * @return bool True if parent has access, false otherwise
+ */
+function parentHasAccessToStudent(int $studentId, ?int $parentId = null): bool
+{
+    if ($parentId === null) $parentId = getParentId();
+    if (!$parentId) return false;
+
+    try {
+        $pdo = safeGetDBConnection('parentHasAccessToStudent');
+        if ($pdo === null) return false;
+
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as count
+            FROM student_parent
+            WHERE student_id = ? AND parent_id = ?
+        ");
+        $stmt->execute([$studentId, $parentId]);
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result && $result['count'] > 0;
+    } catch (PDOException $e) {
+        logDBError("Error in parentHasAccessToStudent: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Checks if a teacher has access to a specific class-subject combination
+ *
+ * @param int $classSubjectId Class-subject ID to check
+ * @param int|null $teacherId Optional teacher ID, uses current user if null
+ * @return bool True if teacher has access, false otherwise
+ */
+function teacherHasAccessToClassSubject(int $classSubjectId, ?int $teacherId = null): bool
+{
+    if ($teacherId === null) $teacherId = getTeacherId();
+    if (!$teacherId) return false;
+
+    try {
+        $pdo = safeGetDBConnection('teacherHasAccessToClassSubject');
+        if ($pdo === null) return false;
+
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) as count
+            FROM class_subjects
+            WHERE class_subject_id = ? AND teacher_id = ?
+        ");
+        $stmt->execute([$classSubjectId, $teacherId]);
+
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result && $result['count'] > 0;
+    } catch (PDOException $e) {
+        logDBError("Error in teacherHasAccessToClassSubject: " . $e->getMessage());
+        return false;
+    }
+}
+
+/************************
+ * NAVIGATION & UI FUNCTIONS
+ ************************/
+
+/**
+ * Returns navigation menu items based on user role
+ *
+ * @param int $role User role ID
+ * @return array Array of navigation items
  */
 function getNavItemsByRole(int $role): array
 {
@@ -155,7 +295,7 @@ function getNavItemsByRole(int $role): array
     ];
 
     switch ($role) {
-        case 1: // Administrator
+        case ROLE_ADMIN:
             $items[] = [
                 'title' => 'Upravljanje uporabnikov',
                 'url' => '/uwuweb/admin/users.php',
@@ -183,7 +323,7 @@ function getNavItemsByRole(int $role): array
             ];
             break;
 
-        case 2: // Teacher
+        case ROLE_TEACHER:
             $items[] = [
                 'title' => 'Redovalnica',
                 'url' => '/uwuweb/teacher/gradebook.php',
@@ -201,7 +341,7 @@ function getNavItemsByRole(int $role): array
             ];
             break;
 
-        case 3: // Student
+        case ROLE_STUDENT:
             $items[] = [
                 'title' => 'Ocene',
                 'url' => '/uwuweb/student/grades.php',
@@ -219,7 +359,7 @@ function getNavItemsByRole(int $role): array
             ];
             break;
 
-        case 4: // Parent
+        case ROLE_PARENT:
             $items[] = [
                 'title' => 'Ocene otroka',
                 'url' => '/uwuweb/parent/grades.php',
@@ -243,17 +383,17 @@ function getNavItemsByRole(int $role): array
 }
 
 /**
- * Returns an array of dashboard widgets appropriate for the user's role
+ * Returns dashboard widgets based on user role
  *
- * @param int $role The user's role ID
- * @return array Array of widgets with title and rendering function
+ * @param int $role User role ID
+ * @return array Array of widget definitions
  */
 function getWidgetsByRole(int $role): array
 {
     $widgets = [];
 
     switch ($role) {
-        case 1: // Administrator
+        case ROLE_ADMIN:
             $widgets[] = [
                 'title' => 'Statistika uporabnikov',
                 'function' => 'renderAdminUserStatsWidget'
@@ -272,7 +412,7 @@ function getWidgetsByRole(int $role): array
             ];
             break;
 
-        case 2: // Teacher
+        case ROLE_TEACHER:
             $widgets[] = [
                 'title' => 'Pregled razredov',
                 'function' => 'renderTeacherClassOverviewWidget'
@@ -291,7 +431,7 @@ function getWidgetsByRole(int $role): array
             ];
             break;
 
-        case 3: // Student
+        case ROLE_STUDENT:
             $widgets[] = [
                 'title' => 'Povzetek prisotnosti',
                 'function' => 'renderStudentAttendanceWidget'
@@ -310,7 +450,7 @@ function getWidgetsByRole(int $role): array
             ];
             break;
 
-        case 4: // Parent
+        case ROLE_PARENT:
             $widgets[] = [
                 'title' => 'Prisotnost otroka',
                 'function' => 'renderParentAttendanceWidget'
@@ -326,10 +466,10 @@ function getWidgetsByRole(int $role): array
 }
 
 /**
- * Creates a simple placeholder card for widgets without data
+ * Renders a placeholder widget when data is unavailable
  *
- * @param string $message Optional message to display in the placeholder
- * @return string HTML content for the placeholder widget
+ * @param string $message Optional message to display
+ * @return string HTML for the placeholder widget
  */
 function renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string
 {
@@ -340,9 +480,39 @@ function renderPlaceholderWidget(string $message = 'Podatki trenutno niso na vol
 }
 
 /**
- * Creates the HTML for the recent activity dashboard widget
+ * Renders a header card with title, description and role badge
  *
- * @return string HTML content for the widget
+ * @param string $title Card title
+ * @param string $description Card description
+ * @param string $role User role to display
+ * @param string|null $roleText Optional custom text for role badge
+ * @return void Outputs HTML directly
+ */
+function renderHeaderCard(string $title, string $description, string $role, ?string $roleText = null): void
+{
+    $roleClass = strtolower($role);
+    if ($roleClass === 'administrator') $roleClass = 'admin';
+
+    $displayRoleText = $roleText ?? ucfirst($role);
+
+    echo <<<HTML
+    <!-- Header Card -->
+    <div class="card shadow mb-lg page-transition">
+        <div class="card__content p-md d-flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold mt-0 mb-xs">$title</h1>
+                <p class="text-secondary mt-0 mb-0">$description</p>
+            </div>
+            <div class="role-badge role-$roleClass">$displayRoleText</div>
+        </div>
+    </div>
+HTML;
+}
+
+/**
+ * Renders the recent activity widget
+ *
+ * @return string HTML for the activity widget
  */
 function renderRecentActivityWidget(): string
 {
@@ -359,7 +529,7 @@ function renderRecentActivityWidget(): string
         $limit = 5;
 
         switch ($roleId) {
-            case 1: // Admin
+            case ROLE_ADMIN:
                 $query = "SELECT 'user_activity' as type, u.username, r.name as role_name,
                           u.created_at as activity_date, 'Registracija novega uporabnika' as description
                           FROM users u
@@ -372,8 +542,8 @@ function renderRecentActivityWidget(): string
                 $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 break;
 
-            case 2: // Teacher
-                $teacherId = function_exists('getTeacherId') ? getTeacherId() : null;
+            case ROLE_TEACHER:
+                $teacherId = getTeacherId();
                 if (!$teacherId) return renderPlaceholderWidget('Podatki učitelja niso na voljo.');
 
                 $gradeQuery = "SELECT
@@ -404,8 +574,8 @@ function renderRecentActivityWidget(): string
                 $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 break;
 
-            case 3: // Student
-                $studentId = function_exists('getStudentId') ? getStudentId() : null;
+            case ROLE_STUDENT:
+                $studentId = getStudentId();
                 if (!$studentId) return renderPlaceholderWidget('Podatki dijaka niso na voljo.');
 
                 $query = "SELECT
@@ -431,7 +601,7 @@ function renderRecentActivityWidget(): string
                 $activities = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 break;
 
-            case 4: // Parent
+            case ROLE_PARENT:
                 $parentInfo = getUserInfo($userId);
                 if (!$parentInfo || empty($parentInfo['children'])) return renderPlaceholderWidget('Ni povezanih otrok ali podatkov o staršu.');
                 $childIds = array_column($parentInfo['children'], 'student_id');
@@ -473,7 +643,7 @@ function renderRecentActivityWidget(): string
             $html .= '<li class="d-flex items-start gap-md p-md' . (next($activities) ? ' border-bottom' : '') . '">';
 
             switch ($roleId) {
-                case 1: // Admin
+                case ROLE_ADMIN:
                     $iconClass = 'profile-admin';
                     $html .= '<div class="rounded-full p-sm ' . $iconClass . ' text-white">A</div>';
                     $html .= '<div class="flex-grow-1">';
@@ -484,7 +654,7 @@ function renderRecentActivityWidget(): string
                     $html .= '</div>';
                     break;
 
-                case 2: // Teacher
+                case ROLE_TEACHER:
                     $iconClass = 'profile-teacher';
                     $html .= '<div class="rounded-full p-sm ' . $iconClass . ' text-white">T</div>';
                     $html .= '<div class="flex-grow-1">';
@@ -495,7 +665,7 @@ function renderRecentActivityWidget(): string
                     $html .= '</div>';
                     break;
 
-                case 3: // Student
+                case ROLE_STUDENT:
                     $iconClass = 'profile-student';
                     $html .= '<div class="rounded-full p-sm ' . $iconClass . ' text-white">S</div>';
                     $html .= '<div class="flex-grow-1">';
@@ -506,7 +676,7 @@ function renderRecentActivityWidget(): string
                     $html .= '</div>';
                     break;
 
-                case 4: // Parent
+                case ROLE_PARENT:
                     $iconClass = 'profile-parent';
                     $html .= '<div class="rounded-full p-sm ' . $iconClass . ' text-white">P</div>';
                     $html .= '<div class="flex-grow-1">';
@@ -526,15 +696,195 @@ function renderRecentActivityWidget(): string
         return $html;
 
     } catch (PDOException $e) {
-        error_log("Database error in renderRecentActivityWidget: " . $e->getMessage());
+        logDBError("Error in renderRecentActivityWidget: " . $e->getMessage());
         return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o nedavnih aktivnostih.');
     }
 }
 
+/************************
+ * CLASS/SUBJECT FUNCTIONS
+ ************************/
+
 /**
- * Translates the single-letter status code into a human-readable label
+ * Retrieves all classes assigned to a teacher
  *
- * @param string $status The status code (P, A, L)
+ * @param int $teacherId Teacher ID
+ * @return array Array of class records
+ */
+function getTeacherClasses(int $teacherId): array
+{
+    try {
+        $pdo = safeGetDBConnection('getTeacherClasses');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT cs.class_subject_id, c.class_id, c.class_code, c.title as class_title,
+                   s.subject_id, s.name as subject_name
+            FROM class_subjects cs
+            JOIN classes c ON cs.class_id = c.class_id
+            JOIN subjects s ON cs.subject_id = s.subject_id
+            WHERE cs.teacher_id = ?
+            ORDER BY c.class_code, s.name
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$teacherId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getTeacherClasses: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Gets all students enrolled in a specific class
+ *
+ * @param int $classId Class ID
+ * @return array Array of student records
+ */
+function getClassStudents(int $classId): array
+{
+    try {
+        $pdo = safeGetDBConnection('getClassStudents');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT e.enroll_id, s.student_id, s.first_name, s.last_name,
+                   u.username, u.user_id
+            FROM enrollments e
+            JOIN students s ON e.student_id = s.student_id
+            JOIN users u ON s.user_id = u.user_id
+            WHERE e.class_id = ?
+            ORDER BY s.last_name, s.first_name
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$classId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getClassStudents: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Retrieves periods for a specific class-subject
+ *
+ * @param int $classSubjectId Class-Subject ID
+ * @return array Array of period records
+ */
+function getClassPeriods(int $classSubjectId): array
+{
+    if (getUserRole() === ROLE_TEACHER && !teacherHasAccessToClassSubject($classSubjectId)) return [];
+
+    try {
+        $pdo = safeGetDBConnection('getClassPeriods');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT period_id, period_date, period_label
+            FROM periods
+            WHERE class_subject_id = ?
+            ORDER BY period_date DESC
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$classSubjectId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getClassPeriods: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Retrieves students linked to a parent
+ *
+ * @param int|null $parentId Parent ID (uses current user if null)
+ * @return array Array of student records
+ */
+function getParentStudents(?int $parentId = null): array
+{
+    if ($parentId === null) $parentId = getParentId();
+    if (!$parentId) return [];
+
+    try {
+        $pdo = safeGetDBConnection('getParentStudents');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT s.student_id, s.first_name, s.last_name, s.class_code,
+                   u.username, u.user_id
+            FROM students s
+            JOIN users u ON s.user_id = u.user_id
+            JOIN student_parent sp ON s.student_id = sp.student_id
+            WHERE sp.parent_id = ?
+            ORDER BY s.last_name, s.first_name
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$parentId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getParentStudents: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Gets classes and subjects for a specific student
+ *
+ * @param int $studentId Student ID
+ * @return array Array of class records with subjects
+ */
+function getStudentClasses(int $studentId): array
+{
+    // Verify parent has access to this student if the current user is a parent
+    if (getUserRole() === ROLE_PARENT && !parentHasAccessToStudent($studentId)) return [];
+
+    try {
+        $pdo = safeGetDBConnection('getStudentClasses');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT c.class_id, c.class_code, c.title as class_title,
+                   e.enroll_id,
+                   cs.class_subject_id,
+                   s.subject_id, s.name as subject_name,
+                   t.teacher_id,
+                   CONCAT(u.username) as teacher_name
+            FROM enrollments e
+            JOIN classes c ON e.class_id = c.class_id
+            JOIN class_subjects cs ON c.class_id = cs.class_id
+            JOIN subjects s ON cs.subject_id = s.subject_id
+            JOIN teachers t ON cs.teacher_id = t.teacher_id
+            JOIN users u ON t.user_id = u.user_id
+            WHERE e.student_id = ?
+            ORDER BY c.class_code, s.name
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$studentId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getStudentClasses: " . $e->getMessage());
+        return [];
+    }
+}
+
+/************************
+ * ATTENDANCE FUNCTIONS
+ ************************/
+
+/**
+ * Translates attendance status code to readable label
+ *
+ * @param string $status Status code (P, A, L)
  * @return string Human-readable status label
  */
 function getAttendanceStatusLabel(string $status): string
@@ -548,10 +898,10 @@ function getAttendanceStatusLabel(string $status): string
 }
 
 /**
- * Calculates presence, absence, and lateness rates from attendance records
+ * Calculates statistics from attendance records
  *
- * @param array $attendance Array of attendance records to analyze
- * @return array Statistics including present_count, absent_count, late_count, and percentages
+ * @param array $attendance Array of attendance records
+ * @return array Statistics including counts and percentages
  */
 function calculateAttendanceStats(array $attendance): array
 {
@@ -587,162 +937,12 @@ function calculateAttendanceStats(array $attendance): array
 }
 
 /**
- * Calculate overall grade average for a class
+ * Gets attendance records for a student
  *
- * @param array $grades Array of grade records from getClassGrades()
- * @return float Overall percentage average
- */
-function calculateClassAverage(array $grades): float
-{
-    $totalPoints = 0;
-    $totalMaxPoints = 0;
-
-    foreach ($grades as $subject) if (!empty($subject['grade_items'])) foreach ($subject['grade_items'] as $item) if (isset($item['points'])) {
-        $totalPoints += ($item['points'] * $item['weight']);
-        $totalMaxPoints += ($item['max_points'] * $item['weight']);
-    }
-
-    if ($totalMaxPoints > 0) return round(($totalPoints / $totalMaxPoints) * 100, 1);
-
-    return 0.0;
-}
-
-/**
- * Converts a numerical percentage to a letter grade
- *
- * @param float $percentage Grade percentage (0-100)
- * @return string Letter grade (1-5)
- */
-function getGradeLetter(float $percentage): string
-{
-    if ($percentage >= 90) return '5';
-
-    if ($percentage >= 80) return '4';
-
-    if ($percentage >= 70) return '3';
-
-    if ($percentage >= 50) return '2';
-
-    return '1';
-}
-
-/**
- * Validates date format (YYYY-MM-DD)
- *
- * @param string $date Date string to validate
- * @return bool Returns true if date is valid
- */
-function validateDate(string $date): bool
-{
-    $dateObj = DateTime::createFromFormat('Y-m-d', $date);
-    return $dateObj && $dateObj->format('Y-m-d') === $date;
-}
-
-/**
- * Sends a standardized JSON error response with the specified HTTP status code, error message, and context. Handles JSON exceptions internally and logs errors.
- *
- * @param string $message The error message to send to the client
- * @param int $statusCode HTTP status code to send (default: 400)
- * @param string $context Additional context for error logging (e.g., 'attendance.php/addPeriod')
- * @return never This function will terminate script execution
- */
-function sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never
-{
-    if (!headers_sent()) {
-        header('Content-Type: application/json; charset=utf-8');
-        http_response_code($statusCode);
-    }
-
-    $logContext = $context ? " Context: [$context]" : '';
-    error_log("API Error Response (HTTP $statusCode): $message$logContext");
-
-    try {
-        echo json_encode(['success' => false, 'message' => $message], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
-    } catch (JsonException $e) {
-        error_log("Failed to encode JSON error response: " . $e->getMessage());
-        if (!headers_sent()) header('Content-Type: text/plain; charset=utf-8');
-        echo "{\"success\": false, \"message\": \"Internal Server Error: Failed to create JSON response.\"}";
-    }
-    exit;
-}
-
-/**
- * Format date for display
- *
- * @param string $date Date in YYYY-MM-DD format
- * @return string Formatted date in DD.MM.YYYY format
- */
-function formatDateDisplay(string $date): string
-{
-    return date('d.m.Y', strtotime($date));
-}
-
-/**
- * Format datetime for display
- *
- * @param string $datetime Datetime in YYYY-MM-DD HH:MM:SS format
- * @return string Formatted datetime in DD.MM.YYYY format
- */
-function formatDateTimeDisplay(string $datetime): string
-{
-    return date('d.m.Y', strtotime($datetime));
-}
-
-/**
- * Format file size into human-readable string
- *
- * @param int $bytes File size in bytes
- * @return string Formatted file size with appropriate unit (KB, MB, GB)
- */
-function formatFileSize(int $bytes): string
-{
-    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    $factor = floor((strlen($bytes) - 1) / 3);
-
-    return sprintf("%.2f %s", $bytes / (1024 ** $factor), $units[$factor]);
-}
-
-/**
- * Renders a Header Card component with title, description and role badge
- *
- * @param string $title The title for the header card (h1 element)
- * @param string $description The description text for the header card (p element)
- * @param string $role The user role to display in the badge (e.g., 'admin', 'teacher')
- * @param string|null $roleText Optional custom text for the role badge (defaults to capitalized role)
- * @return void Outputs the HTML directly
- */
-function renderHeaderCard(string $title, string $description, string $role, ?string $roleText = null): void
-{
-    $roleClass = strtolower($role);
-    if ($roleClass === 'administrator') $roleClass = 'admin';
-
-    $displayRoleText = $roleText ?? ucfirst($role);
-
-    echo <<<HTML
-    <!-- Header Card -->
-    <div class="card shadow mb-lg page-transition">
-        <div class="card__content p-md d-flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold mt-0 mb-xs">$title</h1>
-                <p class="text-secondary mt-0 mb-0">$description</p>
-            </div>
-            <div class="role-badge role-$roleClass">$displayRoleText</div>
-        </div>
-    </div>
-HTML;
-}
-
-/****************************
- * ATTENDANCE FUNCTIONS
- ****************************/
-
-/**
- * Gets attendance records for a student with optional date filtering
- *
- * @param int $studentId Student ID to retrieve attendance for
- * @param string|null $startDate Optional start date for filtering (YYYY-MM-DD format)
- * @param string|null $endDate Optional end date for filtering (YYYY-MM-DD format)
- * @param bool $checkAccess Whether to check if current user has access to this student's data
+ * @param int $studentId Student ID
+ * @param string|null $startDate Optional start date for filtering
+ * @param string|null $endDate Optional end date for filtering
+ * @param bool $checkAccess Whether to check if user has access to this data
  * @return array Array of attendance records
  */
 function getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null, bool $checkAccess = true): array
@@ -816,9 +1016,46 @@ function getStudentAttendance(int $studentId, ?string $startDate = null, ?string
 }
 
 /**
- * Retrieves attendance status for all students in a period
+ * Gets student attendance for a specific date
  *
- * @param int $periodId Period ID to retrieve attendance for
+ * @param int $studentId Student ID
+ * @param string $date Date in YYYY-MM-DD format
+ * @return array Array of attendance records
+ */
+function getStudentAttendanceByDate(int $studentId, string $date): array
+{
+    try {
+        $pdo = safeGetDBConnection('getStudentAttendanceByDate');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT a.att_id, a.status, a.justification,
+                   p.period_date as date, p.period_label,
+                   s.name as subject_name
+            FROM attendance a
+            JOIN periods p ON a.period_id = p.period_id
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+            JOIN subjects s ON cs.subject_id = s.subject_id
+            WHERE e.student_id = ?
+            AND DATE(p.period_date) = ?
+            ORDER BY p.period_date, p.period_label
+        ";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$studentId, $date]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getStudentAttendanceByDate: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Retrieves attendance for all students in a period
+ *
+ * @param int $periodId Period ID
  * @return array Array of attendance records with student details
  */
 function getPeriodAttendance(int $periodId): array
@@ -865,11 +1102,11 @@ function getPeriodAttendance(int $periodId): array
 }
 
 /**
- * Creates a new period entry and initializes attendance records for all enrolled students
+ * Creates a new period and initializes attendance records for all students
  *
  * @param int $classSubjectId Class-Subject ID
  * @param string $periodDate Date in YYYY-MM-DD format
- * @param string $periodLabel Label for the period (e.g., "1", "2", etc.)
+ * @param string $periodLabel Label for the period
  * @return int|false Period ID on success, false on failure
  */
 function addPeriod(int $classSubjectId, string $periodDate, string $periodLabel): int|false
@@ -939,12 +1176,12 @@ function addPeriod(int $classSubjectId, string $periodDate, string $periodLabel)
 }
 
 /**
- * Updates or creates an attendance record for a student in a specific period
+ * Updates or creates an attendance record
  *
  * @param int $enrollId Enrollment ID
  * @param int $periodId Period ID
  * @param string $status Attendance status (P, A, L)
- * @return bool Success or failure
+ * @return bool Success status
  */
 function saveAttendance(int $enrollId, int $periodId, string $status): bool
 {
@@ -955,7 +1192,7 @@ function saveAttendance(int $enrollId, int $periodId, string $status): bool
         $pdo = safeGetDBConnection('saveAttendance');
         if ($pdo === null) return false;
 
-        // First verify teacher has access to this period
+        // Verify teacher has access to this period
         $stmt = $pdo->prepare("
             SELECT p.class_subject_id
             FROM periods p
@@ -1002,12 +1239,12 @@ function saveAttendance(int $enrollId, int $periodId, string $status): bool
     }
 }
 
-/****************************
+/************************
  * GRADE FUNCTIONS
- ****************************/
+ ************************/
 
 /**
- * Retrieves all grade items defined for a specific class-subject
+ * Gets grade items for a class-subject
  *
  * @param int $classSubjectId Class-Subject ID
  * @return array Array of grade item records
@@ -1039,10 +1276,10 @@ function getGradeItems(int $classSubjectId): array
 }
 
 /**
- * Retrieves grades for all students and grade items in a class-subject
+ * Gets grades for all students and grade items in a class-subject
  *
  * @param int $classSubjectId Class-Subject ID
- * @return array Array of grade records grouped by student with grade items and grades
+ * @return array Array of grade records grouped by student
  */
 function getClassGrades(int $classSubjectId): array
 {
@@ -1105,11 +1342,11 @@ function getClassGrades(int $classSubjectId): array
 }
 
 /**
- * Creates a new grade item entry for a class-subject
+ * Creates a new grade item
  *
  * @param int $classSubjectId Class-Subject ID
  * @param string $name Name of the grade item
- * @param float $maxPoints Maximum points possible
+ * @param float $maxPoints Maximum points
  * @param float $weight Weight of the grade item (default: 1.00)
  * @return int|false Grade item ID on success, false on failure
  */
@@ -1136,13 +1373,13 @@ function addGradeItem(int $classSubjectId, string $name, float $maxPoints, float
 }
 
 /**
- * Updates or creates a grade record for a student and grade item
+ * Updates or creates a grade record
  *
  * @param int $enrollId Enrollment ID
  * @param int $itemId Grade Item ID
  * @param float $points Points earned
- * @param string|null $comment Optional comment/feedback
- * @return bool Success or failure
+ * @param string|null $comment Optional comment
+ * @return bool Success status
  */
 function saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool
 {
@@ -1204,15 +1441,79 @@ function saveGrade(int $enrollId, int $itemId, float $points, ?string $comment =
     }
 }
 
-/****************************
- * JUSTIFICATION FUNCTIONS
- ****************************/
+/**
+ * Calculate weighted average for a set of grades
+ *
+ * @param array $grades Grade records
+ * @return float Weighted average percentage
+ */
+function calculateWeightedAverage(array $grades): float
+{
+    if (empty($grades)) return 0.0;
+
+    $totalWeightedPoints = 0;
+    $totalWeight = 0;
+
+    foreach ($grades as $grade) {
+        // Ensure max_points is not zero to avoid division by zero error
+        if (isset($grade['max_points']) && $grade['max_points'] != 0) $percentage = ($grade['points'] / $grade['max_points']) * 100; else $percentage = 0;
+
+        $weight = isset($grade['weight']) ? (float)$grade['weight'] : 1.0;
+
+        $totalWeightedPoints += $percentage * $weight;
+        $totalWeight += $weight;
+    }
+
+    if ($totalWeight <= 0) return 0.0;
+
+    return $totalWeightedPoints / $totalWeight;
+}
 
 /**
- * Get information about a saved justification file
+ * Calculate overall grade average for a class
+ *
+ * @param array $grades Array of grade records
+ * @return float Overall percentage average
+ */
+function calculateClassAverage(array $grades): float
+{
+    $totalPoints = 0;
+    $totalMaxPoints = 0;
+
+    foreach ($grades as $subject) if (!empty($subject['grade_items'])) foreach ($subject['grade_items'] as $item) if (isset($item['points'])) {
+        $totalPoints += ($item['points'] * $item['weight']);
+        $totalMaxPoints += ($item['max_points'] * $item['weight']);
+    }
+
+    if ($totalMaxPoints > 0) return round(($totalPoints / $totalMaxPoints) * 100, 1);
+
+    return 0.0;
+}
+
+/**
+ * Converts a numerical percentage to a letter grade
+ *
+ * @param float $percentage Grade percentage (0-100)
+ * @return string Letter grade (1-5)
+ */
+function getGradeLetter(float $percentage): string
+{
+    if ($percentage >= 90) return '5';
+    if ($percentage >= 80) return '4';
+    if ($percentage >= 70) return '3';
+    if ($percentage >= 50) return '2';
+    return '1';
+}
+
+/************************
+ * JUSTIFICATION FUNCTIONS
+ ************************/
+
+/**
+ * Gets information about a justification file
  *
  * @param int $absenceId Attendance record ID
- * @return string|null Filename or null if no file exists or access denied
+ * @return string|null Filename or null if no file found or access denied
  */
 function getJustificationFileInfo(int $absenceId): ?string
 {
@@ -1239,11 +1540,10 @@ function getJustificationFileInfo(int $absenceId): ?string
         if ($userRole === ROLE_STUDENT) {
             $currentStudentId = getStudentId();
             if ($currentStudentId !== $result['student_id']) return null;
-        } else if ($userRole === ROLE_PARENT) if (!parentHasAccessToStudent($result['student_id'])) return null; else
-            // Admin can access all files
+        } else if ($userRole === ROLE_PARENT) if (!parentHasAccessToStudent($result['student_id'])) return null;
 
-            // Get the file info
-            $stmt = $pdo->prepare("
+        // Get the file info
+        $stmt = $pdo->prepare("
             SELECT justification_file
             FROM attendance
             WHERE att_id = ?
@@ -1259,7 +1559,7 @@ function getJustificationFileInfo(int $absenceId): ?string
 }
 
 /**
- * Upload justification for an absence
+ * Uploads a justification for an absence
  *
  * @param int $absenceId Absence ID
  * @param string $justification Justification text
@@ -1308,15 +1608,15 @@ function uploadJustification(int $absenceId, string $justification): bool
 
         return $updateStmt->execute();
     } catch (PDOException $e) {
-        logDBError("PDOException in uploadJustification for absence ID $absenceId: " . $e->getMessage());
+        logDBError("Error in uploadJustification for absence ID $absenceId: " . $e->getMessage());
         return false;
     }
 }
 
 /**
- * Validate justification file
+ * Validates an uploaded justification file
  *
- * @param array $file Uploaded file data from $_FILES superglobal
+ * @param array $file Uploaded file data from $_FILES
  * @return bool Validation result
  */
 function validateJustificationFile(array $file): bool
@@ -1324,7 +1624,7 @@ function validateJustificationFile(array $file): bool
     // Check for upload errors
     if (!isset($file['error']) || is_array($file['error'])) {
         error_log("Invalid parameters received for file upload validation.");
-        return false; // Invalid parameters
+        return false;
     }
 
     switch ($file['error']) {
@@ -1332,7 +1632,7 @@ function validateJustificationFile(array $file): bool
             break; // No error, continue validation
         case UPLOAD_ERR_NO_FILE:
             error_log("No file sent during justification upload.");
-            return false; // Or handle as needed, maybe allow text-only justification
+            return false;
         case UPLOAD_ERR_INI_SIZE:
         case UPLOAD_ERR_FORM_SIZE:
             error_log("Exceeded filesize limit during justification upload.");
@@ -1382,11 +1682,11 @@ function validateJustificationFile(array $file): bool
 }
 
 /**
- * Save uploaded justification file
+ * Saves an uploaded justification file
  *
  * @param array $file Uploaded file data from $_FILES
  * @param int $absenceId Absence ID
- * @return string|false Returns the saved filename on success, false on failure
+ * @return string|false Saved filename or false on failure
  */
 function saveJustificationFile(array $file, int $absenceId): string|false
 {
@@ -1493,15 +1793,14 @@ function saveJustificationFile(array $file, int $absenceId): string|false
 }
 
 /**
- * Retrieves all absence justifications pending approval for classes taught by a specific teacher
+ * Gets pending justifications for a teacher
  *
- * @param int|null $teacherId Teacher ID (null for current user)
+ * @param int|null $teacherId Teacher ID (uses current user if null)
  * @return array Array of pending justification records
  */
 function getPendingJustifications(?int $teacherId = null): array
 {
     if ($teacherId === null) $teacherId = getTeacherId();
-
     if (!$teacherId) return [];
 
     try {
@@ -1539,10 +1838,10 @@ function getPendingJustifications(?int $teacherId = null): array
 }
 
 /**
- * Get detailed information about a specific justification
+ * Gets detailed information about a justification
  *
  * @param int $absenceId Attendance record ID
- * @return array|null Justification details or null if not found or no access
+ * @return array|null Justification details or null if not found/no access
  */
 function getJustificationById(int $absenceId): ?array
 {
@@ -1594,10 +1893,10 @@ function getJustificationById(int $absenceId): ?array
 }
 
 /**
- * Sets the approved flag to true for an absence justification
+ * Approves a justification
  *
  * @param int $absenceId Attendance record ID
- * @return bool Success or failure
+ * @return bool Success status
  */
 function approveJustification(int $absenceId): bool
 {
@@ -1624,11 +1923,11 @@ function approveJustification(int $absenceId): bool
 }
 
 /**
- * Sets the approved flag to false and adds a rejection reason
+ * Rejects a justification
  *
  * @param int $absenceId Attendance record ID
  * @param string $reason Reason for rejection
- * @return bool Success or failure
+ * @return bool Success status
  */
 function rejectJustification(int $absenceId, string $reason): bool
 {
@@ -1656,224 +1955,82 @@ function rejectJustification(int $absenceId, string $reason): bool
     }
 }
 
+/************************
+ * UTILITY FUNCTIONS
+ ************************/
+
 /**
- * Gets attendance records for a student on a specific date
+ * Validates a date format (YYYY-MM-DD)
  *
- * @param int $studentId Student ID
+ * @param string $date Date string to validate
+ * @return bool True if valid date format
+ */
+function validateDate(string $date): bool
+{
+    $dateObj = DateTime::createFromFormat('Y-m-d', $date);
+    return $dateObj && $dateObj->format('Y-m-d') === $date;
+}
+
+/**
+ * Formats date for display (YYYY-MM-DD to DD.MM.YYYY)
+ *
  * @param string $date Date in YYYY-MM-DD format
- * @return array Array of attendance records
+ * @return string Formatted date
  */
-function getStudentAttendanceByDate(int $studentId, string $date): array
+function formatDateDisplay(string $date): string
 {
-    try {
-        $pdo = safeGetDBConnection('getStudentAttendanceByDate');
-        if ($pdo === null) return [];
+    return date('d.m.Y', strtotime($date));
+}
 
-        $query = "
-            SELECT a.att_id, a.status, a.justification,
-                   p.period_date as date, p.period_label,
-                   s.name as subject_name
-            FROM attendance a
-            JOIN periods p ON a.period_id = p.period_id
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
-            JOIN subjects s ON cs.subject_id = s.subject_id
-            WHERE e.student_id = ?
-            AND DATE(p.period_date) = ?
-            ORDER BY p.period_date, p.period_label
-        ";
+/**
+ * Formats datetime for display
+ *
+ * @param string $datetime Datetime string
+ * @return string Formatted date
+ */
+function formatDateTimeDisplay(string $datetime): string
+{
+    return date('d.m.Y', strtotime($datetime));
+}
 
-        $stmt = $pdo->prepare($query);
-        $stmt->execute([$studentId, $date]);
+/**
+ * Formats file size to human-readable string
+ *
+ * @param int $bytes File size in bytes
+ * @return string Formatted file size with units
+ */
+function formatFileSize(int $bytes): string
+{
+    $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+    $factor = floor((strlen($bytes) - 1) / 3);
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        logDBError("Error in getStudentAttendanceByDate: " . $e->getMessage());
-        return [];
+    return sprintf("%.2f %s", $bytes / (1024 ** $factor), $units[$factor]);
+}
+
+/**
+ * Sends a standardized JSON error response
+ *
+ * @param string $message Error message
+ * @param int $statusCode HTTP status code
+ * @param string $context Context for error logging
+ * @return never (exits script execution)
+ */
+function sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never
+{
+    if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code($statusCode);
     }
-}
 
-/**
- * Retrieves all students enrolled in a specific class
- *
- * @param int $classId Class ID to retrieve students for
- * @return array Array of student records
- */
-function getClassStudents(int $classId): array
-{
+    $logContext = $context ? " Context: [$context]" : '';
+    error_log("API Error Response (HTTP $statusCode): $message$logContext");
+
     try {
-        $pdo = safeGetDBConnection('getClassStudents');
-        if ($pdo === null) return [];
-
-        $query = "
-            SELECT e.enroll_id, s.student_id, s.first_name, s.last_name,
-                   u.username, u.user_id
-            FROM enrollments e
-            JOIN students s ON e.student_id = s.student_id
-            JOIN users u ON s.user_id = u.user_id
-            WHERE e.class_id = ?
-            ORDER BY s.last_name, s.first_name
-        ";
-
-        $stmt = $pdo->prepare($query);
-        $stmt->execute([$classId]);
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (PDOException $e) {
-        logDBError("Error in getClassStudents: " . $e->getMessage());
-        return [];
+        echo json_encode(['success' => false, 'message' => $message], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+    } catch (JsonException $e) {
+        error_log("Failed to encode JSON error response: " . $e->getMessage());
+        if (!headers_sent()) header('Content-Type: text/plain; charset=utf-8');
+        echo "{\"success\": false, \"message\": \"Internal Server Error: Failed to create JSON response.\"}";
     }
-}
-
-/****************************
- * API HANDLER FUNCTIONS
- ****************************/
-
-/**
- * API handler for saving attendance record
- *
- * @return void Outputs JSON response
- * @throws JsonException
- * @throws JsonException
- */
-function handleSaveAttendanceApi(): void
-{
-    // Ensure POST request with required parameters
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'attendance.php/handleSaveAttendanceApi');
-
-    // Extract and validate request parameters
-    $enrollId = filter_input(INPUT_POST, 'enroll_id', FILTER_VALIDATE_INT);
-    $periodId = filter_input(INPUT_POST, 'period_id', FILTER_VALIDATE_INT);
-    $status = filter_input(INPUT_POST, 'status');
-
-    if (!$enrollId || !$periodId || !in_array($status, ['P', 'A', 'L'], true)) sendJsonErrorResponse('Missing or invalid parameters', 400, 'attendance.php/handleSaveAttendanceApi');
-
-    // Verify CSRF token
-    $token = filter_input(INPUT_POST, 'csrf_token');
-    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'attendance.php/handleSaveAttendanceApi');
-
-    // Call the business logic function
-    $result = saveAttendance($enrollId, $periodId, $status);
-
-    // Return appropriate response
-    if ($result) echo json_encode(['success' => true, 'message' => 'Attendance saved successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to save attendance', 500, 'attendance.php/handleSaveAttendanceApi');
-}
-
-/**
- * API handler for adding grade item
- *
- * @return void Outputs JSON response
- * @throws JsonException
- * @throws JsonException
- */
-function handleAddGradeItemApi(): void
-{
-    // Ensure POST request with required parameters
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'grades.php/handleAddGradeItemApi');
-
-    // Extract and validate request parameters
-    $classSubjectId = filter_input(INPUT_POST, 'class_subject_id', FILTER_VALIDATE_INT);
-    $name = filter_input(INPUT_POST, 'name');
-    $maxPoints = filter_input(INPUT_POST, 'max_points', FILTER_VALIDATE_FLOAT);
-    $weight = filter_input(INPUT_POST, 'weight', FILTER_VALIDATE_FLOAT) ?: 1.00;
-
-    if (!$classSubjectId || !$name || !$maxPoints) sendJsonErrorResponse('Missing or invalid parameters', 400, 'grades.php/handleAddGradeItemApi');
-
-    // Verify CSRF token
-    $token = filter_input(INPUT_POST, 'csrf_token');
-    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'grades.php/handleAddGradeItemApi');
-
-    // Call the business logic function
-    $result = addGradeItem($classSubjectId, $name, $maxPoints, $weight);
-
-    // Return appropriate response
-    if ($result) echo json_encode(['success' => true, 'item_id' => $result, 'message' => 'Grade item added successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to add grade item', 500, 'grades.php/handleAddGradeItemApi');
-}
-
-/**
- * API handler for saving grade
- *
- * @return void Outputs JSON response
- * @throws JsonException
- * @throws JsonException
- */
-function handleSaveGradeApi(): void
-{
-    // Ensure POST request with required parameters
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'grades.php/handleSaveGradeApi');
-
-    // Extract and validate request parameters
-    $enrollId = filter_input(INPUT_POST, 'enroll_id', FILTER_VALIDATE_INT);
-    $itemId = filter_input(INPUT_POST, 'item_id', FILTER_VALIDATE_INT);
-    $points = filter_input(INPUT_POST, 'points', FILTER_VALIDATE_FLOAT);
-    $comment = filter_input(INPUT_POST, 'comment');
-
-    if (!$enrollId || !$itemId || $points === false) sendJsonErrorResponse('Missing or invalid parameters', 400, 'grades.php/handleSaveGradeApi');
-
-    // Verify CSRF token
-    $token = filter_input(INPUT_POST, 'csrf_token');
-    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'grades.php/handleSaveGradeApi');
-
-    // Call the business logic function
-    $result = saveGrade($enrollId, $itemId, $points, $comment);
-
-    // Return appropriate response
-    if ($result) echo json_encode(['success' => true, 'message' => 'Grade saved successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to save grade', 500, 'grades.php/handleSaveGradeApi');
-}
-
-/**
- * API handler for approving justification
- *
- * @return void Outputs JSON response
- * @throws JsonException
- * @throws JsonException
- */
-function handleApproveJustificationApi(): void
-{
-    // Ensure POST request with required parameters
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'justifications.php/handleApproveJustificationApi');
-
-    // Extract and validate request parameters
-    $absenceId = filter_input(INPUT_POST, 'att_id', FILTER_VALIDATE_INT);
-
-    if (!$absenceId) sendJsonErrorResponse('Missing or invalid parameters', 400, 'justifications.php/handleApproveJustificationApi');
-
-    // Verify CSRF token
-    $token = filter_input(INPUT_POST, 'csrf_token');
-    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'justifications.php/handleApproveJustificationApi');
-
-    // Call the business logic function
-    $result = approveJustification($absenceId);
-
-    // Return appropriate response
-    if ($result) echo json_encode(['success' => true, 'message' => 'Justification approved successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to approve justification', 500, 'justifications.php/handleApproveJustificationApi');
-}
-
-/**
- * API handler for rejecting justification
- *
- * @return void Outputs JSON response
- * @throws JsonException
- * @throws JsonException
- */
-function handleRejectJustificationApi(): void
-{
-    // Ensure POST request with required parameters
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') sendJsonErrorResponse('Invalid request method', 405, 'justifications.php/handleRejectJustificationApi');
-
-    // Extract and validate request parameters
-    $absenceId = filter_input(INPUT_POST, 'att_id', FILTER_VALIDATE_INT);
-    $reason = filter_input(INPUT_POST, 'reason');
-
-    if (!$absenceId || !$reason) sendJsonErrorResponse('Missing or invalid parameters', 400, 'justifications.php/handleRejectJustificationApi');
-
-    // Verify CSRF token
-    $token = filter_input(INPUT_POST, 'csrf_token');
-    if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'justifications.php/handleRejectJustificationApi');
-
-    // Call the business logic function
-    $result = rejectJustification($absenceId, $reason);
-
-    // Return appropriate response
-    if ($result) echo json_encode(['success' => true, 'message' => 'Justification rejected successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to reject justification', 500, 'justifications.php/handleRejectJustificationApi');
+    exit;
 }

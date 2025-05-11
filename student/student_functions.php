@@ -13,69 +13,6 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 /**
- * Retrieves the student ID associated with the current user
- *
- * @return int|null Student ID or null if not a student or not logged in
- */
-function getStudentId(): ?int
-{
-    $userId = getUserId();
-    if (!$userId) return null;
-
-    static $studentIdCache = null;
-    if ($studentIdCache !== null && isset($studentIdCache[$userId])) return $studentIdCache[$userId];
-
-    try {
-        $db = getDBConnection();
-        if (!$db) return null;
-
-        $query = "SELECT student_id FROM students WHERE user_id = :user_id";
-        $stmt = $db->prepare($query);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $stmt->execute();
-
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        $id = $result ? (int)$result['student_id'] : null;
-
-        if ($studentIdCache === null) $studentIdCache = [];
-        $studentIdCache[$userId] = $id;
-
-        return $id;
-    } catch (PDOException $e) {
-        error_log("Database error in getStudentId: " . $e->getMessage());
-        return null;
-    }
-}
-
-/**
- * Calculate weighted average for a set of grades
- *
- * @param array $grades Grade records
- * @return float|int Weighted average percentage
- */
-function calculateWeightedAverage(array $grades): float|int
-{
-    if (empty($grades)) return 0.0;
-
-    $totalWeightedPoints = 0;
-    $totalWeight = 0;
-
-    foreach ($grades as $grade) {
-        // Ensure max_points is not zero to avoid division by zero error
-        if (isset($grade['max_points']) && $grade['max_points'] != 0) $percentage = ($grade['points'] / $grade['max_points']) * 100; else $percentage = 0;
-
-        $weight = isset($grade['weight']) ? (float)$grade['weight'] : 1.0;
-
-        $totalWeightedPoints += $percentage * $weight;
-        $totalWeight += $weight;
-    }
-
-    if ($totalWeight <= 0) return 0.0;
-
-    return $totalWeightedPoints / $totalWeight;
-}
-
-/**
  * Calculate grade statistics grouped by subject and class
  *
  * @param array $grades Grade records
