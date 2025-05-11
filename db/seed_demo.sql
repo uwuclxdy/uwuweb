@@ -3,10 +3,10 @@ USE uwuweb;
 
 -- Teachers
 INSERT INTO users (username, pass_hash, role_id)
-VALUES ('novak.j', '$2y$10$DKGGjDuuPBUCvRtJal7D0exxxdI.ppSxuwDInrUJvSahSEUs2ZgNy', 2),
-       ('kovac.a', '$2y$10$DKGGjDuuPBUCvRtJal7D0exxxdI.ppSxuwDInrUJvSahSEUs2ZgNy', 2),
-       ('horvat.m', '$2y$10$DKGGjDuuPBUCvRtJal7D0exxxdI.ppSxuwDInrUJvSahSEUs2ZgNy', 2),
-       ('zupan.t', '$2y$10$DKGGjDuuPBUCvRtJal7D0exxxdI.ppSxuwDInrUJvSahSEUs2ZgNy', 2);
+VALUES ('novak.j', '$2y$10$cWdPksSP0u0R4Jn4mRJaVuJX6ZNKkgEXV82JZJwL7pZU8VYlv35uu', 2),
+       ('kovac.a', '$2y$10$cWdPksSP0u0R4Jn4mRJaVuJX6ZNKkgEXV82JZJwL7pZU8VYlv35uu', 2),
+       ('horvat.m', '$2y$10$cWdPksSP0u0R4Jn4mRJaVuJX6ZNKkgEXV82JZJwL7pZU8VYlv35uu', 2),
+       ('teacher', '$2y$10$cWdPksSP0u0R4Jn4mRJaVuJX6ZNKkgEXV82JZJwL7pZU8VYlv35uu', 2);
 
 INSERT INTO teachers (user_id, first_name, last_name)
 VALUES (2, 'Janez', 'Novak'),
@@ -30,16 +30,16 @@ VALUES ('1A', '1. A razred', 1),
 
 -- Students
 INSERT INTO users (username, pass_hash, role_id)
-VALUES ('kranjc.m', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3),
-       ('polanc.p', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3),
-       ('zajc.l', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3),
-       ('vidmar.k', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3),
-       ('zupancic.j', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3),
-       ('kobal.n', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3),
-       ('golob.s', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3),
-       ('novak.e', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3),
-       ('kralj.a', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3),
-       ('kos.z', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3);
+VALUES ('kranjc.m', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3),
+       ('polanc.p', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3),
+       ('zajc.l', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3),
+       ('vidmar.k', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3),
+       ('zupancic.j', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3),
+       ('kobal.n', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3),
+       ('golob.s', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3),
+       ('novak.e', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3),
+       ('kralj.a', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3),
+       ('student', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
 
 INSERT INTO students (user_id, first_name, last_name, dob, class_code)
 VALUES (6, 'Maja', 'Kranjc', '2007-03-15', '1A'),
@@ -55,12 +55,12 @@ VALUES (6, 'Maja', 'Kranjc', '2007-03-15', '1A'),
 
 -- Parents
 INSERT INTO users (username, pass_hash, role_id)
-VALUES ('kranjc.g', '$2y$10$5PEvGKuui1hEZXVabZmk9Orr.FYsLunLmfh0g/XkwTUgulrTJltqW', 4),
-       ('polanc.j', '$2y$10$5PEvGKuui1hEZXVabZmk9Orr.FYsLunLmfh0g/XkwTUgulrTJltqW', 4),
-       ('zajc.b', '$2y$10$5PEvGKuui1hEZXVabZmk9Orr.FYsLunLmfh0g/XkwTUgulrTJltqW', 4),
-       ('kobal.m', '$2y$10$5PEvGKuui1hEZXVabZmk9Orr.FYsLunLmfh0g/XkwTUgulrTJltqW', 4),
-       ('novak.i', '$2y$10$5PEvGKuui1hEZXVabZmk9Orr.FYsLunLmfh0g/XkwTUgulrTJltqW', 4),
-       ('kos.d', '$2y$10$5PEvGKuui1hEZXVabZmk9Orr.FYsLunLmfh0g/XkwTUgulrTJltqW', 4);
+VALUES ('kranjc.g', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4),
+       ('polanc.j', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4),
+       ('zajc.b', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4),
+       ('kobal.m', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4),
+       ('novak.i', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4),
+       ('parent', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4);
 
 INSERT INTO parents (user_id)
 VALUES (16),
