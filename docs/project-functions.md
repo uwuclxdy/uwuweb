@@ -1,355 +1,246 @@
 # uwuweb Function Documentation
 
-This file contains centralized documentation for all functions across the uwuweb application.
-
-## /includes/functions.php
-
-Common Utility Functions Library
-
-### User and Role Management:
-
-- `getUserInfo(int $userId): ?array` - Retrieves comprehensive user profile with role-specific data (teacher_id, student
-  details, parent_id with children).
-
-### Security Functions:
-
-- `sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never` - Sends standardized JSON
-  error with status code and logs error with context before terminating execution.
-- `validateDate(string $date): bool` - Validates date format (YYYY-MM-DD). Returns true if valid.
-
-### Formatting Functions:
-
-- `formatDateDisplay(string $date): string` - Formats date from YYYY-MM-DD to DD.MM.YYYY.
-- `formatDateTimeDisplay(string $datetime): string` - Formats datetime to DD.MM.YYYY.
-
-### Navigation and Widgets:
-
-- `getNavItemsByRole(int $role): array` - Returns role-specific navigation menu items with title, URL and icon.
-- `getWidgetsByRole(int $role): array` - Returns dashboard widgets configuration appropriate for user role.
-- `renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string` - Creates a simple placeholder
-  card for widgets without data.
-- `renderHeaderCard(string $title, string $description, string $role, ?string $roleText = null): void` - Renders a
-  header card with title and description`
-
-### Activity Widgets:
-
-- `renderRecentActivityWidget(): string` - Generates role-appropriate recent activity summary with different content
-  based on user role.
-
-### Attendance Utilities:
-
-- `getAttendanceStatusLabel(string $status): string` - Translates single-letter status code (P/A/L) to human-readable
-  label.
-- `calculateAttendanceStats(array $attendance): array` - Computes attendance metrics including counts and percentages
-  from attendance records.
-- `calculateClassAverage(array $grades): float` - Calculates overall grade average for a class.
-- `getGradeLetter(float $percentage): string` - Converts percentage to Slovenian letter grade.
-- `getJustificationFileInfo(int $absenceId): ?string` - Returns justification file metadata.
-
-## /student/student_functions.php
-
-Student Functions Library - Provides functions for retrieving and managing student grades, attendance, and absence
-justifications.
-
-### Student Data Retrieval:
-
-- `getStudentId(): ?int` - Returns student ID for current user, with caching for optimization.
-- `getStudentAttendance(int $studentId): array` - Returns student's attendance records.
-- `getStudentGrades(int $studentId): array` - Returns student's grades.
-- `getClassAverage(int $classId): array` - Returns academic averages for class.
-- `getStudentAbsences(int $studentId): array` - Returns student's absence records.
-- `getStudentJustifications(int $studentId): array` - Gets justifications submitted by a student.
-
-### Grade Analysis:
-
-- `calculateWeightedAverage(array $grades): float|int` - Computes weighted grade average.
-- `calculateGradeStatistics(array $grades): array` - Analyzes grades by subject and class.
-
-### Absence Justifications:
-
-- `uploadJustification(int $absenceId, string $justification): bool` - Stores absence explanation text.
-- `validateJustificationFile(array $file): bool` - Checks justification file validity.
-- `saveJustificationFile(array $file, int $absenceId): bool|string` - Stores justification file securely.
-- `getJustificationFileInfoStudent(int $absenceId): ?string` - Returns justification file metadata.
-
-### Dashboard Widgets:
-
-- `renderStudentGradesWidget(): string` - Displays student's recent grades and subject performance statistics.
-- `renderStudentAttendanceWidget(): string` - Shows attendance summary with statistics and recent attendance records.
-- `renderStudentClassAveragesWidget(): string` - Compares student's performance against class averages across subjects.
-- `renderUpcomingClassesWidget(): string` - Lists student's scheduled classes for the next week organized by day.
-
-## /teacher/teacher_functions.php
-
-Teacher Functions Library - Provides centralized functions for teacher operations including grade management, attendance
-tracking, and justification processing.
-
-### Teacher Information Functions:
-
-- `getTeacherId(?int $userId = null): ?int` - Gets teacher_id from user_id or current session user if null.
-- `getTeacherClasses(int $teacherId): array` - Returns classes taught by teacher with code, title and subject info.
-- `teacherHasAccessToClassSubject(int $classSubjectId, ?int $teacherId = null): bool` - Verifies teacher access to
-  class-subject. Uses current teacher if $teacherId null.
-
-### Class & Student Management:
-
-- `getClassStudents(int $classId): array` - Returns students enrolled in a class.
-- `getClassPeriods(int $classSubjectId): array` - Returns periods for a class-subject.
-
-### Attendance Management:
-
-- `getPeriodAttendance(int $periodId): array` - Returns attendance records for a period.
-- `addPeriod(int $classSubjectId, string $periodDate, string $periodLabel): bool|int` - Creates new period for class.
-  Returns period_id or false.
-- `saveAttendance(int $enrollId, int $periodId, string $status): bool` - Records student attendance status.
-- `getStudentAttendanceByDate(int $studentId, string $date): array` - Gets attendance records for a student on a
-  specific date.
-
-### Grade Management:
-
-- `getGradeItems(int $classSubjectId): array` - Returns grade items for class-subject after permission check.
-- `getClassGrades(int $classSubjectId): array` - Returns all grades for students in a class.
-- `addGradeItem(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): bool|int` - Creates grade
-  item. Returns item_id or false.
-- `saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool` - Creates or updates student
-  grade.
-
-### Justification Management:
-
-- `getPendingJustifications(?int $teacherId = null): array` - Returns pending justifications for teacher or all if
-  admin.
-- `getJustificationById(int $absenceId): ?array` - Returns justification details with student info and attachments.
-- `approveJustification(int $absenceId): bool` - Approves justification and updates attendance.
-- `rejectJustification(int $absenceId, string $reason): bool` - Rejects justification with reason.
-
-### Dashboard Widgets:
-
-- `renderTeacherClassOverviewWidget(): string` - Displays teacher's assigned classes with subject and student count
-  information.
-- `renderTeacherAttendanceWidget(): string` - Shows today's classes with attendance recording status and quick action
-  links.
-- `renderTeacherPendingJustificationsWidget(): string` - Lists pending absence justifications awaiting teacher approval.
-- `renderTeacherClassAveragesWidget(): string` - Visualizes academic performance averages across teacher's classes.
-
-## /parent/parent_functions.php
-
-Parent Functions Library - Provides centralized functions for parent-specific functionality in the uwuweb system.
-
-### Parent Information Functions:
-
-- `getParentId(): ?int` - Returns parent_id for current user.
-- `getParentStudents(?int $parentId = null): array` - Returns linked students for parent.
-- `parentHasAccessToStudent(int $studentId, ?int $parentId = null): bool` - Verifies parent's student access.
-
-### Student Data Access Functions:
-
-- `getStudentClasses(int $studentId): array` - Returns student's enrolled classes with subjects.
-- `getClassGrades(int $studentId, int $classId): array` - Returns student's grades by subject.
-
-### Attendance and Justification Functions:
-
-- `getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null): array` - Returns student
-  attendance with optional date range.
-- `parentHasAccessToJustification(int $attId): bool` - Verifies parent's justification access.
-- `getJustificationDetails(int $attId): ?array` - Returns justification details for parent.
-- `getStudentJustifications(int $studentId): array` - Returns all justifications submitted for a student.
-
-### Dashboard Widgets:
-
-- `renderParentAttendanceWidget(): string` - Displays attendance summary for each child with statistics and recent
-  absences.
-- `renderParentChildClassAveragesWidget(): string` - Shows academic performance for each child compared to class
-  averages.
-
-## /admin/admin_functions.php
-
-Admin Functions Library - Provides centralized functions for administrative operations including user management, system
-settings, and class-subject assignments.
-
-### User Management Functions:
-
-- `getAllUsers(): array` - Returns all users with role information.
-- `displayUserList(): void` - Renders user management table with action buttons.
-- `getUserDetails(int $userId): ?array` - Returns detailed user information with role-specific data.
-- `createNewUser(array $userData): bool|int` - Creates user with role. Returns user_id or false.
-- `updateUser(int $userId, array $userData): bool` - Updates user information. Returns success status.
-- `resetUserPassword(int $userId, string $newPassword): bool` - Sets new user password. Returns success status.
-- `deleteUser(int $userId): bool` - Removes user if no dependencies exist. Returns success status.
-- `handleCreateUser(): void` - Processes user creation form submission.
-- `handleUpdateUser(): void` - Processes user update form submission.
-- `handleResetPassword(): void` - Processes password reset form submission.
-- `handleDeleteUser(): void` - Processes user deletion confirmation.
-
-### Subject Management Functions:
-
-- `getAllSubjects(): array` - Returns all subjects from the database.
-- `displaySubjectsList(): void` - Renders subject management table with actions.
-- `getSubjectDetails(int $subjectId): ?array` - Returns detailed subject information or null if not found.
-- `createSubject(array $subjectData): bool|int` - Creates subject. Returns subject_id or false.
-- `updateSubject(int $subjectId, array $subjectData): bool` - Updates subject information. Returns success status.
-- `deleteSubject(int $subjectId): bool` - Removes subject if not in use. Returns success status.
-
-### Class Management Functions:
-
-- `getAllClasses(): array` - Returns all classes with homeroom teacher information.
-- `displayClassesList(): void` - Renders class management table with actions.
-- `getClassDetails(int $classId): ?array` - Returns detailed class information or null if not found.
-- `createClass(array $classData): bool|int` - Creates class. Returns class_id or false.
-- `updateClass(int $classId, array $classData): bool` - Updates class information. Returns success status.
-- `deleteClass(int $classId): bool` - Removes class if no dependencies exist. Returns success status.
-
-### Class-Subject Assignment Functions:
-
-- `assignSubjectToClass(array $assignmentData): bool|int` - Assigns subject to class with teacher. Returns assignment_id
-  or false.
-- `updateClassSubjectAssignment(int $assignmentId, array $assignmentData): bool` - Updates class-subject assignment.
-  Returns success status.
-- `removeSubjectFromClass(int $assignmentId): bool` - Removes subject assignment from class. Returns success status.
-- `getAllClassSubjectAssignments(): array` - Returns all class-subject assignments with related information.
-- `getAllTeachers(): array` - Returns all teachers with their basic information.
-
-### System Settings Functions:
-
-- `getSystemSettings(): array` - Retrieves system-wide settings from the database.
-- `updateSystemSettings(array $settings): bool` - Updates system-wide settings. Returns success status.
-
-### Dashboard Widget Functions:
-
-- `renderAdminUserStatsWidget(): string` - Displays user statistics by role with counts and recent registrations.
-- `renderAdminSystemStatusWidget(): string` - Shows system status including database stats, active sessions, and PHP
-  configuration.
-- `renderAdminAttendanceWidget(): string` - Visualizes school-wide attendance metrics with charts and highlights
-  best-performing class.
-
-### Validation and Utility Functions:
-
-- `getAllStudentsBasicInfo(): array` - Retrieves basic information for all students.
-- `validateUserForm(array $userData): bool|string` - Validates user form data based on role. Returns true or error
-  message.
-- `usernameExists(string $username, ?int $excludeUserId = null): bool` - Checks if username already exists, optionally
-  excluding a user.
-- `classCodeExists(string $classCode): bool` - Checks if class code exists. Returns true if found.
-- `subjectExists(int $subjectId): bool` - Checks if subject exists. Returns true if found.
-- `studentExists(int $studentId): bool` - Checks if student exists. Returns true if found.
+This document provides a centralized reference for all functions in the uwuweb application, organized by file location
+and functional category.
 
 ## /includes/db.php
 
-Database Connection Handler - Establishes and provides a PDO connection to the uwuweb database. Used by all data access
-operations throughout the application.
+Database connection management functions.
 
-### Connection Management:
-
-- `getDBConnection(): PDO|null` - Returns PDO connection or null on failure.
-- `safeGetDBConnection(string $context = '', bool $terminate = true): PDO|null` - Returns PDO connection or terminates
-  with error. Context for logging.
-- `testDBConnection(): string` - Tests connection and returns status with MySQL info.
-
-### Error Handling:
-
-- `logDBError(string $error): void` - Logs DB errors to file or PHP error log.
+- `logDBError(string $error): void` - Logs database errors to a file
+- `getDBConnection(): ?PDO` - Creates and returns a PDO database connection
+- `safeGetDBConnection(string $context = '', bool $terminate = true): ?PDO` - Gets a PDO connection or terminates
+  execution if it fails
+- `testDBConnection(): string` - Tests database connectivity and returns status message
 
 ## /includes/auth.php
 
-Authentication and Session Management - Provides functions for user authentication, session management, and role-based
-access control.
+Authentication and session management functions.
 
-### Authentication and Session:
+- `isLoggedIn(): bool` - Checks if a user is currently logged in
+- `checkSessionTimeout(): void` - Checks if the session has timed out due to inactivity
+- `updateLastActivityTime(): void` - Updates the last activity timestamp
+- `destroySession(string $reason = ''): void` - Destroys current session and redirects to login
 
-- `isLoggedIn(): bool` - Checks if a user is currently logged in based on session data.
-- `getUserRole(): int|null` - Returns current user's role ID from session or null if not set.
-- `getUserId(): int|null` - Returns current user's ID from session or null if not set.
-- `hasRole(int $roleId): bool` - Checks if current user has the specified role.
-- `requireRole(int $roleId): bool` - Restricts page access to users with specific role, redirects if unauthorized.
-- `checkSessionTimeout(): void` - Checks if the session has timed out due to inactivity and logs out if needed.
-- `updateLastActivityTime(): void` - Updates the last activity timestamp in the current session.
-- `destroySession(string $reason = ''): void` - Destroys the current session, clears cookies, and redirects to login
-  page.
+### User Information
 
-### Security Functions:
+- `getUserRole(): int|null` - Returns the current user's role ID from session
+- `getUserId(): int|null` - Returns the current user's ID from session
+- `hasRole(int $roleId): bool` - Checks if current user has a specific role
+- `getRoleName(?int $roleId): string` - Returns the name of a role by ID
 
-- `generateCSRFToken(): string` - Creates a CSRF token for form security and stores in session.
-- `verifyCSRFToken(string $token): bool` - Validates submitted CSRF token against the one stored in session.
+### Access Control
 
-### Role Management:
+- `requireRole(int $roleId): bool` - Restricts page access to users with specific role
 
-- `getRoleName(int $roleId): string` - Returns the name of a role by ID, falls back to database lookup if not in
-  predefined list.
+### Security
 
-## /api/justifications.php
+- `generateCSRFToken(): string` - Creates a CSRF token for form security
+- `verifyCSRFToken(string $token): bool` - Validates submitted CSRF token
 
-Justifications API Endpoint - Handles CRUD operations for absence justifications via AJAX requests. Returns JSON
-responses for client-side processing. Access control based on user role: students can submit, teachers can approve.
+## /includes/functions.php
 
-### Core API Functions:
+Core utility functions library.
 
-- `submitJustification(): void` - Processes student-submitted justification with text and optional file upload.
-  Validates student ownership and absence status before recording justification.
-- `handleApproveJustification(): void` - Processes teacher approval/rejection of justification with optional rejection
-  reason. Performs role and access verification before updating status.
-- `getJustifications(): void` - Returns role-filtered justifications with formatted dates and status labels. Results are
-  tailored based on user role (all for admin, class-specific for teachers, own for students, children's for parents).
-- `getJustificationDetails(): void` - Retrieves detailed justification information by ID. Implements role-based access
-  control and formats dates and status labels for display.
+### User Management Functions
 
-### Access Control Functions:
+- `getUserInfo(int $userId): ?array` - Retrieves comprehensive user profile with role-specific data
+- `getStudentId(): ?int` - Retrieves the student ID associated with the current user
+- `getTeacherId(?int $userId = null): ?int` - Retrieves the teacher ID associated with a user
+- `getParentId(): ?int` - Retrieves the parent ID associated with the current user
+- `parentHasAccessToStudent(int $studentId, ?int $parentId = null): bool` - Checks if a parent has access to a specific
+  student's data
+- `teacherHasAccessToClassSubject(int $classSubjectId, ?int $teacherId = null): bool` - Checks if a teacher has access
+  to a specific class-subject combination
 
-- `teacherHasAccessToJustification(int $attId): bool` - Verifies if current teacher has permission to access a specific
-  justification based on class-subject assignment. Returns true if authorized.
-- `studentOwnsJustification(int $attId): bool` - Verifies if current student is the owner of a specific attendance
-  record/justification. Returns true if student owns the record.
+### Navigation & UI Functions
 
-## /api/attendance.php
+- `getNavItemsByRole(int $role): array` - Returns navigation menu items based on user role
+- `getWidgetsByRole(int $role): array` - Returns dashboard widgets based on user role
+- `renderPlaceholderWidget(string $message = 'Podatki trenutno niso na voljo.'): string` - Renders a placeholder widget
+  when data is unavailable
+- `renderHeaderCard(string $title, string $description, string $role, ?string $roleText = null): void` - Renders a
+  header card with title, description and role badge
+- `renderRecentActivityWidget(): string` - Renders the recent activity widget
 
-Attendance API Endpoint - Handles CRUD operations for attendance data via AJAX requests.
+### Class/Subject Functions
 
-### Period Management:
+- `getTeacherClasses(int $teacherId): array` - Retrieves all classes assigned to a teacher
+- `getClassStudents(int $classId): array` - Gets all students enrolled in a specific class
+- `getClassPeriods(int $classSubjectId): array` - Retrieves periods for a specific class-subject
+- `getParentStudents(?int $parentId = null): array` - Retrieves students linked to a parent
+- `getStudentClasses(int $studentId): array` - Gets classes and subjects for a specific student
 
-- `handleAddPeriod(): void` - Creates a new period for a class with initial attendance records using POST data (
-  class_subject_id, period_date, period_label)
-- `handleUpdatePeriod(): void` - Updates date and label information for an existing period using POST data (period_id,
-  period_date, period_label)
-- `handleDeletePeriod(): void` - Deletes a period and all associated attendance records using POST data (period_id)
+### Attendance Functions
 
-### Attendance Recording:
+- `getAttendanceStatusLabel(string $status): string` - Translates attendance status code to readable label
+- `calculateAttendanceStats(array $attendance): array` - Calculates statistics from attendance records
+-
+`getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null, bool $checkAccess = true): array` -
+Gets attendance records for a student
+- `getStudentAttendanceByDate(int $studentId, string $date): array` - Gets student attendance for a specific date
+- `getPeriodAttendance(int $periodId): array` - Retrieves attendance for all students in a period
+- `addPeriod(int $classSubjectId, string $periodDate, string $periodLabel): int|false` - Creates a new period and
+  initializes attendance records
+- `saveAttendance(int $enrollId, int $periodId, string $status): bool` - Updates or creates an attendance record
 
-- `handleSaveAttendance(): void` - Saves attendance status ('P', 'A', 'L') for a single student using POST data (
-  enroll_id, period_id, status)
-- `handleBulkAttendance(): void` - Saves attendance status for multiple students at once using POST data (period_id,
-  attendance_data array)
+### Grade Functions
 
-### Justification Management:
+- `getGradeItems(int $classSubjectId): array` - Gets grade items for a class-subject
+- `getClassGrades(int $classSubjectId): array` - Gets grades for all students and grade items in a class-subject
+- `addGradeItem(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): int|false` - Creates a new
+  grade item
+- `saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool` - Updates or creates a grade
+  record
+- `calculateWeightedAverage(array $grades): float` - Calculate weighted average for a set of grades
+- `calculateClassAverage(array $grades): float` - Calculate overall grade average for a class
+- `getGradeLetter(float $percentage): string` - Converts a numerical percentage to a letter grade
 
-- `handleJustifyAbsence(): void` - Records or approves absence justification based on user role using POST data (att_id,
-  justification, approved, reject_reason)
-- `handleGetStudentAttendance(): void` - Retrieves attendance summary and statistics for a student using POST data (
-  student_id, optional date_from, date_to)
+### Justification Functions
 
-## /api/grades.php
+- `getJustificationFileInfo(int $absenceId): ?string` - Gets information about a justification file
+- `uploadJustification(int $absenceId, string $justification): bool` - Uploads a justification for an absence
+- `validateJustificationFile(array $file): bool` - Validates an uploaded justification file
+- `saveJustificationFile(array $file, int $absenceId): string|false` - Saves an uploaded justification file
+- `getPendingJustifications(?int $teacherId = null): array` - Gets pending justifications for a teacher
+- `getJustificationById(int $absenceId): ?array` - Gets detailed information about a justification
+- `approveJustification(int $absenceId): bool` - Approves a justification
+- `rejectJustification(int $absenceId, string $reason): bool` - Rejects a justification
 
-Handles CRUD operations for grade data via AJAX requests. Returns JSON responses for client-side processing.
+### Utility Functions
 
-### Grade Item Management:
+- `validateDate(string $date): bool` - Validates a date format (YYYY-MM-DD)
+- `formatDateDisplay(string $date): string` - Formats date for display (YYYY-MM-DD to DD.MM.YYYY)
+- `formatDateTimeDisplay(string $datetime): string` - Formats datetime for display
+- `formatFileSize(int $bytes): string` - Formats file size to human-readable string
+- `sendJsonErrorResponse(string $message, int $statusCode = 400, string $context = ''): never` - Sends a standardized
+  JSON error response
 
-- `addGradeItem(): void` - Creates a new grade item for a specific class-subject using JSON request data
-- `updateGradeItem(): void` - Updates name, max points, and weight for an existing grade item
-- `deleteGradeItem(): void` - Removes a grade item and all associated grades
-- `saveGrade(): void` - Creates or updates a grade for a student on a specific grade item
+## /admin/admin_functions.php
 
-### Authorization Functions:
+Administrative operation functions.
 
-- `teacherHasAccessToClass(int $classId): bool` - Verifies if the current teacher is assigned to the given class
-- `teacherHasAccessToGradeItem(int $itemId, int $teacherId): bool` - Verifies if the teacher is authorized to modify the
-  given grade item
-- `teacherHasAccessToEnrollment(int $enrollId): bool` - Verifies if the current teacher is authorized to modify grades
-  for the given enrollment
+### User Management Functions
+
+- `getAllUsers(): array` - Retrieves all users with their role information
+- `displayUserList(): void` - Displays a table of all users with management actions
+- `getUserDetails(int $userId): ?array` - Fetches detailed information about a specific user
+- `createNewUser(array $userData): bool|int` - Creates a new user with specified role
+- `updateUser(int $userId, array $userData): bool` - Updates an existing user's information
+- `resetUserPassword(int $userId, string $newPassword): bool` - Resets a user's password
+- `deleteUser(int $userId): bool` - Deletes a user if they have no dependencies
+- `handleCreateUser(): void` - Creates a new user based on form data
+- `handleUpdateUser(): void` - Updates an existing user based on form data
+- `handleResetPassword(): void` - Resets a user's password
+- `handleDeleteUser(): void` - Deletes a user after confirmation
+
+### Subject Management Functions
+
+- `getAllSubjects(): array` - Retrieves all subjects
+- `displaySubjectsList(): void` - Displays a table of all subjects with management actions
+- `getSubjectDetails(int $subjectId): ?array` - Fetches detailed information about a specific subject
+- `createSubject(array $subjectData): bool|int` - Creates a new subject
+- `updateSubject(int $subjectId, array $subjectData): bool` - Updates an existing subject
+- `deleteSubject(int $subjectId): bool` - Deletes a subject if it's not in use
+
+### Class Management Functions
+
+- `getAllClasses(): array` - Retrieves all classes
+- `displayClassesList(): void` - Displays a table of all classes with management actions
+- `getClassDetails(int $classId): ?array` - Fetches detailed information about a specific class
+- `createClass(array $classData): bool|int` - Creates a new class
+- `updateClass(int $classId, array $classData): bool` - Updates an existing class
+- `deleteClass(int $classId): bool` - Deletes a class if it has no dependencies
+
+### Class-Subject Assignment Functions
+
+- `assignSubjectToClass(array $assignmentData): bool|int` - Assigns a subject to a class with a specific teacher
+- `updateClassSubjectAssignment(int $assignmentId, array $assignmentData): bool` - Updates a class-subject assignment
+- `removeSubjectFromClass(int $assignmentId): bool` - Removes a subject assignment from a class
+- `getAllClassSubjectAssignments(): array` - Gets all class-subject assignments
+- `getAllTeachers(): array` - Gets all available teachers
+
+### System Settings Functions
+
+- `getSystemSettings(): array` - Retrieves system-wide settings
+- `updateSystemSettings(array $settings): bool` - Updates system-wide settings
+
+### Dashboard Widget Functions
+
+- `renderAdminUserStatsWidget(): string` - Displays user statistics by role with counts and recent registrations
+- `renderAdminSystemStatusWidget(): string` - Shows system status including database stats, active sessions, and PHP
+  configuration
+- `renderAdminAttendanceWidget(): string` - Visualizes school-wide attendance metrics with charts and highlights
+  best-performing class
+
+### Validation and Utility Functions
+
+- `getAllStudentsBasicInfo(): array` - Retrieves basic information for all students
+- `validateUserForm(array $userData): bool|string` - Validates user form data based on role
+- `usernameExists(string $username, ?int $excludeUserId = null): bool` - Checks if username already exists
+- `classCodeExists(string $classCode): bool` - Checks if class code exists
+- `subjectExists(int $subjectId): bool` - Checks if subject exists
+- `studentExists(int $studentId): bool` - Checks if student exists
 
 ## /api/admin.php
 
-Handles administrative API functions for the uwuweb system. Returns JSON responses for client-side processing.
+Administrative API endpoints.
 
-### Class and Subject Management:
+- `handleGetClassDetails(): void` - Returns detailed information about a class including students and subjects
+- `handleGetSubjectDetails(): void` - Returns detailed information about a subject including assigned classes
+- `handleGetTeacherDetails(): void` - Returns detailed information about a teacher including classes and assignments
 
-- `getClassDetails(): void` - Retrieves detailed information about a class including enrolled students and assigned
-  subjects
-- `getSubjectDetails(): void` - Retrieves detailed information about a subject including assigned classes
-- `getTeacherDetails(): void` - Retrieves detailed information about a teacher including assigned classes and subjects
+## /api/attendance.php
+
+Attendance management API endpoints.
+
+- `handleAddPeriodApi(): void` - API handler for adding a new period
+- `handleGetPeriodAttendanceApi(): void` - API handler for getting period attendance
+- `handleGetStudentAttendanceApi(): void` - API handler for getting student attendance
+- `handleSaveAttendanceApi(): void` - API handler for saving attendance record
+
+## /api/grades.php
+
+Grade management API endpoints.
+
+- `handleGetGradeItemsApi(): void` - API handler for retrieving grade items
+- `handleGetClassGradesApi(): void` - API handler for retrieving class grades
+- `handleAddGradeItemApi(): void` - API handler for adding grade item
+- `handleSaveGradeApi(): void` - API handler for saving grade
+
+## /api/justifications.php
+
+Justification management API endpoints.
+
+- `handleSubmitJustificationApi(): void` - API handler for submitting justification
+- `handleApproveJustificationApi(): void` - API handler for approving justification
+- `handleRejectJustificationApi(): void` - API handler for rejecting justification
+- `handleGetJustificationsApi(): void` - API handler for retrieving justifications
+- `handleGetJustificationDetailsApi(): void` - API handler for getting justification details
+
+## /parent/parent_functions.php
+
+Parent-specific helper functions.
+
+- `renderParentAttendanceWidget(): string` - Creates the HTML for the parent's attendance dashboard widget
+- `renderParentChildClassAveragesWidget(): string` - Creates the HTML for the parent's view of their child's class
+  averages
+
+## /student/student_functions.php
+
+Student-specific helper functions.
+
+- `calculateGradeStatistics(array $grades): array` - Calculate grade statistics grouped by subject and class
+- `renderStudentGradesWidget(): string` - Creates the HTML for the student's grades dashboard widget
+- `renderStudentAttendanceWidget(): string` - Creates the HTML for the student's attendance dashboard widget
+- `renderStudentClassAveragesWidget(): string` - Creates the HTML for the student's class averages dashboard widget
+- `renderUpcomingClassesWidget(): string` - Creates the HTML for a student's upcoming classes widget
+
+## /teacher/teacher_functions.php
+
+Teacher-specific helper functions.
+
+- `renderTeacherClassOverviewWidget(): string` - Creates the HTML for the teacher's class overview dashboard widget
+- `renderTeacherAttendanceWidget(): string` - Shows attendance status for today's classes taught by the teacher
+- `renderTeacherPendingJustificationsWidget(): string` - Shows absence justifications waiting for teacher approval
+- `renderTeacherClassAveragesWidget(): string` - Creates the HTML for the teacher's class averages dashboard widget

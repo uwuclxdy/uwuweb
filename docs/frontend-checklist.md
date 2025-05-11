@@ -14,10 +14,10 @@
 
 - [x] `/dashboard.php` - Main dashboard container
 - [x] Role-specific dashboard widgets:
-  - [x] Admin widgets (user stats, system status, school attendance, class averages)
-  - [x] Teacher widgets (class overview, attendance, pending justifications, class averages)
-  - [x] Student widgets (grades, attendance, upcoming classes, class averages)
-  - [x] Parent widgets (child grades, attendance, class averages)
+    - [x] Admin widgets (user stats, system status, school attendance, class averages)
+    - [x] Teacher widgets (class overview, attendance, pending justifications, class averages)
+    - [x] Student widgets (grades, attendance, upcoming classes, class averages)
+    - [x] Parent widgets (child grades, attendance, class averages)
 
 ## Admin Pages
 
