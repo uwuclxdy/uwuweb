@@ -42,8 +42,7 @@ function calculateGradeStatistics(array $grades): array
             'classes' => [],
             'total_points' => 0,
             'total_max_points' => 0,
-            'total_weight' => 0,
-            'weighted_average' => 0,
+            'average' => 0,
             'grade_count' => 0
         ];
 
@@ -52,36 +51,32 @@ function calculateGradeStatistics(array $grades): array
             'grades' => [],
             'total_points' => 0,
             'total_max_points' => 0,
-            'total_weight' => 0,
-            'weighted_average' => 0,
+            'average' => 0,
             'grade_count' => 0
         ];
 
         $statistics[$subject]['classes'][$class]['grades'][] = $grade;
 
-        $weight = isset($grade['weight']) ? (float)$grade['weight'] : 1.0;
         $points = isset($grade['points']) ? (float)$grade['points'] : 0.0;
         $max_points = isset($grade['max_points']) ? (float)$grade['max_points'] : 0.0;
 
         // Only add to totals if max_points is valid
         if ($max_points > 0) {
-            $statistics[$subject]['classes'][$class]['total_points'] += $points * $weight;
-            $statistics[$subject]['classes'][$class]['total_max_points'] += $max_points * $weight;
-            $statistics[$subject]['classes'][$class]['total_weight'] += $weight;
+            $statistics[$subject]['classes'][$class]['total_points'] += $points;
+            $statistics[$subject]['classes'][$class]['total_max_points'] += $max_points;
             $statistics[$subject]['classes'][$class]['grade_count']++;
 
-            $statistics[$subject]['total_points'] += $points * $weight;
-            $statistics[$subject]['total_max_points'] += $max_points * $weight;
-            $statistics[$subject]['total_weight'] += $weight;
+            $statistics[$subject]['total_points'] += $points;
+            $statistics[$subject]['total_max_points'] += $max_points;
             $statistics[$subject]['grade_count']++;
         }
     }
 
     // Calculate averages only where valid data exists
     foreach ($statistics as &$subjectData) {
-        if ($subjectData['total_max_points'] > 0 && $subjectData['total_weight'] > 0) $subjectData['weighted_average'] = ($subjectData['total_points'] / $subjectData['total_max_points']) * 100; else $subjectData['weighted_average'] = 0.0;
+        if ($subjectData['total_max_points'] > 0) $subjectData['average'] = ($subjectData['total_points'] / $subjectData['total_max_points']) * 100; else $subjectData['average'] = 0.0;
 
-        foreach ($subjectData['classes'] as &$classData) if ($classData['total_max_points'] > 0 && $classData['total_weight'] > 0) $classData['weighted_average'] = ($classData['total_points'] / $classData['total_max_points']) * 100; else $classData['weighted_average'] = 0.0;
+        foreach ($subjectData['classes'] as &$classData) if ($classData['total_max_points'] > 0) $classData['average'] = ($classData['total_points'] / $classData['total_max_points']) * 100; else $classData['average'] = 0.0;
         unset($classData); // Release reference
     }
     unset($subjectData); // Release reference
@@ -130,7 +125,7 @@ function renderStudentGradesWidget(): string
         foreach ($subjectAverages as $avg) {
             if ($avg['avg_score'] === null) continue;
             $score = number_format($avg['avg_score'], 1);
-            $sClass = $avg['avg_score'] >= 80 ? 'grade-high' : ($avg['avg_score'] >= 60 ? 'grade-medium' : 'grade-low');
+            $sClass = $avg['avg_score'] >= 90 ? 'grade-5' : ($avg['avg_score'] >= 60 ? 'grade-3' : 'grade-1');
             $html .= '<div class="d-flex justify-between items-center p-sm rounded shadow-sm">';
             $html .= '<span>' . htmlspecialchars($avg['subject_name']) . ' <small class="text-disabled">(' . $avg['grade_count'] . ' ocen)</small></span>';
             $html .= '<span class="badge ' . $sClass . '">' . $score . '%</span>';
@@ -147,7 +142,7 @@ function renderStudentGradesWidget(): string
         $html .= '<div class="d-flex flex-column gap-md">';
         foreach ($recentGrades as $grade) {
             $perc = $grade['percentage'];
-            $sClass = $perc === null ? 'badge-secondary' : ($perc >= 80 ? 'grade-high' : ($perc >= 60 ? 'grade-medium' : 'grade-low'));
+            $sClass = $perc === null ? 'badge-secondary' : ($perc >= 80 ? 'grade-5' : ($perc >= 60 ? 'grade-3' : 'grade-1'));
             $percFormatted = $perc !== null ? ' (' . $perc . '%)' : '';
             $html .= '<div class="p-sm rounded shadow-sm">';
             $html .= '<div class="d-flex justify-between items-center mb-xs">';
@@ -287,7 +282,7 @@ function renderStudentClassAveragesWidget(): string
             $compText = '-';
             $compClass = 'text-secondary';
             if ($grade['student_avg_score'] !== null) {
-                $sClass = $grade['student_avg_score'] >= 80 ? 'grade-high' : ($grade['student_avg_score'] >= 60 ? 'grade-medium' : 'grade-low');
+                $sClass = $grade['student_avg_score'] >= 80 ? 'grade-5' : ($grade['student_avg_score'] >= 60 ? 'grade-3' : 'grade-1');
                 if ($grade['class_avg_score'] !== null) {
                     $diff = $grade['student_avg_score'] - $grade['class_avg_score'];
                     $diffF = number_format($diff, 1);

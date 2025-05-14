@@ -276,7 +276,7 @@ img {
 
 .card:hover {
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
-    transform: translateY(-3px);
+    /*transform: translateY(-3px);*/
 }
 
 .card:hover::before {
@@ -791,18 +791,28 @@ img {
     line-height: 1.2; /* Adjust line height for grades */
 }
 
-.grade-high {
-    color: #22c55e;
-    background-color: rgba(34, 197, 94, 0.08);
+.grade-5 {
+    color: #1be1e8; /* Green - Excellent */
+    background-color: rgba(34, 173, 197, 0.08);
 }
 
-.grade-medium {
-    color: #eab308; /* Tailwind Yellow 500 */
+.grade-4 {
+    color: #15c788; /* Teal - Very Good */
+    background-color: rgba(20, 184, 47, 0.08);
+}
+
+.grade-3 {
+    color: #eab308; /* Yellow - Good */
     background-color: rgba(234, 179, 8, 0.08);
 }
 
-.grade-low {
-    color: #ef4444;
+.grade-2 {
+    color: #f97316; /* Orange - Sufficient */
+    background-color: rgba(249, 115, 22, 0.08);
+}
+
+.grade-1 {
+    color: #ef4444; /* Red - Insufficient */
     background-color: rgba(239, 68, 68, 0.08);
 }
 
@@ -2274,19 +2284,19 @@ img {
     }
 
     /* Ensure status/grade colors print reasonably */
-    .status-success, .grade-high {
+    .status-success, .grade-5 {
         background-color: #e6f7ec !important;
         color: #000 !important;
         border-left-color: #22c55e !important;
     }
 
-    .status-warning, .grade-medium, .status-late {
+    .status-warning, .grade-3, .status-late {
         background-color: #fff8e6 !important;
         color: #000 !important;
         border-left-color: #f59e0b !important;
     }
 
-    .status-error, .grade-low, .status-absent {
+    .status-error, .grade-1, .status-absent {
         background-color: #ffe6e6 !important;
         color: #000 !important;
         border-left-color: #ef4444 !important;

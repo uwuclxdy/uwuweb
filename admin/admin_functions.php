@@ -1843,7 +1843,7 @@ function renderAdminAttendanceWidget(): string
             $output .= '<span class="d-block text-sm text-secondary mt-xs">(' . htmlspecialchars($bestClass['class_code']) . ')</span>';
             $output .= '</div>';
             $output .= '<div class="text-right">';
-            $output .= '<span class="grade grade-high d-block text-xl">' . htmlspecialchars(round((float)$bestClass['present_percent'], 1)) . '%</span>';
+            $output .= '<span class="grade grade-5 d-block text-xl">' . htmlspecialchars(round((float)$bestClass['present_percent'], 1)) . '%</span>';
             $output .= '<span class="d-block text-sm text-secondary mt-xs">prisotnost</span>';
             $output .= '</div>';
             $output .= '</div>';
@@ -1905,7 +1905,7 @@ function validateUserForm(array $userData): bool|string
 
     if (!isset($userData['user_id']) && usernameExists($userData['username'])) return 'Uporabniško ime je že zasedeno.';
     // Check if username exists when updating, excluding self
-    if (isset($userData['user_id']) && !empty($userData['user_id']) && usernameExists($userData['username'], (int)$userData['user_id'])) return 'Uporabniško ime je že zasedeno.';
+    if (!empty($userData['user_id']) && usernameExists($userData['username'], (int)$userData['user_id'])) return 'Uporabniško ime je že zasedeno.';
 
     if (empty($userData['role_id']) || !in_array($userData['role_id'], [ROLE_ADMIN, ROLE_TEACHER, ROLE_STUDENT, ROLE_PARENT], true)) return 'Izbrana je neveljavna vloga.';
 

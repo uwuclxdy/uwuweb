@@ -42,9 +42,11 @@
  * Grade Functions:
  * - getGradeItems(int $classSubjectId): array - Gets grade items for a class-subject
  * - getClassGrades(int $classSubjectId): array - Gets grades for all students and grade items in a class-subject
- * - addGradeItem(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): int|false - Creates a new grade item
+ * - addGradeItem(int $classSubjectId, string $name, float $maxPoints, string $date): int|false - Creates a new grade item
+ *  - updateGradeItem(int $itemId, string $name, float $maxPoints, string $date): bool - Updates a grade item
  * - saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool - Updates or creates a grade
- * - calculateWeightedAverage(array $grades): float - Calculate weighted average for a set of grades
+ * - deleteGradeItem(int $enrollId, int $itemId): bool - Deletes a grade
+ * - calculateAverage(array $grades): float - Calculate average for a set of grades
  * - calculateClassAverage(array $grades): float - Calculate overall grade average for a class
  * - getGradeLetter(float $percentage): string - Converts a numerical percentage to a letter grade
  *
@@ -1316,7 +1318,7 @@ function getGradeItems(int $classSubjectId): array
         if ($pdo === null) return [];
 
         $query = "
-            SELECT item_id, name, max_points, weight
+            SELECT item_id, name, max_points, date
             FROM grade_items
             WHERE class_subject_id = ?
             ORDER BY item_id
@@ -1404,27 +1406,133 @@ function getClassGrades(int $classSubjectId): array
  * @param int $classSubjectId Class-Subject ID
  * @param string $name Name of the grade item
  * @param float $maxPoints Maximum points
- * @param float $weight Weight of the grade item (default: 1.00)
+ * @param string $date Test date in YYYY-MM-DD format
  * @return int|false Grade item ID on success, false on failure
  */
-function addGradeItem(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): int|false
+function addGradeItem(int $classSubjectId, string $name, float $maxPoints, string $date): int|false
 {
     // Check if current user is a teacher and has access to this class-subject
     if (getUserRole() === ROLE_TEACHER && !teacherHasAccessToClassSubject($classSubjectId)) return false;
+
+    // Validate date if provided
+    if (!validateDate($date)) {
+        logDBError("Invalid date format in addGradeItem: $date");
+        return false;
+    }
 
     try {
         $pdo = safeGetDBConnection('addGradeItem');
         if ($pdo === null) return false;
 
-        $stmt = $pdo->prepare("
-            INSERT INTO grade_items (class_subject_id, name, max_points, weight)
-            VALUES (?, ?, ?, ?)
-        ");
-        $stmt->execute([$classSubjectId, $name, $maxPoints, $weight]);
+        if ($date) {
+            $stmt = $pdo->prepare("
+                INSERT INTO grade_items (class_subject_id, name, max_points, date)
+                VALUES (?, ?, ?, ?)
+            ");
+            $stmt->execute([$classSubjectId, $name, $maxPoints, $date]);
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO grade_items (class_subject_id, name, max_points)
+                VALUES (?, ?, ?)
+            ");
+            $stmt->execute([$classSubjectId, $name, $maxPoints]);
+        }
 
         return (int)$pdo->lastInsertId();
     } catch (PDOException $e) {
         logDBError("Error in addGradeItem: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Deletes a grade item
+ *
+ * @param int $enrollId The enrollment ID
+ * @param int $itemId The grade item ID
+ * @return bool True if deletion was successful, false otherwise
+ */
+function deleteGradeItem(int $enrollId, int $itemId): bool
+{
+    try {
+        $pdo = safeGetDBConnection('deleteGrade');
+
+        // First check if the grade exists
+        $checkStmt = $pdo->prepare(
+            "SELECT grade_id FROM grades 
+             WHERE enroll_id = :enroll_id AND item_id = :item_id"
+        );
+        $checkStmt->bindParam(':enroll_id', $enrollId, PDO::PARAM_INT);
+        $checkStmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+        $checkStmt->execute();
+
+        if ($checkStmt->rowCount() === 0) return false;
+
+        // Delete the grade
+        $stmt = $pdo->prepare(
+            "DELETE FROM grades 
+             WHERE enroll_id = :enroll_id AND item_id = :item_id"
+        );
+        $stmt->bindParam(':enroll_id', $enrollId, PDO::PARAM_INT);
+        $stmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+        $result = $stmt->execute();
+
+        return $result && $stmt->rowCount() > 0;
+    } catch (PDOException $e) {
+        logDBError('Error deleting grade: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Updates a grade item's details
+ *
+ * @param int $itemId The grade item ID to update
+ * @param string $name The new name for the grade item
+ * @param float $maxPoints The new maximum points for the grade item
+ * @param string $date The new test date (YYYY-MM-DD format)
+ * @return bool True if update was successful, false otherwise
+ */
+function updateGradeItem(int $itemId, string $name, float $maxPoints, string $date): bool
+{
+    // Validate date if provided
+    if (!empty($date) && !validateDate($date)) {
+        logDBError("Invalid date format in updateGradeItem: $date");
+        return false;
+    }
+
+    try {
+        $pdo = safeGetDBConnection('updateGradeItem');
+
+        // First check if the grade item exists
+        $checkStmt = $pdo->prepare(
+            "SELECT item_id FROM grade_items 
+             WHERE item_id = :item_id"
+        );
+        $checkStmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+        $checkStmt->execute();
+
+        if ($checkStmt->rowCount() === 0) return false;
+
+        if (empty($date)) $stmt = $pdo->prepare(
+            "UPDATE grade_items 
+             SET name = :name, max_points = :max_points
+             WHERE item_id = :item_id"
+        ); else {
+            $stmt = $pdo->prepare(
+                "UPDATE grade_items 
+                 SET name = :name, max_points = :max_points, date = :date
+                 WHERE item_id = :item_id"
+            );
+            $stmt->bindParam(':date', $date);
+        }
+
+        $stmt->bindParam(':name', $name);
+        $stmt->bindParam(':max_points', $maxPoints);
+        $stmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+        return $stmt->execute();
+    } catch (PDOException $e) {
+        logDBError('Error updating grade item: ' . $e->getMessage());
         return false;
     }
 }
@@ -1499,31 +1607,26 @@ function saveGrade(int $enrollId, int $itemId, float $points, ?string $comment =
 }
 
 /**
- * Calculate weighted average for a set of grades
+ * Calculate average for a set of grades
  *
  * @param array $grades Grade records
- * @return float Weighted average percentage
+ * @return float Average percentage
  */
-function calculateWeightedAverage(array $grades): float
+function calculateAverage(array $grades): float
 {
     if (empty($grades)) return 0.0;
 
-    $totalWeightedPoints = 0;
-    $totalWeight = 0;
+    $totalPoints = 0;
+    $totalMaxPoints = 0;
 
-    foreach ($grades as $grade) {
-        // Ensure max_points is not zero to avoid division by zero error
-        if (isset($grade['max_points']) && $grade['max_points'] != 0) $percentage = ($grade['points'] / $grade['max_points']) * 100; else $percentage = 0;
-
-        $weight = isset($grade['weight']) ? (float)$grade['weight'] : 1.0;
-
-        $totalWeightedPoints += $percentage * $weight;
-        $totalWeight += $weight;
+    foreach ($grades as $grade) if (isset($grade['max_points'], $grade['points']) && $grade['max_points'] > 0) {
+        $totalPoints += $grade['points'];
+        $totalMaxPoints += $grade['max_points'];
     }
 
-    if ($totalWeight <= 0) return 0.0;
+    if ($totalMaxPoints <= 0) return 0.0;
 
-    return $totalWeightedPoints / $totalWeight;
+    return ($totalPoints / $totalMaxPoints) * 100;
 }
 
 /**
@@ -1538,8 +1641,8 @@ function calculateClassAverage(array $grades): float
     $totalMaxPoints = 0;
 
     foreach ($grades as $subject) if (!empty($subject['grade_items'])) foreach ($subject['grade_items'] as $item) if (isset($item['points'])) {
-        $totalPoints += ($item['points'] * $item['weight']);
-        $totalMaxPoints += ($item['max_points'] * $item['weight']);
+        $totalPoints += $item['points'];
+        $totalMaxPoints += $item['max_points'];
     }
 
     if ($totalMaxPoints > 0) return round(($totalPoints / $totalMaxPoints) * 100, 1);
@@ -2113,9 +2216,9 @@ function generateAlert(string $message, string $type = 'info', bool $animate = t
     $icon = $iconMap[$type] ?? $iconMap['info'];
 
     return <<<HTML
-    <div class="alert status-{$type}{$animClass}">
-        <div class="alert-icon">{$icon}</div>
-        <div class="alert-content">{$message}</div>
+    <div class="alert status-$type$animClass">
+        <div class="alert-icon">$icon</div>
+        <div class="alert-content">$message</div>
     </div>
     HTML;
 }

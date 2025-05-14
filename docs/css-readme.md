@@ -183,7 +183,11 @@ Classes specifically for different user roles:
 ### Grade Display
 
 - `.grade`: Base grade display
-- `.grade-high`, `.grade-medium`, `.grade-low`: Grade performance levels
+- `.grade-5`: Excellent grade (green)
+- `.grade-4`: Very good grade (teal)
+- `.grade-3`: Good grade (yellow)
+- `.grade-2`: Sufficient grade (orange)
+- `.grade-1`: Insufficient grade (red)
 
 ## Animations
 

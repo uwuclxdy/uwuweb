@@ -7,6 +7,10 @@
  * Provides teacher-specific helper functions and dashboard widgets.
  * Core attendance, grade, and justification functions are now in /includes/functions.php.
  *
+ *
+ *  Utility Functions:
+ *  - findClassSubjectById(array $teacherClasses, int $classSubjectId): ?array - Finds a class-subject by its ID from the teacher's classes
+ *
  * Dashboard Widgets:
  * - renderTeacherClassOverviewWidget(): string - Creates the HTML for the teacher's class overview dashboard widget
  * - renderTeacherAttendanceWidget(): string - Shows attendance status for today's classes taught by the teacher
@@ -17,6 +21,35 @@
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
+
+/**
+ * Finds a class-subject by its ID from the teacher's classes
+ *
+ * @param array $teacherClasses Array of classes the teacher has access to
+ * @param int $classSubjectId The ID of the class-subject to find
+ * @return array|null The selected class-subject or null if not found
+ */
+function findClassSubjectById(array $teacherClasses, int $classSubjectId): ?array
+{
+    foreach ($teacherClasses as $class) if (isset($class['subjects']) && is_array($class['subjects'])) foreach ($class['subjects'] as $subject) if (isset($subject['class_subject_id']) && $subject['class_subject_id'] == $classSubjectId) return [
+        'class_id' => $class['class_id'] ?? null,
+        'class_code' => $class['class_code'] ?? '',
+        'class_title' => $class['title'] ?? '',
+        'subject_id' => $subject['subject_id'] ?? null,
+        'subject_name' => $subject['subject_name'] ?? '',
+        'class_subject_id' => $subject['class_subject_id']
+    ]; // Check flat structure (direct class-subject entries)
+    else if (isset($class['class_subject_id']) && $class['class_subject_id'] == $classSubjectId) return [
+        'class_id' => $class['class_id'] ?? null,
+        'class_code' => $class['class_code'] ?? '',
+        'class_title' => $class['title'] ?? $class['class_title'] ?? 'Razred',
+        'subject_id' => $class['subject_id'] ?? null,
+        'subject_name' => $class['subject_name'] ?? '',
+        'class_subject_id' => $class['class_subject_id']
+    ];
+
+    return null;
+}
 
 /**
  * Creates the HTML for the teacher's class overview dashboard widget
@@ -288,13 +321,14 @@ function renderTeacherClassAveragesWidget(): string
     $html .= '    <h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Povprečja mojih razredov</h5>';
     $html .= '    <div class="p-md flex-grow-1" style="overflow-y:auto;">';
 
+    // todo: use all 5 grade colors
     if (empty($classAverages) || !array_filter($classAverages, static fn($ca) => $ca['avg_score'] !== null)) $html .= '      <p class="text-secondary text-center">Nimate razredov z ocenami za prikaz povprečij.</p>'; else {
         $html .= '      <div class="row gap-md">';
         foreach ($classAverages as $class) {
             if ($class['avg_score'] === null) continue;
             $avg = (float)$class['avg_score'];
             $avgF = number_format($avg, 1);
-            $badge = $avg >= 80 ? 'grade-high' : ($avg >= 60 ? 'grade-medium' : 'grade-low');
+            $badge = $avg >= 80 ? 'grade-5' : ($avg >= 60 ? 'grade-3' : 'grade-1');
 
             $html .= '        <div class="col-12 col-md-6 mb-md">';
             $html .= '          <div class="rounded p-0 shadow h-100 d-flex flex-column">';

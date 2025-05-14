@@ -36,6 +36,7 @@ function renderParentAttendanceWidget(): string
         $children = $parentInfo['children'];
         $html = '<div class="d-flex flex-column gap-lg" style="overflow-y: auto; max-height: 400px;">'; // Scrollable container for children
 
+        // todo: fix this
         if (empty($children)) $html .= renderPlaceholderWidget('Na vaš račun ni povezanih otrok.'); else foreach ($children as $child) {
             // Fetch stats (simplified)
             $statsQuery = "SELECT COUNT(*) as total, SUM(IF(status = 'P', 1, 0)) as present, SUM(IF(status = 'A', 1, 0)) as absent, SUM(IF(status = 'L', 1, 0)) as late, SUM(IF(status = 'A' AND approved = 1, 1, 0)) as justified, SUM(IF(status = 'A' AND justification IS NOT NULL AND approved IS NULL, 1, 0)) as pending, SUM(IF(status = 'A' AND approved = 0, 1, 0)) as rejected, SUM(IF(status = 'A' AND justification IS NULL AND approved IS NULL, 1, 0)) as needs_justification FROM attendance a JOIN enrollments e ON a.enroll_id = e.enroll_id WHERE e.student_id = :student_id";
@@ -152,7 +153,7 @@ function renderParentChildClassAveragesWidget(): string
                 $compText = '-';
                 $compClass = 'text-secondary';
                 if ($grade['student_avg_score'] !== null) {
-                    $sClass = $grade['student_avg_score'] >= 80 ? 'grade-high' : ($grade['student_avg_score'] >= 60 ? 'grade-medium' : 'grade-low');
+                    $sClass = $grade['student_avg_score'] >= 90 ? 'grade-5' : ($grade['student_avg_score'] >= 60 ? 'grade-3' : 'grade-1');
                     if ($grade['class_avg_score'] !== null) {
                         $diff = $grade['student_avg_score'] - $grade['class_avg_score'];
                         $diffF = number_format($diff, 1);

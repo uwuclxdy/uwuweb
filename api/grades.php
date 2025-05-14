@@ -124,7 +124,7 @@ function handleAddGradeItemApi(): void
     $classSubjectId = filter_input(INPUT_POST, 'class_subject_id', FILTER_VALIDATE_INT);
     $name = filter_input(INPUT_POST, 'name');
     $maxPoints = filter_input(INPUT_POST, 'max_points', FILTER_VALIDATE_FLOAT);
-    $weight = filter_input(INPUT_POST, 'weight', FILTER_VALIDATE_FLOAT) ?: 1.00;
+    $date = filter_input(INPUT_POST, 'date');
 
     if (!$classSubjectId || !$name || !$maxPoints) sendJsonErrorResponse('Missing or invalid parameters', 400, 'grades.php/handleAddGradeItemApi');
 
@@ -133,7 +133,7 @@ function handleAddGradeItemApi(): void
     if (!$token || !verifyCSRFToken($token)) sendJsonErrorResponse('Invalid CSRF token', 403, 'grades.php/handleAddGradeItemApi');
 
     // Call the business logic function
-    $result = addGradeItem($classSubjectId, $name, $maxPoints, $weight);
+    $result = addGradeItem($classSubjectId, $name, $maxPoints, $date);
 
     // Return appropriate response
     if ($result) echo json_encode(['success' => true, 'item_id' => $result, 'message' => 'Grade item added successfully'], JSON_THROW_ON_ERROR); else sendJsonErrorResponse('Failed to add grade item', 500, 'grades.php/handleAddGradeItemApi');

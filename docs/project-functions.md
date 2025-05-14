@@ -88,11 +88,13 @@ Gets attendance records for a student
 
 - `getGradeItems(int $classSubjectId): array` - Gets grade items for a class-subject
 - `getClassGrades(int $classSubjectId): array` - Gets grades for all students and grade items in a class-subject
-- `addGradeItem(int $classSubjectId, string $name, float $maxPoints, float $weight = 1.00): int|false` - Creates a new
-  grade item
+- `addGradeItem(int $classSubjectId, string $name, float $maxPoints, string $date): int|false` - Creates a new grade
+  item
+- `updateGradeItem(int $itemId, string $name, float $maxPoints, string $date): bool` - Updates a grade item
+- `deleteGradeItem(int $enrollId, int $itemId): bool` - Deletes a grade item
 - `saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool` - Updates or creates a grade
   record
-- `calculateWeightedAverage(array $grades): float` - Calculate weighted average for a set of grades
+- `calculateAverage(array $grades): float` - Calculate average for a set of grades
 - `calculateClassAverage(array $grades): float` - Calculate overall grade average for a class
 - `getGradeLetter(float $percentage): string` - Converts a numerical percentage to a letter grade
 
@@ -241,6 +243,8 @@ Student-specific helper functions.
 
 Teacher-specific helper functions.
 
+- `findClassSubjectById(array $teacherClasses, int $classSubjectId): ?array` - Finds a class-subject by ID in the
+  teacher's classes
 - `renderTeacherClassOverviewWidget(): string` - Creates the HTML for the teacher's class overview dashboard widget
 - `renderTeacherAttendanceWidget(): string` - Shows attendance status for today's classes taught by the teacher
 - `renderTeacherPendingJustificationsWidget(): string` - Shows absence justifications waiting for teacher approval

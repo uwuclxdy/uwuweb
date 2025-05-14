@@ -399,13 +399,6 @@ For delete confirmations, follow this simpler pattern instead of requiring users
                             min="1" step="0.01">
                   </div>
                </div>
-               <div class="col col-md-6">
-                  <div class="form-group">
-                     <label class="form-label" for="grade_item_weight">Weight:</label>
-                     <input type="number" id="grade_item_weight" name="weight" class="form-input" value="1.00"
-                            min="0.01" max="3.00" step="0.01">
-                  </div>
-               </div>
             </div>
          </div>
          <div class="modal-footer">
