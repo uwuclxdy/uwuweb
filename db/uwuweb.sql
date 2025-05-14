@@ -16,31 +16,36 @@ CREATE TABLE roles
 CREATE TABLE users
 (
     user_id   INT AUTO_INCREMENT PRIMARY KEY,
-    username  VARCHAR(50)  NOT NULL UNIQUE,
+    username  VARCHAR(50)  NOT NULL,
     pass_hash VARCHAR(255) NOT NULL,
     role_id   INT          NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (role_id) REFERENCES roles (role_id)
+    CONSTRAINT username UNIQUE (username),
+    CONSTRAINT users_ibfk_1 FOREIGN KEY (role_id) REFERENCES roles (role_id)
 );
+
+CREATE INDEX role_id ON users (role_id);
 
 -- Students
 CREATE TABLE students
 (
     student_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id    INT          NOT NULL UNIQUE,
+    user_id INT NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name  VARCHAR(100) NOT NULL,
     dob        DATE         NOT NULL,
     class_code VARCHAR(10)  NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users (user_id)
+    CONSTRAINT user_id UNIQUE (user_id),
+    CONSTRAINT students_ibfk_1 FOREIGN KEY (user_id) REFERENCES users (user_id)
 );
 
 -- Parents
 CREATE TABLE parents
 (
     parent_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL UNIQUE,
-    FOREIGN KEY (user_id) REFERENCES users (user_id)
+    user_id INT NOT NULL,
+    CONSTRAINT user_id UNIQUE (user_id),
+    CONSTRAINT parents_ibfk_1 FOREIGN KEY (user_id) REFERENCES users (user_id)
 );
 
 -- Student-Parent relationship (many-to-many)
@@ -49,18 +54,21 @@ CREATE TABLE student_parent
     student_id INT NOT NULL,
     parent_id INT NOT NULL,
     PRIMARY KEY (student_id, parent_id),
-    FOREIGN KEY (student_id) REFERENCES students (student_id),
-    FOREIGN KEY (parent_id) REFERENCES parents (parent_id)
+    CONSTRAINT student_parent_ibfk_1 FOREIGN KEY (student_id) REFERENCES students (student_id),
+    CONSTRAINT student_parent_ibfk_2 FOREIGN KEY (parent_id) REFERENCES parents (parent_id)
 );
+
+CREATE INDEX parent_id ON student_parent (parent_id);
 
 -- Teachers
 CREATE TABLE teachers
 (
     teacher_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id    INT          NOT NULL UNIQUE,
+    user_id INT NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name  VARCHAR(100) NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users (user_id)
+    CONSTRAINT user_id UNIQUE (user_id),
+    CONSTRAINT teachers_ibfk_1 FOREIGN KEY (user_id) REFERENCES users (user_id)
 );
 
 -- Subjects
@@ -74,11 +82,14 @@ CREATE TABLE subjects
 CREATE TABLE classes
 (
     class_id            INT AUTO_INCREMENT PRIMARY KEY,
-    class_code          VARCHAR(10)  NOT NULL UNIQUE,
+    class_code VARCHAR(10) NOT NULL,
     title               VARCHAR(100) NOT NULL,
     homeroom_teacher_id INT          NOT NULL,
-    FOREIGN KEY (homeroom_teacher_id) REFERENCES teachers (teacher_id)
+    CONSTRAINT class_code UNIQUE (class_code),
+    CONSTRAINT classes_ibfk_1 FOREIGN KEY (homeroom_teacher_id) REFERENCES teachers (teacher_id)
 );
+
+CREATE INDEX homeroom_teacher_id ON classes (homeroom_teacher_id);
 
 -- Class-Subject-Teacher relationship
 CREATE TABLE class_subjects
@@ -87,11 +98,14 @@ CREATE TABLE class_subjects
     class_id   INT NOT NULL,
     subject_id INT NOT NULL,
     teacher_id INT NOT NULL,
-    FOREIGN KEY (class_id) REFERENCES classes (class_id),
-    FOREIGN KEY (subject_id) REFERENCES subjects (subject_id),
-    FOREIGN KEY (teacher_id) REFERENCES teachers (teacher_id),
-    UNIQUE KEY (class_id, subject_id)
+    CONSTRAINT class_id UNIQUE (class_id, subject_id),
+    CONSTRAINT class_subjects_ibfk_1 FOREIGN KEY (class_id) REFERENCES classes (class_id),
+    CONSTRAINT class_subjects_ibfk_2 FOREIGN KEY (subject_id) REFERENCES subjects (subject_id),
+    CONSTRAINT class_subjects_ibfk_3 FOREIGN KEY (teacher_id) REFERENCES teachers (teacher_id)
 );
+
+CREATE INDEX subject_id ON class_subjects (subject_id);
+CREATE INDEX teacher_id ON class_subjects (teacher_id);
 
 -- Enrollments
 CREATE TABLE enrollments
@@ -99,10 +113,12 @@ CREATE TABLE enrollments
     enroll_id INT AUTO_INCREMENT PRIMARY KEY,
     student_id INT NOT NULL,
     class_id  INT NOT NULL,
-    FOREIGN KEY (student_id) REFERENCES students (student_id),
-    FOREIGN KEY (class_id) REFERENCES classes (class_id),
-    UNIQUE KEY (student_id, class_id)
+    CONSTRAINT student_id UNIQUE (student_id, class_id),
+    CONSTRAINT enrollments_ibfk_1 FOREIGN KEY (student_id) REFERENCES students (student_id),
+    CONSTRAINT enrollments_ibfk_2 FOREIGN KEY (class_id) REFERENCES classes (class_id)
 );
+
+CREATE INDEX class_id ON enrollments (class_id);
 
 -- Periods (individual class sessions)
 CREATE TABLE periods
@@ -111,8 +127,10 @@ CREATE TABLE periods
     class_subject_id INT         NOT NULL,
     period_date      DATE        NOT NULL,
     period_label     VARCHAR(50) NOT NULL,
-    FOREIGN KEY (class_subject_id) REFERENCES class_subjects (class_subject_id)
+    CONSTRAINT periods_ibfk_1 FOREIGN KEY (class_subject_id) REFERENCES class_subjects (class_subject_id)
 );
+
+CREATE INDEX class_subject_id ON periods (class_subject_id);
 
 -- Grade Items
 CREATE TABLE grade_items
@@ -121,9 +139,11 @@ CREATE TABLE grade_items
     class_subject_id INT           NOT NULL,
     name             VARCHAR(100)  NOT NULL,
     max_points       DECIMAL(5, 2) NOT NULL,
-    weight           DECIMAL(3, 2) DEFAULT 1.00,
-    FOREIGN KEY (class_subject_id) REFERENCES class_subjects (class_subject_id)
+    date DATE NULL,
+    CONSTRAINT grade_items_ibfk_1 FOREIGN KEY (class_subject_id) REFERENCES class_subjects (class_subject_id)
 );
+
+CREATE INDEX class_subject_id ON grade_items (class_subject_id);
 
 -- Grades
 CREATE TABLE grades
@@ -133,9 +153,12 @@ CREATE TABLE grades
     item_id   INT           NOT NULL,
     points    DECIMAL(5, 2) NOT NULL,
     comment   TEXT,
-    FOREIGN KEY (enroll_id) REFERENCES enrollments (enroll_id),
-    FOREIGN KEY (item_id) REFERENCES grade_items (item_id)
+    CONSTRAINT grades_ibfk_1 FOREIGN KEY (enroll_id) REFERENCES enrollments (enroll_id),
+    CONSTRAINT grades_ibfk_2 FOREIGN KEY (item_id) REFERENCES grade_items (item_id)
 );
+
+CREATE INDEX enroll_id ON grades (enroll_id);
+CREATE INDEX item_id ON grades (item_id);
 
 -- Attendance
 CREATE TABLE attendance
@@ -148,10 +171,12 @@ CREATE TABLE attendance
     approved      BOOLEAN DEFAULT NULL,
     reject_reason TEXT,
     justification_file VARCHAR(255) DEFAULT NULL,
-    FOREIGN KEY (enroll_id) REFERENCES enrollments (enroll_id),
-    FOREIGN KEY (period_id) REFERENCES periods (period_id),
-    UNIQUE KEY (enroll_id, period_id)
+    CONSTRAINT enroll_id UNIQUE (enroll_id, period_id),
+    CONSTRAINT attendance_ibfk_1 FOREIGN KEY (enroll_id) REFERENCES enrollments (enroll_id),
+    CONSTRAINT attendance_ibfk_2 FOREIGN KEY (period_id) REFERENCES periods (period_id)
 );
+
+CREATE INDEX period_id ON attendance (period_id);
 
 -- System Settings
 CREATE TABLE system_settings
