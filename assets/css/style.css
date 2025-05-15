@@ -33,7 +33,7 @@
 
     /* Typography */
     --font-primary: 'Quicksand', sans-serif;
-    --font-size-xs: 0.75rem; /* 12px - Small labels, metadata */
+    --font-size-xs: 13px; /* 13px - Small labels, metadata */
     --font-size-sm: 0.875rem; /* 14px - Secondary text */
     --font-size-md: 1rem; /* 16px - Body text */
     --font-size-lg: 1.25rem; /* 20px - Subtitle, section headers */
