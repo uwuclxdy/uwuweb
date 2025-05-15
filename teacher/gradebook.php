@@ -227,11 +227,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && veri
     }
 
     // Save Grade
-    if (isset($_POST['save_grade'], $_POST['enroll_id'], $_POST['item_id'])) {
+    if (isset($_POST['save_grade'], $_POST['enroll_id'], $_POST['item_id'], $_POST['class_subject_id'])) {
         $enrollId = (int)$_POST['enroll_id'];
         $itemId = (int)$_POST['item_id'];
         $points = (float)($_POST['points'] ?? 0);
         $comment = $_POST['comment'] ?? null;
+        $classSubjectId = (int)$_POST['class_subject_id'];
 
         // Find item for validation (if we have grade items loaded)
         $maxPoints = null;
@@ -244,24 +245,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token']) && veri
         if ($maxPoints !== null && $points > $maxPoints) echo generateAlert('Število točk ne more presegati največjega števila točk (' . $maxPoints . ').', 'error'); else {
             $result = saveGrade($enrollId, $itemId, $points, $comment);
             if ($result) {
-                // Redirect to refresh data
-                $redirectParams = $selectedClassSubjectId ? "?class_subject_id=$selectedClassSubjectId&success=save_grade" : "?success=save_grade";
-                header("Location: gradebook.php$redirectParams");
+                // Redirect with the selected class_subject_id
+                header("Location: gradebook.php?class_subject_id=$classSubjectId&success=save_grade");
                 exit;
             } else echo generateAlert('Napaka pri shranjevanju ocene.', 'error');
         }
     }
 
     // Delete Grade
-    if (isset($_POST['delete_grade'], $_POST['enroll_id'], $_POST['item_id'])) {
+    if (isset($_POST['delete_grade'], $_POST['enroll_id'], $_POST['item_id'], $_POST['class_subject_id'])) {
         $enrollId = (int)$_POST['enroll_id'];
         $itemId = (int)$_POST['item_id'];
+        $classSubjectId = (int)$_POST['class_subject_id'];
 
         // Add function call to delete grade (would need to be implemented in functions.php)
         $result = deleteGradeItem($enrollId, $itemId);
         if ($result) {
-            $redirectParams = $selectedClassSubjectId ? "?class_subject_id=$selectedClassSubjectId&success=delete_grade" : "?success=delete_grade";
-            header("Location: gradebook.php$redirectParams");
+            header("Location: gradebook.php?class_subject_id=$classSubjectId&success=delete_grade");
             exit;
         } else echo generateAlert('Napaka pri brisanju ocene.', 'error');
     }
@@ -325,7 +325,7 @@ if (isset($_GET['success'])) switch ($_GET['success']) {
 renderHeaderCard(
     'Redovalnica',
     'Pregled in urejanje ocen učencev',
-    'teacher'
+    'teacher',
 );
 ?>
 
@@ -747,13 +747,21 @@ renderHeaderCard(
                 <input type="hidden" name="save_grade" value="1">
                 <input type="hidden" id="edit_grade_enroll_id" name="enroll_id" value="">
                 <input type="hidden" id="edit_grade_item_id" name="item_id" value="">
+                <input type="hidden" name="class_subject_id" value="<?= $selectedClassSubjectId ?>">
 
                 <div class="alert status-info mb-lg">
                     <div class="alert-content">
-                        <p><strong>Učenec:</strong> <span id="edit_grade_student_name"
-                                                          style="text-decoration: underline; text-underline-offset: 3px"></span>
+                        <p>
+                            <strong>
+                                <span id="edit_grade_item_name" class="modal-title" style="font-weight: 800"></span>
+                            </strong>
                         </p>
-                        <p><strong>Preverjanje znanja:</strong> <span id="edit_grade_item_name"></span></p>
+                        <p>
+                            <strong>Učenec:</strong>
+                            <span id="edit_grade_student_name"
+                                  style="text-decoration: underline; text-underline-offset: 3px">
+                            </span>
+                        </p>
                     </div>
                 </div>
 
@@ -1356,6 +1364,13 @@ renderHeaderCard(
                 itemInput.value = itemId;
                 form.appendChild(itemInput);
 
+                // Add class_subject_id
+                const classSubjectInput = document.createElement('input');
+                classSubjectInput.type = 'hidden';
+                classSubjectInput.name = 'class_subject_id';
+                classSubjectInput.value = '<?= $selectedClassSubjectId ?>';
+                form.appendChild(classSubjectInput);
+
                 // Submit the form
                 document.body.appendChild(form);
                 form.submit();
@@ -1405,25 +1420,7 @@ renderHeaderCard(
         });
 
         // Batch grade functionality
-        if (document.getElementById('batchApplyButton')) {
-            document.getElementById('batchApplyButton').addEventListener('click', function () {
-                const value = document.getElementById('batchValueInput').value;
-                if (value) {
-                    document.querySelectorAll('.batch-points').forEach(input => {
-                        input.value = value;
-                    });
-                }
-            });
-
-            document.getElementById('clearAllBatchButton').addEventListener('click', function () {
-                document.querySelectorAll('.batch-points').forEach(input => {
-                    input.value = '';
-                });
-                document.querySelectorAll('.batch-comment').forEach(input => {
-                    input.value = '';
-                });
-            });
-
+        if (document.getElementById('saveBatchGradesButton')) {
             document.getElementById('saveBatchGradesButton').addEventListener('click', function () {
                 const itemId = document.getElementById('batch_grade_item').value;
                 if (!itemId) {
