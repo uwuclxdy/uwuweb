@@ -759,25 +759,36 @@ img {
     color: #22c55e;
 }
 
-/* Attendance Status (uses status-indicator base) */
+/* Attendance Status */
 .attendance-status {
-    /* Inherits from .status-indicator */
+    display: inline-block;
+    padding: calc(var(--space-xs) * 1.5) calc(var(--space-sm) + var(--space-xs)); /* 6px 12px */
+    border-radius: var(--button-radius); /* 12px, like buttons */
     font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.4;
+    text-align: center;
+    border: 1px solid; /* Border style defined, color comes from specific status */
+    min-width: 90px;
+    vertical-align: middle;
 }
 
-.status-present { /* Extends .status-success */
-    background-color: rgba(34, 197, 94, 0.12);
-    color: #22c55e;
+.status-present {
+    background-color: rgba(34, 197, 94, 0.15); /* Slightly more opaque */
+    color: #22c55e; /* Tailwind Green 500 */
+    border-color: #15803d; /* Tailwind Green 700 (darker shade for border) */
 }
 
-.status-absent { /* Extends .status-error */
-    background-color: rgba(239, 68, 68, 0.12);
-    color: #ef4444;
+.status-absent {
+    background-color: rgba(239, 68, 68, 0.15); /* Slightly more opaque */
+    color: #ef4444; /* Tailwind Red 500 */
+    border-color: #b91c1c; /* Tailwind Red 700 (darker shade for border) */
 }
 
-.status-late { /* Extends .status-warning */
-    background-color: rgba(245, 158, 11, 0.12);
-    color: #f59e0b;
+.status-late {
+    background-color: rgba(245, 158, 11, 0.15); /* Slightly more opaque */
+    color: #f59e0b; /* Tailwind Amber 500 */
+    border-color: #b45309; /* Tailwind Amber 700 (darker shade for border) */
 }
 
 /* Grade Display */
@@ -2284,28 +2295,28 @@ img {
     }
 
     /* Ensure status/grade colors print reasonably */
-    .status-success, .grade-5 {
+    .status-success, .grade-5, .status-present {
         background-color: #e6f7ec !important;
         color: #000 !important;
-        border-left-color: #22c55e !important;
+        border-color: #22c55e !important; /* Ensure border prints */
     }
 
     .status-warning, .grade-3, .status-late {
         background-color: #fff8e6 !important;
         color: #000 !important;
-        border-left-color: #f59e0b !important;
+        border-color: #f59e0b !important; /* Ensure border prints */
     }
 
     .status-error, .grade-1, .status-absent {
         background-color: #ffe6e6 !important;
         color: #000 !important;
-        border-left-color: #ef4444 !important;
+        border-color: #ef4444 !important; /* Ensure border prints */
     }
 
     .status-info {
         background-color: #e6f7ff !important;
         color: #000 !important;
-        border-left-color: #0ea5e9 !important;
+        border-color: #0ea5e9 !important; /* Ensure border prints */
     }
 
     .badge, .role-badge, .attendance-status, .grade {
