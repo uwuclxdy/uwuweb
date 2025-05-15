@@ -31,22 +31,37 @@ require_once __DIR__ . '/../includes/functions.php';
  */
 function findClassSubjectById(array $teacherClasses, int $classSubjectId): ?array
 {
-    foreach ($teacherClasses as $class) if (isset($class['subjects']) && is_array($class['subjects'])) foreach ($class['subjects'] as $subject) if (isset($subject['class_subject_id']) && $subject['class_subject_id'] == $classSubjectId) return [
-        'class_id' => $class['class_id'] ?? null,
-        'class_code' => $class['class_code'] ?? '',
-        'class_title' => $class['title'] ?? '',
-        'subject_id' => $subject['subject_id'] ?? null,
-        'subject_name' => $subject['subject_name'] ?? '',
-        'class_subject_id' => $subject['class_subject_id']
-    ]; // Check flat structure (direct class-subject entries)
-    else if (isset($class['class_subject_id']) && $class['class_subject_id'] == $classSubjectId) return [
-        'class_id' => $class['class_id'] ?? null,
-        'class_code' => $class['class_code'] ?? '',
-        'class_title' => $class['title'] ?? $class['class_title'] ?? 'Razred',
-        'subject_id' => $class['subject_id'] ?? null,
-        'subject_name' => $class['subject_name'] ?? '',
-        'class_subject_id' => $class['class_subject_id']
-    ];
+    // First check nested structure (classes with subjects array)
+    foreach ($teacherClasses as $class) {
+        if (isset($class['subjects']) && is_array($class['subjects'])) {
+            foreach ($class['subjects'] as $subject) {
+                if (isset($subject['class_subject_id']) && $subject['class_subject_id'] == $classSubjectId) {
+                    return [
+                        'class_id' => $class['class_id'] ?? null,
+                        'class_code' => $class['class_code'] ?? '',
+                        'class_title' => $class['title'] ?? '',
+                        'subject_id' => $subject['subject_id'] ?? null,
+                        'subject_name' => $subject['subject_name'] ?? '',
+                        'class_subject_id' => $subject['class_subject_id']
+                    ];
+                }
+            }
+        }
+    }
+
+    // Then check flat structure (direct class-subject entries)
+    foreach ($teacherClasses as $class) {
+        if (isset($class['class_subject_id']) && $class['class_subject_id'] == $classSubjectId) {
+            return [
+                'class_id' => $class['class_id'] ?? null,
+                'class_code' => $class['class_code'] ?? '',
+                'class_title' => $class['title'] ?? $class['class_title'] ?? 'Razred',
+                'subject_id' => $class['subject_id'] ?? null,
+                'subject_name' => $class['subject_name'] ?? '',
+                'class_subject_id' => $class['class_subject_id']
+            ];
+        }
+    }
 
     return null;
 }
@@ -94,8 +109,8 @@ function renderTeacherClassOverviewWidget(): string
             $html .= '<span>' . htmlspecialchars($class['student_count']) . ' dijakov</span>';
             $html .= '          </div>';
             $html .= '          <div class="d-flex gap-sm justify-end">';
-            $html .= '<a href="/uwuweb/teacher/gradebook.php?class_subject_id=' . (int)$class['class_subject_id'] . '" class="btn btn-sm btn-primary">Redovalnica</a>';
-            $html .= '<a href="/uwuweb/teacher/attendance.php?class_subject_id=' . (int)$class['class_subject_id'] . '" class="btn btn-sm btn-secondary">Prisotnost</a>';
+            $html .= '<a href="/uwuweb/teacher/gradebook.php?class_id=' . (int)$class['class_subject_id'] . '" class="btn btn-sm btn-primary">Redovalnica</a>';
+            $html .= '<a href="/uwuweb/teacher/attendance.php?class_id=' . (int)$class['class_subject_id'] . '" class="btn btn-sm btn-secondary">Prisotnost</a>';
             $html .= '          </div>';
             $html .= '        </li>';
         }

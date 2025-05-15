@@ -45,7 +45,7 @@
  * - addGradeItem(int $classSubjectId, string $name, float $maxPoints, string $date): int|false - Creates a new grade item
  *  - updateGradeItem(int $itemId, string $name, float $maxPoints, string $date): bool - Updates a grade item
  * - saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool - Updates or creates a grade
- * - deleteGradeItem(int $enrollId, int $itemId): bool - Deletes a grade
+ * - deleteGradeItem(int $enrollId, int $itemId): bool - Deletes a grade, or entire grade item (if $enrollId is 0)
  * - calculateAverage(array $grades): float - Calculate average for a set of grades
  * - calculateClassAverage(array $grades): float - Calculate overall grade average for a class
  * - getGradeLetter(float $percentage): string - Converts a numerical percentage to a letter grade
@@ -1446,40 +1446,46 @@ function addGradeItem(int $classSubjectId, string $name, float $maxPoints, strin
 }
 
 /**
- * Deletes a grade item
+ * Deletes a grade item or a specific grade
  *
- * @param int $enrollId The enrollment ID
+ * @param int $enrollId The enrollment ID (0 to delete entire grade item)
  * @param int $itemId The grade item ID
  * @return bool True if deletion was successful, false otherwise
  */
 function deleteGradeItem(int $enrollId, int $itemId): bool
 {
+    $pdo = safeGetDBConnection('deleteGradeItem');
+    if (!$pdo) sendJsonErrorResponse('Database connection error', 500, 'deleteGradeItem');
     try {
-        $pdo = safeGetDBConnection('deleteGrade');
+        $pdo->beginTransaction();
 
-        // First check if the grade exists
-        $checkStmt = $pdo->prepare(
-            "SELECT grade_id FROM grades 
-             WHERE enroll_id = :enroll_id AND item_id = :item_id"
-        );
-        $checkStmt->bindParam(':enroll_id', $enrollId, PDO::PARAM_INT);
-        $checkStmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
-        $checkStmt->execute();
+        // Delete a specific grade
+        if ($enrollId > 0) {
+            $stmt = $pdo->prepare(
+                "DELETE FROM grades 
+                 WHERE enroll_id = :enroll_id AND item_id = :item_id"
+            );
+            $stmt->bindParam(':enroll_id', $enrollId, PDO::PARAM_INT);
+            $stmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+            $result = $stmt->execute();
 
-        if ($checkStmt->rowCount() === 0) return false;
+            $pdo->commit();
+            return $result;
+        }
 
-        // Delete the grade
-        $stmt = $pdo->prepare(
-            "DELETE FROM grades 
-             WHERE enroll_id = :enroll_id AND item_id = :item_id"
-        );
-        $stmt->bindParam(':enroll_id', $enrollId, PDO::PARAM_INT);
-        $stmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
-        $result = $stmt->execute();
+        // Delete an entire grade item and all associated grades
+        $deleteGradesStmt = $pdo->prepare("DELETE FROM grades WHERE item_id = :item_id");
+        $deleteGradesStmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+        $deleteGradesStmt->execute();
+        $deleteItemStmt = $pdo->prepare("DELETE FROM grade_items WHERE item_id = :item_id");
+        $deleteItemStmt->bindParam(':item_id', $itemId, PDO::PARAM_INT);
+        $result = $deleteItemStmt->execute();
 
-        return $result && $stmt->rowCount() > 0;
+        $pdo->commit();
+        return $result;
     } catch (PDOException $e) {
-        logDBError('Error deleting grade: ' . $e->getMessage());
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        logDBError('Error in deleteGradeItem: ' . $e->getMessage());
         return false;
     }
 }

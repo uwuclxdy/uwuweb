@@ -91,7 +91,7 @@ Gets attendance records for a student
 - `addGradeItem(int $classSubjectId, string $name, float $maxPoints, string $date): int|false` - Creates a new grade
   item
 - `updateGradeItem(int $itemId, string $name, float $maxPoints, string $date): bool` - Updates a grade item
-- `deleteGradeItem(int $enrollId, int $itemId): bool` - Deletes a grade item
+- `deleteGradeItem(int $enrollId, int $itemId): bool` - Deletes a grade item, or entire grade item (if $enrollId is 0)
 - `saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool` - Updates or creates a grade
   record
 - `calculateAverage(array $grades): float` - Calculate average for a set of grades
