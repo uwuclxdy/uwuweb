@@ -79,6 +79,8 @@ Core utility functions library.
 `getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null, bool $checkAccess = true): array` -
 Gets attendance records for a student
 - `getStudentAttendanceByDate(int $studentId, string $date): array` - Gets student attendance for a specific date
+- `validatePeriodDate(string $date): bool` - Validates period date to ensure it's not too far in the future or past
+- `isClassEmpty(int $classId): bool` - Checks if a class is empty (has no students)
 - `getPeriodAttendance(int $periodId): array` - Retrieves attendance for all students in a period
 - `addPeriod(int $classSubjectId, string $periodDate, string $periodLabel): int|false` - Creates a new period and
   initializes attendance records

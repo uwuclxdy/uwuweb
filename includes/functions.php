@@ -36,6 +36,8 @@
  * - getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null, bool $checkAccess = true): array - Gets attendance for a student
  * - getStudentAttendanceByDate(int $studentId, string $date): array - Gets student attendance for a specific date
  * - getPeriodAttendance(int $periodId): array - Retrieves attendance for all students in a period
+ * - validatePeriodDate(string $date): bool - Validates period date to ensure it's not too far in future/past
+ * - isClassEmpty(int $classId): bool - Checks if a class is empty (has no students)
  * - addPeriod(int $classSubjectId, string $periodDate, string $periodLabel): int|false - Creates a new period
  * - saveAttendance(int $enrollId, int $periodId, string $status): bool - Updates or creates an attendance record
  *
@@ -43,7 +45,7 @@
  * - getGradeItems(int $classSubjectId): array - Gets grade items for a class-subject
  * - getClassGrades(int $classSubjectId): array - Gets grades for all students and grade items in a class-subject
  * - addGradeItem(int $classSubjectId, string $name, float $maxPoints, string $date): int|false - Creates a new grade item
- *  - updateGradeItem(int $itemId, string $name, float $maxPoints, string $date): bool - Updates a grade item
+ * - updateGradeItem(int $itemId, string $name, float $maxPoints, string $date): bool - Updates a grade item
  * - saveGrade(int $enrollId, int $itemId, float $points, ?string $comment = null): bool - Updates or creates a grade
  * - deleteGradeItem(int $enrollId, int $itemId): bool - Deletes a grade, or entire grade item (if $enrollId is 0)
  * - calculateAverage(array $grades): float - Calculate average for a set of grades
@@ -544,15 +546,21 @@ function renderPlaceholderWidget(string $message = 'Podatki trenutno niso na vol
  * @param string $title Card title
  * @param string $description Card description
  * @param string $role User role to display
- * @param string|null $roleText Optional custom text for role badge
  * @return void Outputs HTML directly
  */
-function renderHeaderCard(string $title, string $description, string $role, ?string $roleText = null): void
+function renderHeaderCard(string $title, string $description, string $role): void
 {
     $roleClass = strtolower($role);
     if ($roleClass === 'administrator') $roleClass = 'admin';
 
-    $displayRoleText = $roleText ?? ucfirst($role);
+    // set role text to slovene translations
+    $displayRoleText = match ($roleClass) {
+        'admin' => 'Administrator',
+        'teacher' => 'Profesor',
+        'student' => 'Dijak',
+        'parent' => 'Starš',
+        default => ucfirst($roleClass),
+    };
 
     echo <<<HTML
     <!-- Header Card -->
@@ -1296,6 +1304,39 @@ function saveAttendance(int $enrollId, int $periodId, string $status): bool
         logDBError("Error in saveAttendance: " . $e->getMessage());
         return false;
     }
+}
+
+/**
+ * Validates period date to ensure it's not too far in the future or past
+ * @param string $date Date to validate in Y-m-d format
+ * @return bool True if date is valid, false otherwise
+ */
+function validatePeriodDate(string $date): bool
+{
+    $inputDate = strtotime($date);
+    $today = strtotime(date('Y-m-d'));
+
+    // Max allowed dates (30 days in future, 180 days in past)
+    $maxFutureDate = strtotime('+30 days', $today);
+    $maxPastDate = strtotime('-180 days', $today);
+
+    return ($inputDate <= $maxFutureDate && $inputDate >= $maxPastDate);
+}
+
+/**
+ * Checks if a class is empty (has no students)
+ * @param int $classId Class ID to check
+ * @return bool True if class is empty, false otherwise
+ */
+function isClassEmpty(int $classId): bool
+{
+    $db = safeGetDBConnection('isClassEmpty');
+    $stmt = $db->prepare('SELECT COUNT(*) FROM students s 
+                          JOIN enrollments e ON s.student_id = e.student_id 
+                          WHERE e.class_id = ?');
+    $stmt->execute([$classId]);
+
+    return (int)$stmt->fetchColumn() === 0;
 }
 
 /************************
