@@ -1,348 +1,292 @@
 <?php
 /**
  * Student Absence Justification Page
+ * File path: /student/justification.php
  *
  * Allows students to view their absences and submit justifications
- *
  */
 
 use Random\RandomException;
 
+require_once 'student_functions.php';
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
 require_once '../includes/functions.php';
-require_once 'student_functions.php';
 
-requireRole(ROLE_STUDENT);
+// Require student role
+requireRole(3); // ROLE_STUDENT
 
+// Get student ID
 $studentId = getStudentId();
 if (!$studentId) die('Napaka: Študentski račun ni bil najden.');
 
-// Handle file upload submission
+// Process POST requests
 $message = '';
-$messageType = '';
-$uploadedFile = '';
-try {
-    $csrfToken = generateCSRFToken();
-} catch (RandomException $e) {
-    $message = 'Napaka.';
-    $messageType = 'error';
-}
+$error = '';
+$success = false;
 
-// Get specific absence ID from query string if provided
-$specificAbsenceId = isset($_GET['att_id']) ? (int)$_GET['att_id'] : (isset($_GET['id']) ? (int)$_GET['id'] : null);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') if (isset($_POST['submit_justification'])) {
+    $csrf_token = $_POST['csrf_token'] ?? '';
 
-// Form processing logic
-if ($_SERVER['REQUEST_METHOD'] === 'POST') if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
-    $message = 'Neuspešno preverjanje pristnosti. Poskusite znova.';
-    $messageType = 'error';
-} else {
-    $absenceId = isset($_POST['absence_id']) ? (int)$_POST['absence_id'] : 0;
-    $justificationText = isset($_POST['justification']) ? trim($_POST['justification']) : '';
+    if (!verifyCSRFToken($csrf_token)) $error = 'Neveljavna seja. Poskusite ponovno.'; else {
+        $attId = (int)$_POST['att_id'];
+        $justification = $_POST['justification'] ?? '';
 
-    // Basic validation
-    if ($absenceId <= 0) {
-        $message = 'Neveljavna ID odsotnosti.';
-        $messageType = 'error';
-    } elseif (empty($justificationText) && empty($_FILES['justification_file']['name'])) {
-        $message = 'Vnesite besedilo opravičila ali naložite datoteko.';
-        $messageType = 'error';
-    } else {
-        // Process text justification
-        if (!empty($justificationText)) {
-            $success = uploadJustification($absenceId, $justificationText);
-            if (!$success) {
-                $message = 'Napaka pri shranjevanju opravičila. Poskusite znova.';
-                $messageType = 'error';
-            } else {
-                $message = 'Opravičilo je bilo uspešno shranjeno.';
-                $messageType = 'success';
-            }
-        }
+        // Verify this attendance record belongs to the student
+        $absenceDetails = getAbsenceDetails($attId);
 
-        // Process file upload if present
-        if (!empty($_FILES['justification_file']['name'])) if (validateJustificationFile($_FILES['justification_file'])) {
-            $result = saveJustificationFile($_FILES['justification_file'], $absenceId);
-            if ($result !== false) {
-                $uploadedFile = $result;
-                $message = 'Opravičilo z datoteko je bilo uspešno oddano.';
-                $messageType = 'success';
-            } else {
-                $message = 'Napaka pri nalaganju datoteke. Prosimo, preverite velikost in format datoteke.';
-                $messageType = 'error';
-            }
-        } else {
-            $message = 'Neveljavna datoteka. Dovoljene so samo PDF, JPG, PNG in GIF datoteke do 5MB.';
-            $messageType = 'error';
-        }
+        if (!$absenceDetails || $absenceDetails['student_id'] !== $studentId) $error = 'Neveljavna zahteva.'; else if (!empty($_FILES['justification_file']['name'])) if (validateJustificationFile($_FILES['justification_file'])) {
+            $filePath = saveJustificationFile($_FILES['justification_file'], $attId);
+
+            if ($filePath) if (uploadJustification($attId, $justification)) {
+                // Update file path
+                $pdo = safeGetDBConnection('student/justification.php');
+                $stmt = $pdo->prepare("UPDATE attendance SET justification_file = :file_path WHERE att_id = :att_id");
+                $stmt->execute([
+                    'file_path' => $filePath,
+                    'att_id' => $attId
+                ]);
+
+                $success = true;
+                $message = 'Opravičilo je bilo uspešno oddano.';
+            } else $error = 'Napaka pri shranjevanju opravičila.'; else $error = 'Napaka pri nalaganju datoteke.';
+        } else $error = 'Neveljavna datoteka. Dovoljeni so samo PDF, JPG in PNG formati do 2MB.'; else if (uploadJustification($attId, $justification)) {
+            $success = true;
+            $message = 'Opravičilo je bilo uspešno oddano.';
+        } else $error = 'Napaka pri shranjevanju opravičila.';
     }
 }
 
-// Get all absences for this student
-$absences = getStudentAttendance($studentId);
+// Get all student's attendance records
+$attendance = getStudentAttendance($studentId);
 
-// Debug and validate data structure
-$validAbsences = [];
-foreach ($absences as $absence) if (isset($absence['att_id'], $absence['period_date'], $absence['period_label'], $absence['subject_name'], $absence['class_code'], $absence['status'])) $validAbsences[] = $absence;
-$absences = $validAbsences;
+// Check if redirected from attendance page
+$highlightAttId = isset($_GET['att_id']) ? (int)$_GET['att_id'] : 0;
+$showJustificationModal = false;
 
-// If there's a specific absence ID in the query string, pre-select it for the modal
-$focusAbsence = null;
-if ($specificAbsenceId) foreach ($absences as $absence) if ((int)$absence['att_id'] === $specificAbsenceId) {
-    $focusAbsence = $absence;
-    break;
+if ($highlightAttId > 0) {
+    $absenceDetails = getAbsenceDetails($highlightAttId);
+    $showJustificationModal = ($absenceDetails && ($absenceDetails['status'] === 'A' || $absenceDetails['status'] === 'L') &&
+        $absenceDetails['approved'] === null && $absenceDetails['student_id'] === $studentId);
+} else $absenceDetails = null;
+
+// Generate CSRF token
+try {
+    $csrfToken = generateCSRFToken();
+} catch (RandomException $e) {
+    sendJsonErrorResponse('Napaka pri generiranju seje. Poskusite znova.');
 }
 
-// Get both unapproved (including pending) and approved/rejected absences
-$pendingAbsences = array_filter($absences, static function ($absence) {
-    return $absence['status'] === 'A' && ($absence['approved'] === null);
-});
+// Check justification folder function
+function checkJustificationFolder(): void
+{
+    $folder = __DIR__ . '/justifications/';
+}
 
-$processedAbsences = array_filter($absences, static function ($absence) {
-    return $absence['status'] === 'A' && ($absence['approved'] === 0 || $absence['approved'] === 1);
-});
+// Get detailed information about an absence function
+function getAbsenceDetails(int $attId): ?array
+{
+    $pdo = safeGetDBConnection('student/justification.php');
 
+    $sql = "SELECT a.*, p.period_date, p.period_label, cs.class_id, c.title as class_title, 
+            s.name as subject_name, e.student_id, t.first_name as teacher_fname, t.last_name as teacher_lname
+            FROM attendance a
+            JOIN periods p ON a.period_id = p.period_id
+            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+            JOIN classes c ON cs.class_id = c.class_id
+            JOIN subjects s ON cs.subject_id = s.subject_id
+            JOIN teachers t ON cs.teacher_id = t.teacher_id
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            WHERE a.att_id = :att_id";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute(['att_id' => $attId]);
+
+    return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+}
+
+// Include header
 require_once '../includes/header.php';
 ?>
 
-<div class="container my-xl">
-    <?php
-    renderHeaderCard(
-        'Opravičila za odsotnosti',
-        'Upravljanje in oddaja opravičil za odsotnosti',
-        'student',
-        'Dijak'
-    );
-    ?>
+<div class="container section">
+    <?php renderHeaderCard(
+        'Opravičila izostankov',
+        'Pregled in oddaja opravičil za izostanke od pouka',
+        'student'
+    ); ?>
 
-    <?php if (!empty($message)): ?>
-        <div class="alert status-<?= $messageType === 'error' ? 'error' : 'success' ?> mb-lg">
-            <p><?= htmlspecialchars($message) ?></p>
+    <?php if ($error): ?>
+        <div class="alert status-error card-entrance">
+            <div class="alert-content"><?= htmlspecialchars($error) ?></div>
         </div>
     <?php endif; ?>
 
-    <?php if (empty($absences)): ?>
-        <div class="card p-lg">
-            <p class="text-center">Nimate odsotnosti v sistemu.</p>
-        </div>
-    <?php else: ?>
-        <!-- Pending Absences Section -->
-        <div class="card mb-xl">
-            <div class="card-header">
-                <h2 class="card-title">Neopravičene odsotnosti</h2>
-                <p class="text-sm text-secondary">Odsotnosti, ki potrebujejo opravičilo.</p>
-            </div>
-            <?php if (empty($pendingAbsences)): ?>
-                <div class="p-lg">
-                    <p class="text-center">Nimate neobravnavanih odsotnosti, ki bi potrebovale opravičilo.</p>
-                </div>
-            <?php else: ?>
-                <div class="table-responsive">
-                    <table class="data-table w-100">
-                        <thead>
-                        <tr>
-                            <th>Datum</th>
-                            <th>Ura</th>
-                            <th>Predmet</th>
-                            <th>Razred</th>
-                            <th>Status</th>
-                            <th>Akcije</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <?php foreach ($pendingAbsences as $absence): ?>
-                            <tr>
-                                <td><?= formatDateDisplay($absence['period_date'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($absence['period_label'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($absence['subject_name'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($absence['class_code'] ?? '') ?></td>
-                                <td>
-                                    <?php if ($absence['justification'] || $absence['justification_file']): ?>
-                                        <span class="badge badge-warning">V obdelavi</span>
-                                    <?php else: ?>
-                                        <span class="badge badge-error">Potrebno opravičilo</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($absence['justification'] || $absence['justification_file']): ?>
-                                        <button class="btn btn-sm btn-secondary"
-                                                data-open-modal="viewJustificationModal"
-                                                data-id="<?= $absence['att_id'] ?>"
-                                                data-date="<?= isset($absence['period_date']) ? formatDateDisplay($absence['period_date']) : '' ?>"
-                                                data-period="<?= htmlspecialchars($absence['period_label']) ?>"
-                                                data-subject="<?= htmlspecialchars($absence['subject_name']) ?>"
-                                                data-justification="<?= htmlspecialchars($absence['justification'] ?? '') ?>"
-                                                data-has-file="<?= $absence['justification_file'] ? '1' : '0' ?>"
-                                                data-file-name="<?= htmlspecialchars($absence['justification_file'] ?? '') ?>">
-                                            Pregled
-                                        </button>
-                                    <?php else: ?>
-                                        <button class="btn btn-sm btn-primary"
-                                                data-open-modal="addJustificationModal"
-                                                data-id="<?= $absence['att_id'] ?>"
-                                                data-date="<?= isset($absence['period_date']) ? formatDateDisplay($absence['period_date']) : '' ?>"
-                                                data-period="<?= htmlspecialchars($absence['period_label']) ?>"
-                                                data-subject="<?= htmlspecialchars($absence['subject_name']) ?>">
-                                            Oddaj opravičilo
-                                        </button>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php endif; ?>
+    <?php if ($success && $message): ?>
+        <div class="alert status-success card-entrance">
+            <div class="alert-content"><?= htmlspecialchars($message) ?></div>
         </div>
     <?php endif; ?>
 
-    <!-- Processed Absences Section -->
-    <?php if (!empty($processedAbsences)): ?>
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">Obravnavana opravičila</h2>
-                <p class="text-sm text-secondary">Opravičila, ki so bila že obravnavana.</p>
-            </div>
+    <div class="card mb-lg">
+        <div class="card__title">
+            <h3>Moji izostanki</h3>
+        </div>
+        <div class="card__content">
             <div class="table-responsive">
-                <table class="data-table w-100">
+                <table class="data-table">
                     <thead>
                     <tr>
                         <th>Datum</th>
                         <th>Ura</th>
                         <th>Predmet</th>
-                        <th>Razred</th>
                         <th>Status</th>
+                        <th>Opravičilo</th>
                         <th>Akcije</th>
                     </tr>
                     </thead>
                     <tbody>
-                    <?php foreach ($processedAbsences as $absence): ?>
+                    <?php if (empty($attendance)): ?>
                         <tr>
-                            <td><?= isset($absence['period_date']) ? formatDateDisplay($absence['period_date']) : '' ?></td>
-                            <td><?= htmlspecialchars($absence['period_label'] ?? '') ?></td>
-                            <td><?= htmlspecialchars($absence['subject_name'] ?? '') ?></td>
-                            <td><?= htmlspecialchars($absence['class_code'] ?? '') ?></td>
-                            <td>
-                                <?php if ($absence['approved'] === 1): ?>
-                                    <span class="badge badge-success">Odobreno</span>
-                                <?php elseif ($absence['approved'] === 0): ?>
-                                    <span class="badge badge-error">Zavrnjeno</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-secondary"
-                                        data-open-modal="viewJustificationModal"
-                                        data-id="<?= $absence['att_id'] ?>"
-                                        data-date="<?= formatDateDisplay($absence['period_date']) ?>"
-                                        data-period="<?= htmlspecialchars($absence['period_label']) ?>"
-                                        data-subject="<?= htmlspecialchars($absence['subject_name']) ?>"
-                                        data-justification="<?= htmlspecialchars($absence['justification'] ?? '') ?>"
-                                        data-has-file="<?= $absence['justification_file'] ? '1' : '0' ?>"
-                                        data-file-name="<?= htmlspecialchars($absence['justification_file'] ?? '') ?>"
-                                        data-approved="<?= $absence['approved'] === 1 ? '1' : '0' ?>"
-                                        data-reject-reason="<?= htmlspecialchars($absence['reject_reason'] ?? '') ?>">
-                                    Pregled
-                                </button>
-                            </td>
+                            <td colspan="6" class="text-center">Ni zabeleženih izostankov.</td>
                         </tr>
-                    <?php endforeach; ?>
+                    <?php else: ?>
+                        <?php foreach ($attendance as $record): ?>
+                            <?php
+                            // Skip if status is Present
+                            if ($record['status'] === 'P') continue;
+
+                            // Get status label
+                            $statusLabel = getAttendanceStatusLabel($record['status']);
+                            $statusClass = $record['status'] === 'A' ? 'badge-error' : 'badge-warning';
+
+                            // Determine justification status
+                            $justificationStatus = 'Ni opravičila';
+                            $justificationClass = 'badge-secondary';
+
+                            if ($record['justification']) if ($record['approved'] === null) {
+                                $justificationStatus = 'V obravnavi';
+                                $justificationClass = 'badge-info';
+                            } elseif ($record['approved'] === '1') {
+                                $justificationStatus = 'Odobreno';
+                                $justificationClass = 'badge-success';
+                            } else {
+                                $justificationStatus = 'Zavrnjeno';
+                                $justificationClass = 'badge-error';
+                            }
+
+                            $canSubmitJustification = empty($record['justification']) ||
+                                ($record['approved'] === null);
+
+                            // Highlight row if it matches the requested attendance record
+                            $rowClass = ($record['att_id'] == $highlightAttId) ? 'bg-accent-tertiary' : '';
+                            ?>
+                            <tr class="<?= $rowClass ?>">
+                                <td><?= htmlspecialchars(formatDateDisplay($record['date'])) ?></td>
+                                <td><?= htmlspecialchars($record['period_label']) ?></td>
+                                <td><?= htmlspecialchars($record['subject_name']) ?></td>
+                                <td><span class="badge <?= $statusClass ?>"><?= htmlspecialchars($statusLabel) ?></span>
+                                </td>
+                                <td>
+                                    <span class="badge <?= $justificationClass ?>"><?= htmlspecialchars($justificationStatus) ?></span>
+                                </td>
+                                <td>
+                                    <?php if ($canSubmitJustification): ?>
+                                        <button data-open-modal="justificationModal"
+                                                data-id="<?= $record['att_id'] ?>"
+                                                data-date="<?= formatDateDisplay($record['date']) ?>"
+                                                data-period="<?= htmlspecialchars($record['period_label']) ?>"
+                                                data-subject="<?= htmlspecialchars($record['subject_name']) ?>"
+                                                data-status="<?= htmlspecialchars($statusLabel) ?>"
+                                                data-justification="<?= htmlspecialchars($record['justification'] ?? '') ?>"
+                                                class="btn btn-primary btn-sm">
+                                            <?= empty($record['justification']) ? 'Oddaj opravičilo' : 'Uredi opravičilo' ?>
+                                        </button>
+                                    <?php elseif ($record['approved'] === '0' && !empty($record['reject_reason'])): ?>
+                                        <button data-open-modal="rejectionModal"
+                                                data-id="<?= $record['att_id'] ?>"
+                                                data-reason="<?= htmlspecialchars($record['reject_reason']) ?>"
+                                                class="btn btn-secondary btn-sm">
+                                            Razlog zavrnitve
+                                        </button>
+                                    <?php else: ?>
+                                        <span class="text-disabled">Ni akcij</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                     </tbody>
                 </table>
             </div>
         </div>
-    <?php endif; ?>
+    </div>
 </div>
 
-<!-- Add Justification Modal -->
-<div class="modal" id="addJustificationModal">
+<!-- Justification Modal -->
+<div class="modal" id="justificationModal">
     <div class="modal-overlay" aria-hidden="true"></div>
-    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="addJustificationModalTitle">
+    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="justificationModalTitle">
         <div class="modal-header">
-            <h3 class="modal-title" id="addJustificationModalTitle">Oddaja opravičila</h3>
+            <h3 class="modal-title" id="justificationModalTitle">Oddaja opravičila</h3>
         </div>
         <form id="justificationForm" method="POST" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-            <input type="hidden" id="addJustificationModal_id" name="absence_id" value="">
-
             <div class="modal-body">
-                <div class="alert status-warning mb-md">
-                    <p>Oddajate opravičilo za odsotnost: <strong id="absenceDetailsText"></strong></p>
-                </div>
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                <input type="hidden" name="att_id" id="justificationModal_id" value="">
 
-                <div class="form-group mb-md">
-                    <label for="justification" class="form-label">Besedilo opravičila:</label>
-                    <textarea id="justification" name="justification" class="form-input" rows="5"
-                              placeholder="Vpišite razlog za odsotnost..."></textarea>
+                <div class="alert status-info mb-md">
+                    <div class="alert-content">
+                        <p>Oddajate opravičilo za izostanek:</p>
+                        <p><strong>Datum:</strong> <span id="justificationModal_date"></span></p>
+                        <p><strong>Ura:</strong> <span id="justificationModal_period"></span></p>
+                        <p><strong>Predmet:</strong> <span id="justificationModal_subject"></span></p>
+                        <p><strong>Status:</strong> <span id="justificationModal_status"></span></p>
+                    </div>
                 </div>
 
                 <div class="form-group">
-                    <label for="justification_file" class="form-label">Priložena datoteka (neobvezno):</label>
+                    <label class="form-label" for="justification">Obrazložitev izostanka:</label>
+                    <textarea id="justification" name="justification" class="form-textarea" rows="4"
+                              required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="justification_file">Priloži dokazilo (neobvezno):</label>
                     <input type="file" id="justification_file" name="justification_file" class="form-input">
-                    <div class="form-help text-secondary">
-                        Dovoljene datoteke: PDF, JPG, PNG, GIF (max. 5MB)
-                    </div>
+                    <div class="feedback-text mt-xs">Dovoljeni formati: PDF, JPG, PNG (največ 2MB)</div>
                 </div>
             </div>
-
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-                <button type="submit" class="btn btn-primary">Oddaj opravičilo</button>
+                <div class="d-flex justify-between w-full">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                    <button type="submit" name="submit_justification" class="btn btn-primary">Oddaj opravičilo</button>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<!-- View Justification Modal -->
-<div class="modal" id="viewJustificationModal">
+<!-- Rejection Reason Modal -->
+<div class="modal" id="rejectionModal">
     <div class="modal-overlay" aria-hidden="true"></div>
-    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="viewJustificationModalTitle">
+    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="rejectionModalTitle">
         <div class="modal-header">
-            <h3 class="modal-title" id="viewJustificationModalTitle">Pregled opravičila</h3>
+            <h3 class="modal-title" id="rejectionModalTitle">Razlog zavrnitve</h3>
         </div>
         <div class="modal-body">
-            <div id="viewAbsenceDetails" class="mb-md p-sm bg-light rounded">
-                <p class="m-0">Datum: <span id="viewJustificationModal_date"></span></p>
-                <p class="m-0">Ura: <span id="viewJustificationModal_period"></span></p>
-                <p class="m-0">Predmet: <span id="viewJustificationModal_subject"></span></p>
-            </div>
-
-            <div id="viewJustificationStatusSection" class="mb-md">
-                <h4 class="mb-sm">Status opravičila:</h4>
-                <div id="viewJustificationStatusPending" class="alert status-warning" style="display:none;">
-                    <p>Opravičilo je bilo oddano in čaka na obravnavo.</p>
-                </div>
-                <div id="viewJustificationStatusApproved" class="alert status-success" style="display:none;">
-                    <p>Opravičilo je bilo odobreno.</p>
-                </div>
-                <div id="viewJustificationStatusRejected" class="alert status-error" style="display:none;">
-                    <p>Opravičilo je bilo zavrnjeno.</p>
-                    <p id="rejectReasonText" class="mt-sm"></p>
-                </div>
-            </div>
-
-            <div class="mb-md">
-                <h4 class="mb-sm">Besedilo opravičila:</h4>
-                <div id="viewJustificationText" class="p-md border rounded">
-                    <p class="text-secondary font-italic">Ni besedila opravičila.</p>
-                </div>
-            </div>
-
-            <div id="attachmentSection">
-                <h4 class="mb-sm">Priložena datoteka:</h4>
-                <div id="noAttachment" class="text-secondary font-italic">
-                    Ni priložene datoteke.
-                </div>
-                <div id="hasAttachment" style="display:none;">
-                    <p>Datoteka: <span id="attachmentFileName"></span></p>
-                    <a href="../teacher/download_justification.php?att_id=" id="downloadAttachmentLink"
-                       class="btn btn-sm btn-secondary" target="_blank">
-                        Prenesi datoteko
-                    </a>
+            <div class="alert status-error mb-md">
+                <div class="alert-content">
+                    <p>Vaše opravičilo je bilo zavrnjeno z naslednjim razlogom:</p>
+                    <p id="rejectionModal_reason" class="font-bold mt-sm"></p>
                 </div>
             </div>
         </div>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-close-modal>Zapri</button>
+            <div class="d-flex justify-between w-full">
+                <div></div> <!-- Empty div for spacing -->
+                <button type="button" class="btn btn-secondary" data-close-modal>Zapri</button>
+            </div>
         </div>
     </div>
 </div>
@@ -354,7 +298,6 @@ require_once '../includes/header.php';
             const modal = document.getElementById(modalId);
             if (modal) {
                 modal.classList.add('open');
-                // Focus the first focusable element
                 const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
                 if (firstFocusable) firstFocusable.focus();
             }
@@ -367,81 +310,40 @@ require_once '../includes/header.php';
 
             if (modal) {
                 modal.classList.remove('open');
-                // Reset forms if present
                 const form = modal.querySelector('form');
                 if (form) form.reset();
+
+                const errorMsgs = modal.querySelectorAll('.feedback-error');
+                errorMsgs.forEach(msg => {
+                    if (msg && msg.style) {
+                        msg.style.display = 'none';
+                    }
+                });
             }
         };
 
         // --- Event Listeners ---
-
         // Open modal buttons
         document.querySelectorAll('[data-open-modal]').forEach(btn => {
             btn.addEventListener('click', function () {
                 const modalId = this.dataset.openModal;
-
-                // Handle specific modal types
-                if (modalId === 'addJustificationModal') {
-                    const absenceId = this.dataset.id;
-                    const date = this.dataset.date;
-                    const period = this.dataset.period;
-                    const subject = this.dataset.subject;
-
-                    // Update the modal content
-                    document.getElementById('addJustificationModal_id').value = absenceId;
-                    document.getElementById('absenceDetailsText').textContent =
-                        `${date}, ${period} (${subject})`;
-                }
-
-                if (modalId === 'viewJustificationModal') {
-                    const absenceId = this.dataset.id;
-                    const date = this.dataset.date;
-                    const period = this.dataset.period;
-                    const subject = this.dataset.subject;
-                    const justification = this.dataset.justification;
-                    const hasFile = this.dataset.hasFile === '1';
-                    const fileName = this.dataset.fileName;
-                    const approved = this.dataset.approved;
-                    const rejectReason = this.dataset.rejectReason;
-
-                    // Update the modal content
-                    document.getElementById('viewJustificationModal_date').textContent = date;
-                    document.getElementById('viewJustificationModal_period').textContent = period;
-                    document.getElementById('viewJustificationModal_subject').textContent = subject;
-
-                    // Show appropriate status
-                    document.getElementById('viewJustificationStatusPending').style.display =
-                        (approved === undefined) ? 'block' : 'none';
-                    document.getElementById('viewJustificationStatusApproved').style.display =
-                        (approved === '1') ? 'block' : 'none';
-                    document.getElementById('viewJustificationStatusRejected').style.display =
-                        (approved === '0') ? 'block' : 'none';
-
-                    if (approved === '0' && rejectReason) {
-                        document.getElementById('rejectReasonText').textContent =
-                            `Razlog zavrnitve: ${rejectReason}`;
-                    }
-
-                    // Update justification text
-                    const justTextElem = document.getElementById('viewJustificationText');
-                    if (justification) {
-                        justTextElem.innerHTML = `<p>${justification.replace(/\n/g, '<br>')}</p>`;
-                    } else {
-                        justTextElem.innerHTML = `<p class="text-secondary font-italic">Ni besedila opravičila.</p>`;
-                    }
-
-                    // Update file attachment section
-                    document.getElementById('noAttachment').style.display = hasFile ? 'none' : 'block';
-                    document.getElementById('hasAttachment').style.display = hasFile ? 'block' : 'none';
-
-                    if (hasFile) {
-                        document.getElementById('attachmentFileName').textContent = fileName;
-                        const downloadLink = document.getElementById('downloadAttachmentLink');
-                        downloadLink.href = `../teacher/download_justification.php?att_id=${absenceId}`;
-                    }
-                }
-
                 openModal(modalId);
+
+                // Process additional data attributes
+                if (modalId === 'justificationModal') {
+                    document.getElementById('justificationModal_id').value = this.dataset.id;
+                    document.getElementById('justificationModal_date').textContent = this.dataset.date;
+                    document.getElementById('justificationModal_period').textContent = this.dataset.period;
+                    document.getElementById('justificationModal_subject').textContent = this.dataset.subject;
+                    document.getElementById('justificationModal_status').textContent = this.dataset.status;
+
+                    // Set existing justification if present
+                    if (this.dataset.justification) {
+                        document.getElementById('justification').value = this.dataset.justification;
+                    }
+                } else if (modalId === 'rejectionModal') {
+                    document.getElementById('rejectionModal_reason').textContent = this.dataset.reason;
+                }
             });
         });
 
@@ -468,14 +370,12 @@ require_once '../includes/header.php';
             }
         });
 
-        <?php if ($focusAbsence): ?>
-        // Open the modal for the specific absence if URL parameter is provided
-        document.addEventListener('DOMContentLoaded', function () {
-            const absenceBtn = document.querySelector(`[data-id="<?= $focusAbsence['att_id'] ?>"][data-open-modal]`);
-            if (absenceBtn) {
-                absenceBtn.click();
-            }
-        });
+        <?php if ($showJustificationModal && $absenceDetails): ?>
+        // Automatically open justification modal if redirected with att_id
+        const modalBtn = document.querySelector(`[data-open-modal="justificationModal"][data-id="<?= $highlightAttId ?>"]`);
+        if (modalBtn) {
+            modalBtn.click();
+        }
         <?php endif; ?>
     });
 </script>

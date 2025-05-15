@@ -7,10 +7,11 @@
  * /uwuweb/teacher/justifications.php
  */
 
+use Random\RandomException;
+
 require_once '../includes/db.php';
 require_once '../includes/auth.php';
 require_once '../includes/functions.php';
-require_once '../includes/header.php';
 require_once 'teacher_functions.php';
 
 requireRole(ROLE_TEACHER);
@@ -18,283 +19,239 @@ requireRole(ROLE_TEACHER);
 $teacherId = getTeacherId(getUserId());
 if (!$teacherId) die('Napaka: Učiteljev račun ni bil najden.');
 
-// Get all pending justifications for this teacher
-$pendingJustifications = getPendingJustifications();
-
-// Handle direct approval/rejection via URL
-$action = $_GET['action'] ?? '';
-$justificationId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$viewJustification = null;
-
-// Process form submissions
-$message = '';
-$messageType = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (!isset($_POST['csrf_token']) || !verifyCSRFToken($_POST['csrf_token'])) {
-        $message = 'Neveljavna oddaja obrazca. Poskusite znova.';
-        $messageType = 'error';
-    } else {
-        // Process rejection submission
-        if (isset($_POST['reject_justification'], $_POST['justification_id'], $_POST['reject_reason'])) {
-            $absenceId = (int)$_POST['justification_id'];
-            $reason = trim($_POST['reject_reason']);
-
-            if (empty($reason)) {
-                $message = 'Za zavrnitev opravičila morate navesti razlog.';
-                $messageType = 'error';
-            } else if (rejectJustification($absenceId, $reason)) {
-                $message = 'Opravičilo uspešno zavrnjeno.';
-                $messageType = 'success';
-            } else {
-                $message = 'Napaka pri zavrnitvi opravičila.';
-                $messageType = 'error';
-            }
-        }
-
-        // Process approval submission
-        if (isset($_POST['approve_justification'], $_POST['justification_id'])) {
-            $absenceId = (int)$_POST['justification_id'];
-
-            if (approveJustification($absenceId)) {
-                $message = 'Opravičilo uspešno odobreno.';
-                $messageType = 'success';
-            } else {
-                $message = 'Napaka pri odobritvi opravičila.';
-                $messageType = 'error';
-            }
-        }
-    }
-
-    // Refresh justifications list after processing
-    $pendingJustifications = getPendingJustifications();
+// CSR+F token for forms
+try {
+    $csrfToken = generateCSRFToken();
+} catch (RandomException $e) {
+    sendJsonErrorResponse('Napaka pri generiranju CSRF žetona.', 500, 'justifications.php');
 }
 
-// Handle view/approve/reject actions
-if ($justificationId > 0) {
-    $viewJustification = getJustificationById($justificationId);
+// Get pending justifications for homeroom teacher
+$pendingJustifications = getHomeroomTeacherJustifications($teacherId);
 
-    if (!$viewJustification) {
-        $message = 'Opravičilo ni bilo najdeno ali nimate dostopa do njega.';
-        $messageType = 'error';
-    }
-}
+// Toggle for showing processed justifications
+$showProcessed = isset($_GET['show_processed']) && $_GET['show_processed'] === '1';
+$processedJustifications = [];
+if ($showProcessed) $processedJustifications = getHomeroomTeacherJustifications($teacherId, true);
 
-// Generate CSRF token
-$csrfToken = generateCSRFToken();
+// Set page title and include header
+$pageTitle = 'Opravičila za odsotnost';
+require_once '../includes/header.php';
 ?>
 
-<!-- Main title card with page heading -->
-<?php
-renderHeaderCard(
-    'Opravičila odsotnosti',
-    'Pregled in odobritev opravičil za odsotnosti',
-    'teacher',
-    'Učitelj'
-);
-?>
+<div class="container">
+    <?php renderHeaderCard(
+        'Opravičila za odsotnost',
+        'Pregled in potrjevanje opravičil odsotnosti učencev',
+        'teacher'
+    ); ?>
 
-<?php if (!empty($message)): ?>
-    <div class="alert status-<?= $messageType === 'success' ? 'success' : 'error' ?> mb-lg">
-        <?= htmlspecialchars($message) ?>
-    </div>
-<?php endif; ?>
-
-<div class="row">
-    <!-- Pending justifications list column -->
-    <div class="col col-md-4">
-        <div class="card shadow mb-lg">
-            <div class="card__title">
-                <div class="d-flex justify-between items-center">
-                    <span>Čakajoča opravičila</span>
-                    <span class="badge badge-<?= !empty($pendingJustifications) ? 'warning' : 'success' ?>">
-                        <?= count($pendingJustifications) ?>
-                    </span>
+    <div class="card mb-lg">
+        <div class="card__content">
+            <div class="d-flex justify-between items-center mb-md">
+                <h3>Čakajoča opravičila</h3>
+                <div class="form-group d-flex items-center">
+                    <input type="checkbox" id="showProcessed" name="showProcessed" class="mr-sm"
+                        <?php echo $showProcessed ? 'checked' : ''; ?>>
+                    <label for="showProcessed" class="form-label mb-0">Prikaži tudi obdelana opravičila</label>
                 </div>
             </div>
-            <div class="card__content">
-                <?php if (empty($pendingJustifications)): ?>
-                    <div class="alert status-success mb-0">
-                        Trenutno nimate čakajočih opravičil za pregled.
+
+            <?php if (empty($pendingJustifications)): ?>
+                <div class="alert status-info">
+                    <div class="alert-content">
+                        <p>Trenutno ni čakajočih opravičil.</p>
                     </div>
-                <?php else: ?>
-                    <div class="d-flex flex-column gap-sm">
-                        <?php foreach ($pendingJustifications as $justification): ?>
-                            <a href="justifications.php?action=view&id=<?= $justification['att_id'] ?>"
-                               class="card p-sm <?= isset($viewJustification) && $viewJustification['att_id'] == $justification['att_id'] ? 'shadow-sm' : '' ?>"
-                               style="text-decoration: none;">
-                                <div class="d-flex justify-between">
-                                    <span class="text-primary">
-                                        <?= htmlspecialchars($justification['first_name'] . ' ' . $justification['last_name']) ?>
-                                    </span>
-                                    <span class="text-secondary text-sm">
-                                        <?= date('d.m.Y', strtotime($justification['period_date'])) ?>
-                                    </span>
-                                </div>
-                                <div class="d-flex justify-between mt-xs">
-                                    <span class="text-secondary text-sm">
-                                        <?= htmlspecialchars($justification['class_code']) ?> | <?= htmlspecialchars($justification['subject_name']) ?>
-                                    </span>
-                                    <span class="badge badge-warning">
-                                        V obdelavi
-                                    </span>
-                                </div>
-                            </a>
+                </div>
+            <?php else: ?>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>Učenec</th>
+                            <th>Razred</th>
+                            <th>Predmet</th>
+                            <th>Datum</th>
+                            <th>Status</th>
+                            <th>Opravičilo</th>
+                            <th>Priloga</th>
+                            <th>Akcije</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($pendingJustifications as $item): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($item['first_name'] . ' ' . $item['last_name']) ?></td>
+                                <td><?= htmlspecialchars($item['class_code']) ?></td>
+                                <td><?= htmlspecialchars($item['subject_name']) ?></td>
+                                <td><?= formatDateDisplay($item['period_date']) ?>
+                                    (<?= htmlspecialchars($item['period_label']) ?>)
+                                </td>
+                                <td>
+                                        <span class="badge badge-<?= $item['status'] === 'A' ? 'error' : 'warning' ?>">
+                                            <?= getAttendanceStatusLabel($item['status']) ?>
+                                        </span>
+                                </td>
+                                <td><?= htmlspecialchars($item['justification']) ?></td>
+                                <td>
+                                    <?php if (!empty($item['justification_file'])): ?>
+                                        <a href="../includes/download_justification.php?att_id=<?= $item['att_id'] ?>&csrf_token=<?= urlencode($csrfToken) ?>"
+                                           class="btn btn-secondary btn-sm">
+                                            Prenesi
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-disabled">Ni priloge</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-sm">
+                                        <button class="btn btn-success btn-sm"
+                                                data-open-modal="approveModal"
+                                                data-id="<?= $item['att_id'] ?>"
+                                                data-name="<?= htmlspecialchars($item['first_name'] . ' ' . $item['last_name']) ?>">
+                                            Odobri
+                                        </button>
+                                        <button class="btn btn-error btn-sm"
+                                                data-open-modal="rejectModal"
+                                                data-id="<?= $item['att_id'] ?>"
+                                                data-name="<?= htmlspecialchars($item['first_name'] . ' ' . $item['last_name']) ?>">
+                                            Zavrni
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                         <?php endforeach; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
-    <!-- Justification details column -->
-    <div class="col col-md-8">
-        <?php if ($viewJustification): ?>
-            <div class="card shadow">
-                <div class="card__title">
-                    Podrobnosti opravičila
-                </div>
-                <div class="card__content">
-                    <div class="mb-lg">
-                        <div class="d-flex flex-wrap gap-lg">
-                            <div>
-                                <div class="text-secondary text-sm">Dijak</div>
-                                <div class="font-bold"><?= htmlspecialchars($viewJustification['first_name'] . ' ' . $viewJustification['last_name']) ?></div>
-                            </div>
-                            <div>
-                                <div class="text-secondary text-sm">Razred</div>
-                                <div><?= htmlspecialchars($viewJustification['class_code']) ?></div>
-                            </div>
-                            <div>
-                                <div class="text-secondary text-sm">Datum</div>
-                                <div><?= date('d.m.Y', strtotime($viewJustification['period_date'])) ?></div>
-                            </div>
-                            <div>
-                                <div class="text-secondary text-sm">Predmet</div>
-                                <div><?= htmlspecialchars($viewJustification['subject_name']) ?></div>
-                            </div>
-                            <div>
-                                <div class="text-secondary text-sm">Ura</div>
-                                <div><?= htmlspecialchars($viewJustification['period_label']) ?></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label">Sporočilo dijaka:</label>
-                        <div class="card p-md bg-tertiary">
-                            <?= nl2br(htmlspecialchars($viewJustification['justification'])) ?>
-                        </div>
-                    </div>
-
-                    <?php if (!empty($viewJustification['justification_file'])): ?>
-                        <div class="form-group">
-                            <label class="form-label">Priložena datoteka:</label>
-                            <div>
-                                <a href="download_justification.php?id=<?= $viewJustification['att_id'] ?>"
-                                   class="btn btn-secondary d-inline-flex items-center gap-xs">
-                                    <span class="material-icons-outlined">attach_file</span>
-                                    Prenesi datoteko
-                                </a>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="d-flex justify-end gap-md mt-lg">
-                        <button data-open-modal="rejectJustificationModal" class="btn btn-error">Zavrni</button>
-                        <button data-open-modal="approveJustificationModal" class="btn btn-success">Odobri</button>
-                    </div>
-                </div>
-            </div>
-        <?php elseif (!empty($pendingJustifications)): ?>
-            <div class="card shadow">
-                <div class="card__content text-center p-xl">
-                    <div class="alert status-info mb-lg">
-                        Izberite opravičilo s seznama za pregled.
-                    </div>
-                    <p class="text-secondary">Imate čakajoča opravičila, ki zahtevajo odobritev. Kliknite na opravičilo
-                        na levi strani, da si ogledate podrobnosti in ga odobrite ali zavrnete.</p>
+    <?php if ($showProcessed && !empty($processedJustifications)): ?>
+        <div class="card mb-lg">
+            <div class="card__content">
+                <h3 class="mb-md">Obdelana opravičila</h3>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>Učenec</th>
+                            <th>Razred</th>
+                            <th>Predmet</th>
+                            <th>Datum</th>
+                            <th>Status</th>
+                            <th>Opravičilo</th>
+                            <th>Priloga</th>
+                            <th>Rezultat</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <?php foreach ($processedJustifications as $item): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($item['first_name'] . ' ' . $item['last_name']) ?></td>
+                                <td><?= htmlspecialchars($item['class_code']) ?></td>
+                                <td><?= htmlspecialchars($item['subject_name']) ?></td>
+                                <td><?= formatDateDisplay($item['period_date']) ?>
+                                    (<?= htmlspecialchars($item['period_label']) ?>)
+                                </td>
+                                <td>
+                                        <span class="badge badge-<?= $item['status'] === 'A' ? 'error' : 'warning' ?>">
+                                            <?= getAttendanceStatusLabel($item['status']) ?>
+                                        </span>
+                                </td>
+                                <td><?= htmlspecialchars($item['justification']) ?></td>
+                                <td>
+                                    <?php if (!empty($item['justification_file'])): ?>
+                                        <a href="../includes/download_justification.php?att_id=<?= $item['att_id'] ?>&csrf_token=<?= urlencode($csrfToken) ?>"
+                                           class="btn btn-secondary btn-sm">
+                                            Prenesi
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="text-disabled">Ni priloge</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if ($item['approved'] === '1'): ?>
+                                        <span class="badge badge-success">Odobreno</span>
+                                    <?php elseif ($item['approved'] === '0'): ?>
+                                        <span class="badge badge-error"
+                                              title="<?= htmlspecialchars($item['reject_reason']) ?>">
+                                                Zavrnjeno
+                                            </span>
+                                    <?php else: ?>
+                                        <span class="badge badge-secondary">V obdelavi</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
-        <?php else: ?>
-            <div class="card shadow">
-                <div class="card__content text-center p-xl">
-                    <div class="alert status-success mb-lg">
-                        Trenutno ni nobenih opravičil, ki bi zahtevala vašo pozornost.
-                    </div>
-                    <p class="text-secondary">Vsa opravičila so bila pregledana. Ko bodo dijaki oddali nova opravičila,
-                        se bodo prikazala na tej strani.</p>
-                </div>
+        </div>
+    <?php endif; ?>
+</div>
+
+<!-- Approve Modal -->
+<div class="modal" id="approveModal">
+    <div class="modal-overlay" aria-hidden="true"></div>
+    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="approveModalTitle">
+        <div class="modal-header">
+            <h3 class="modal-title" id="approveModalTitle">Potrditev odobritve</h3>
+        </div>
+        <div class="modal-body">
+            <div class="alert status-success mb-md">
+                <p>Ali res želite odobriti opravičilo učenca <strong id="approveModal_name"></strong>?</p>
             </div>
-        <?php endif; ?>
+            <input type="hidden" id="approveModal_id" value="">
+        </div>
+        <div class="modal-footer">
+            <div class="d-flex justify-between w-full">
+                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                <button type="button" class="btn btn-success" id="confirmApproveBtn">Odobri</button>
+            </div>
+        </div>
     </div>
 </div>
 
-<!-- Approve Justification Modal -->
-<?php if ($viewJustification): ?>
-    <div class="modal" id="approveJustificationModal">
-        <div class="modal-overlay" aria-hidden="true"></div>
-        <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="approveJustificationModalTitle">
-            <div class="modal-header">
-                <h3 class="modal-title" id="approveJustificationModalTitle">Potrditev odobritve</h3>
-            </div>
-            <form method="POST" action="justifications.php?action=view&id=<?= $viewJustification['att_id'] ?>">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                <input type="hidden" name="justification_id" value="<?= $viewJustification['att_id'] ?>">
-                <input type="hidden" name="approve_justification" value="1">
-
-                <div class="modal-body">
-                    <div class="alert status-warning mb-md">
-                        <p>Ali ste prepričani, da želite odobriti to opravičilo?</p>
-                    </div>
-                    <p>Opravičilo dijaka
-                        <strong><?= htmlspecialchars($viewJustification['first_name'] . ' ' . $viewJustification['last_name']) ?></strong>
-                        bo označeno kot odobreno in odsotnost bo opravičena.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-                    <button type="submit" class="btn btn-success">Odobri opravičilo</button>
-                </div>
-            </form>
+<!-- Reject Modal -->
+<div class="modal" id="rejectModal">
+    <div class="modal-overlay" aria-hidden="true"></div>
+    <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="rejectModalTitle">
+        <div class="modal-header">
+            <h3 class="modal-title" id="rejectModalTitle">Zavrnitev opravičila</h3>
         </div>
-    </div>
-
-    <!-- Reject Justification Modal -->
-    <div class="modal" id="rejectJustificationModal">
-        <div class="modal-overlay" aria-hidden="true"></div>
-        <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="rejectJustificationModalTitle">
-            <div class="modal-header">
-                <h3 class="modal-title" id="rejectJustificationModalTitle">Zavrnitev opravičila</h3>
-            </div>
-            <form method="POST" action="justifications.php?action=view&id=<?= $viewJustification['att_id'] ?>">
+        <form id="rejectForm">
+            <div class="modal-body">
+                <div class="alert status-error mb-md">
+                    <p>Ali res želite zavrniti opravičilo učenca <strong id="rejectModal_name"></strong>?</p>
+                </div>
+                <input type="hidden" id="rejectModal_id" name="att_id" value="">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                <input type="hidden" name="justification_id" value="<?= $viewJustification['att_id'] ?>">
-                <input type="hidden" name="reject_justification" value="1">
 
-                <div class="modal-body">
-                    <div class="alert status-error mb-md">
-                        <p>Opravičilo bo zavrnjeno in dijak bo obveščen o razlogu zavrnitve.</p>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="reject_reason" class="form-label">Razlog zavrnitve:</label>
-                        <textarea id="reject_reason" name="reject_reason" class="form-input" rows="3"
-                                  required></textarea>
-                        <div class="form-help">Navedite jasen razlog za zavrnitev opravičila.</div>
-                    </div>
+                <div class="form-group">
+                    <label for="rejectReason" class="form-label">Razlog zavrnitve:</label>
+                    <textarea id="rejectReason" name="reason" class="form-textarea" required></textarea>
                 </div>
-                <div class="modal-footer">
+            </div>
+            <div class="modal-footer">
+                <div class="d-flex justify-between w-full">
                     <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-                    <button type="submit" class="btn btn-error">Zavrni opravičilo</button>
+                    <button type="submit" class="btn btn-error">Zavrni</button>
                 </div>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
-<?php endif; ?>
+</div>
 
-<!-- Modal handling JavaScript -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Toggle show processed justifications
+        document.getElementById('showProcessed').addEventListener('change', function () {
+            window.location.href = 'justifications.php' + (this.checked ? '?show_processed=1' : '');
+        });
+
         // --- Modal Management Functions ---
         const openModal = (modalId) => {
             const modal = document.getElementById(modalId);
@@ -374,6 +331,62 @@ renderHeaderCard(
                     closeModal(modal);
                 });
             }
+        });
+
+        // Handle approve justification
+        document.getElementById('confirmApproveBtn').addEventListener('click', function () {
+            const absenceId = document.getElementById('approveModal_id').value;
+
+            fetch('../api/justifications.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    'action': 'approveJustification',
+                    'att_id': absenceId,
+                    'csrf_token': '<?= $csrfToken ?>'
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Refresh page on success
+                        location.reload();
+                    } else {
+                        alert('Napaka: ' + (data.message || 'Neznana napaka pri odobritvi opravičila.'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Napaka pri pošiljanju zahteve.');
+                });
+        });
+
+        // Handle reject form submission
+        document.getElementById('rejectForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            formData.append('action', 'rejectJustification');
+
+            fetch('../api/justifications.php', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Refresh page on success
+                        location.reload();
+                    } else {
+                        alert('Napaka: ' + (data.message || 'Neznana napaka pri zavrnitvi opravičila.'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Napaka pri pošiljanju zahteve.');
+                });
         });
     });
 </script>

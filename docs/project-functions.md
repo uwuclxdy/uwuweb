@@ -235,7 +235,10 @@ Parent-specific helper functions.
 
 Student-specific helper functions.
 
+### Grade Functions
 - `calculateGradeStatistics(array $grades): array` - Calculate grade statistics grouped by subject and class
+
+### Dashboard Widget Functions
 - `renderStudentGradesWidget(): string` - Creates the HTML for the student's grades dashboard widget
 - `renderStudentAttendanceWidget(): string` - Creates the HTML for the student's attendance dashboard widget
 - `renderStudentClassAveragesWidget(): string` - Creates the HTML for the student's class averages dashboard widget

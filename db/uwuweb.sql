@@ -1,3 +1,4 @@
+# noinspection IncorrectFormattingForFile
 # noinspection SpellCheckingInspectionForFile
 
 -- uwuweb Database Schema

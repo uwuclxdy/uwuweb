@@ -1005,11 +1005,10 @@ function calculateAttendanceStats(array $attendance): array
 
 /**
  * Gets attendance records for a student
- *
- * @param int $studentId Student ID
- * @param string|null $startDate Optional start date for filtering
- * @param string|null $endDate Optional end date for filtering
- * @param bool $checkAccess Whether to check if user has access to this data
+ * @param int $studentId The student ID
+ * @param string|null $startDate Start date (optional)
+ * @param string|null $endDate End date (optional)
+ * @param bool $checkAccess Whether to check if the current user has access to the student's data
  * @return array Array of attendance records
  */
 function getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null, bool $checkAccess = true): array
@@ -1033,53 +1032,39 @@ function getStudentAttendance(int $studentId, ?string $startDate = null, ?string
         // Teacher and admin can access all student data
     }
 
-    try {
-        $pdo = safeGetDBConnection('getStudentAttendance');
-        if ($pdo === null) return [];
+    $pdo = safeGetDBConnection('includes/functions.php');
 
-        $params = [$studentId];
-        $dateCondition = '';
+    $params = ['student_id' => $studentId];
 
-        if ($startDate) {
-            $dateCondition .= " AND p.period_date >= ?";
-            $params[] = $startDate;
-        }
-
-        if ($endDate) {
-            $dateCondition .= " AND p.period_date <= ?";
-            $params[] = $endDate;
-        }
-
-        $query = "
-            SELECT a.att_id, a.status, a.justification, a.approved, a.reject_reason,
-                   a.justification_file,
-                   p.period_id, p.period_date as date, p.period_label,
-                   c.class_code, c.title as class_title, c.class_id,
-                   s.name as subject_name, s.subject_id,
-                   CONCAT(c.title, ' - ', s.name) as class_name
-            FROM students st
-            JOIN enrollments e ON st.student_id = e.student_id
-            JOIN attendance a ON e.enroll_id = a.enroll_id
+    // Modified query to ensure all periods are included without grouping
+    $sql = "SELECT a.*, p.period_date as date, p.period_label, cs.class_id, c.title as class_title, 
+            s.name as subject_name, e.student_id, t.first_name as teacher_fname, t.last_name as teacher_lname
+            FROM attendance a
             JOIN periods p ON a.period_id = p.period_id
             JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
             JOIN classes c ON cs.class_id = c.class_id
             JOIN subjects s ON cs.subject_id = s.subject_id
-            WHERE st.student_id = ? $dateCondition
-            ORDER BY p.period_date DESC, p.period_label";
+            JOIN teachers t ON cs.teacher_id = t.teacher_id
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            WHERE e.student_id = :student_id";
 
-        $stmt = $pdo->prepare($query);
-        $stmt->execute($params);
-
-        $attendance = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Add status labels
-        foreach ($attendance as &$record) $record['status_label'] = getAttendanceStatusLabel($record['status']);
-
-        return $attendance;
-    } catch (PDOException $e) {
-        logDBError("Error in getStudentAttendance: " . $e->getMessage());
-        return [];
+    if ($startDate) {
+        $sql .= " AND p.period_date >= :start_date";
+        $params['start_date'] = $startDate;
     }
+
+    if ($endDate) {
+        $sql .= " AND p.period_date <= :end_date";
+        $params['end_date'] = $endDate;
+    }
+
+    // Order by date and period label
+    $sql .= " ORDER BY p.period_date DESC, p.period_label";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 /**
@@ -1768,235 +1753,108 @@ function getJustificationFileInfo(int $absenceId): ?string
 /**
  * Uploads a justification for an absence
  *
- * @param int $absenceId Absence ID
- * @param string $justification Justification text
+ * @param int $absenceId The absence ID
+ * @param string $justification The justification text
  * @return bool Success status
  */
 function uploadJustification(int $absenceId, string $justification): bool
 {
-    // Check if user is logged in
-    $userId = getUserId();
-    if (!$userId) return false;
+    $pdo = getDBConnection();
 
-    try {
-        $pdo = safeGetDBConnection('uploadJustification');
-        if ($pdo === null) return false;
+    // Check if this is the student's absence
+    $stmt = $pdo->prepare("
+        SELECT a.att_id FROM attendance a
+        JOIN enrollments e ON a.enroll_id = e.enroll_id
+        WHERE a.att_id = :att_id AND e.student_id = :student_id
+    ");
+    $stmt->execute([
+        'att_id' => $absenceId,
+        'student_id' => getStudentId()
+    ]);
 
-        // Verify the current user (student) owns this absence record
-        $verifyQuery = "
-            SELECT a.att_id
-            FROM attendance a
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN students s ON e.student_id = s.student_id
-            WHERE a.att_id = :absence_id
-            AND s.user_id = :user_id";
+    if (!$stmt->fetch()) return false;
 
-        $verifyStmt = $pdo->prepare($verifyQuery);
-        $verifyStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
-        $verifyStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $verifyStmt->execute();
+    // Update the attendance record with justification
+    $stmt = $pdo->prepare("
+        UPDATE attendance 
+        SET justification = :justification,
+            approved = NULL
+        WHERE att_id = :att_id
+    ");
 
-        if ($verifyStmt->rowCount() === 0) {
-            error_log("User $userId attempted to upload justification for unowned absence ID $absenceId.");
-            return false; // User does not own this absence record
-        }
-
-        // Proceed with update
-        $updateQuery = "
-            UPDATE attendance
-            SET justification = :justification,
-                approved = NULL, -- Reset approval status when new justification is submitted
-                reject_reason = NULL -- Clear previous rejection reason
-            WHERE att_id = :absence_id";
-
-        $updateStmt = $pdo->prepare($updateQuery);
-        $updateStmt->bindParam(':justification', $justification);
-        $updateStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
-
-        return $updateStmt->execute();
-    } catch (PDOException $e) {
-        logDBError("Error in uploadJustification for absence ID $absenceId: " . $e->getMessage());
-        return false;
-    }
+    return $stmt->execute([
+        'justification' => $justification,
+        'att_id' => $absenceId
+    ]);
 }
 
 /**
  * Validates an uploaded justification file
  *
- * @param array $file Uploaded file data from $_FILES
- * @return bool Validation result
+ * @param array $file The uploaded file ($_FILES array element)
+ * @return bool Whether the file is valid
  */
 function validateJustificationFile(array $file): bool
 {
-    // Check for upload errors
-    if (!isset($file['error']) || is_array($file['error'])) {
-        error_log("Invalid parameters received for file upload validation.");
-        return false;
-    }
+    // Check if file is valid
+    if ($file['error'] !== UPLOAD_ERR_OK || empty($file['tmp_name'])) return false;
 
-    switch ($file['error']) {
-        case UPLOAD_ERR_OK:
-            break; // No error, continue validation
-        case UPLOAD_ERR_NO_FILE:
-            error_log("No file sent during justification upload.");
-            return false;
-        case UPLOAD_ERR_INI_SIZE:
-        case UPLOAD_ERR_FORM_SIZE:
-            error_log("Exceeded filesize limit during justification upload.");
-            return false;
-        default:
-            error_log("Unknown upload error: " . $file['error']);
-            return false;
-    }
+    // Check file size (max 15MB)
+    $maxSize = 15 * 1024 * 1024; // 15MB in bytes
+    if ($file['size'] > $maxSize) return false;
 
-    // Check file size (e.g., 5MB maximum)
-    $maxSize = 5 * 1024 * 1024;
-    if (!isset($file['size']) || $file['size'] > $maxSize) {
-        error_log("File size exceeds limit ($maxSize bytes) or size not available.");
-        return false;
-    }
-    if ($file['size'] === 0) {
-        error_log("Uploaded file is empty.");
-        return false;
-    }
+    // Check file type
+    $allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+    $finfo = new finfo(FILEINFO_MIME_TYPE);
+    $mimeType = $finfo->file($file['tmp_name']);
 
-    // Check MIME type
-    $allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
-    if (!isset($file['tmp_name']) || !file_exists($file['tmp_name'])) {
-        error_log("Temporary file path is missing or file does not exist.");
-        return false;
-    }
+    if (!in_array($mimeType, $allowedTypes, true)) return false;
 
-    try {
-        $finfo = new finfo(FILEINFO_MIME_TYPE);
-        $mimeType = $finfo->file($file['tmp_name']);
-
-        if ($mimeType === false) {
-            error_log("Could not determine MIME type for uploaded file.");
-            return false; // Could not determine type
-        }
-
-        if (!in_array($mimeType, $allowedTypes, true)) {
-            error_log("Invalid file type uploaded: " . $mimeType);
-            return false; // Disallowed type
-        }
-    } catch (Exception $e) {
-        error_log("Error checking file MIME type: " . $e->getMessage());
-        return false;
-    }
-
-    return true; // File is valid
+    return true;
 }
 
 /**
  * Saves an uploaded justification file
  *
- * @param array $file Uploaded file data from $_FILES
- * @param int $absenceId Absence ID
- * @return string|false Saved filename or false on failure
+ * @param array $file The uploaded file ($_FILES array element)
+ * @param int $absenceId The absence ID
+ * @return string|false The file path if successful, false otherwise
  */
 function saveJustificationFile(array $file, int $absenceId): string|false
 {
-    // First, validate the file
-    if (!validateJustificationFile($file)) {
-        error_log("Justification file validation failed for absence ID $absenceId.");
-        return false;
-    }
+    // Get student ID from absence record
+    $pdo = getDBConnection();
+    $stmt = $pdo->prepare("
+        SELECT e.student_id, p.period_date 
+        FROM attendance a
+        JOIN enrollments e ON a.enroll_id = e.enroll_id
+        JOIN periods p ON a.period_id = p.period_id
+        WHERE a.att_id = :att_id
+    ");
+    $stmt->execute(['att_id' => $absenceId]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // Check if user is logged in
-    $userId = getUserId();
-    if (!$userId) {
-        error_log("User ID not found in session during justification file save.");
-        return false;
-    }
+    if (!$result) return false;
 
-    try {
-        $pdo = safeGetDBConnection('saveJustificationFile');
-        if ($pdo === null) return false;
+    $studentId = $result['student_id'];
+    $periodDate = $result['period_date'];
 
-        // Verify the current user (student) owns this absence record
-        $verifyQuery = "
-            SELECT a.att_id, a.justification_file
-            FROM attendance a
-            JOIN enrollments e ON a.enroll_id = e.enroll_id
-            JOIN students s ON e.student_id = s.student_id
-            WHERE a.att_id = :absence_id
-            AND s.user_id = :user_id";
+    // Create justifications directory if it doesn't exist
+    $uploadDir = __DIR__ . '/justifications/';
 
-        $verifyStmt = $pdo->prepare($verifyQuery);
-        $verifyStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
-        $verifyStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-        $verifyStmt->execute();
-        $attendanceRecord = $verifyStmt->fetch(PDO::FETCH_ASSOC);
+    // Get file extension
+    $fileInfo = pathinfo($file['name']);
+    $extension = strtolower($fileInfo['extension']);
 
-        if (!$attendanceRecord) {
-            error_log("User $userId attempted to save justification file for unowned absence ID $absenceId.");
-            return false; // User does not own this absence record
-        }
+    // Generate unique filename
+    $timestamp = time();
+    $filename = "{$studentId}_{$absenceId}_$timestamp.$extension";
+    $filepath = $uploadDir . $filename;
 
-        // Set up upload directory
-        $projectRoot = dirname(__DIR__);
-        $uploadDir = $projectRoot . '/uploads/justifications/';
+    // Move uploaded file to destination
+    if (move_uploaded_file($file['tmp_name'], $filepath)) return $filename;
 
-        // Ensure the upload directory exists and is writable
-        if (!is_dir($uploadDir)) if (!mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-            error_log(sprintf('Failed to create upload directory: "%s"', $uploadDir));
-            return false; // Directory creation failed
-        }
-
-        if (!is_writable($uploadDir)) {
-            error_log(sprintf('Upload directory is not writable: "%s"', $uploadDir));
-            return false;
-        }
-
-        // Generate a unique filename
-        $originalName = $file['name'];
-        $fileExtension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-        $safeExtension = preg_replace('/[^a-z0-9]/', '', $fileExtension);
-        if (empty($safeExtension)) $safeExtension = 'bin';
-
-        $newFilename = 'justification_' . $absenceId . '_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $safeExtension;
-        $targetPath = $uploadDir . $newFilename;
-
-        // Move the uploaded file
-        if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
-            error_log("Failed to move uploaded file to $targetPath.");
-            return false;
-        }
-
-        // Delete old file if it exists
-        $oldFilename = $attendanceRecord['justification_file'];
-        if (!empty($oldFilename)) {
-            $oldFilePath = $uploadDir . $oldFilename;
-            if (file_exists($oldFilePath)) unlink($oldFilePath);
-        }
-
-        // Update the database record
-        $updateQuery = "
-            UPDATE attendance
-            SET justification_file = :filename,
-                approved = NULL,
-                reject_reason = NULL
-            WHERE att_id = :absence_id";
-
-        $updateStmt = $pdo->prepare($updateQuery);
-        $updateStmt->bindParam(':filename', $newFilename);
-        $updateStmt->bindParam(':absence_id', $absenceId, PDO::PARAM_INT);
-
-        if ($updateStmt->execute()) return $newFilename; else {
-            error_log("Database update failed after saving justification file $newFilename for absence ID $absenceId.");
-            if (file_exists($targetPath)) unlink($targetPath);
-            return false;
-        }
-    } catch (PDOException $e) {
-        logDBError("Error in saveJustificationFile for absence ID $absenceId: " . $e->getMessage());
-        if (isset($targetPath) && file_exists($targetPath)) unlink($targetPath);
-        return false;
-    } catch (Exception $e) {
-        error_log("General Exception in saveJustificationFile for absence ID $absenceId: " . $e->getMessage());
-        if (isset($targetPath) && file_exists($targetPath)) unlink($targetPath);
-        return false;
-    }
+    return false;
 }
 
 /**

@@ -449,137 +449,6 @@ function renderTeacherClassAveragesWidget(): string
     return $html;
 }
 
-///**
-// * Creates the HTML for the teacher's class overview dashboard widget.
-// * @return string HTML content for the widget.
-// */
-//function renderTeacherClassOverviewWidget(): string
-//{
-//    // Implementation depends on what data needs to be shown.
-//    // Example: List of classes, number of students.
-//    // This function might need access to getTeacherClasses().
-//    $teacherId = getTeacherId();
-//    if (!$teacherId) return renderPlaceholderWidget('Podatki o razredih niso na voljo.');
-//
-//    $classes = getTeacherClasses($teacherId);
-//    if (empty($classes)) {
-//        return renderPlaceholderWidget('Nimate dodeljenih nobenih predmetov ali razredov.');
-//    }
-//
-//    $html = '<ul class="list-unstyled">';
-//    foreach ($classes as $class) {
-//        $html .= '<li class="mb-sm">';
-//        $html .= '<a href="/teacher/gradebook.php?class_subject_id=' . $class['class_subject_id'] . '" class="text-primary hover-underline">';
-//        $html .= htmlspecialchars($class['class_title'] . ' - ' . $class['subject_name']);
-//        $html .= '</a>';
-//        // Could add more info, e.g., student count if readily available
-//        $html .= '</li>';
-//    }
-//    $html .= '</ul>';
-//    return $html;
-//}
-//
-///**
-// * Shows attendance status for today's classes taught by the teacher.
-// * This is a simplified version for a dashboard widget.
-// * @return string HTML content for the widget.
-// */
-//function renderTeacherAttendanceWidget(): string
-//{
-//    $teacherId = getTeacherId();
-//    if (!$teacherId) return renderPlaceholderWidget('Podatki o prisotnosti niso na voljo.');
-//
-//    $pdo = safeGetDBConnection();
-//    // This is a conceptual query; actual implementation might be more complex
-//    // to find "today's classes" and their status.
-//    // For simplicity, this might link to the main attendance page.
-//
-//    // Let's list subjects and link to attendance page
-//    $teacherClasses = getTeacherClasses($teacherId);
-//    if (empty($teacherClasses)) {
-//        return renderPlaceholderWidget('Nimate urnika za danes ali nimate dodeljenih predmetov.');
-//    }
-//
-//    $html = '<p class="text-secondary mb-md">Hitri dostop do vodenja prisotnosti za vaše predmete.</p>';
-//    $html .= '<ul class="list-styled">';
-//    foreach ($teacherClasses as $class) {
-//        $html .= '<li><a href="/teacher/attendance.php?class_subject_id=' . $class['class_subject_id'] . '">';
-//        $html .= htmlspecialchars($class['class_title'] . ' - ' . $class['subject_name']) . '</a></li>';
-//    }
-//    $html .= '</ul>';
-//
-//    return $html;
-//}
-//
-//
-///**
-// * Shows absence justifications waiting for teacher approval.
-// * @return string HTML content for the widget.
-// */
-//function renderTeacherPendingJustificationsWidget(): string
-//{
-//    $teacherId = getTeacherId();
-//    if (!$teacherId) return renderPlaceholderWidget('Podatki o opravičilih niso na voljo.');
-//
-//    $pendingJustifications = getPendingJustifications($teacherId);
-//
-//    if (empty($pendingJustifications)) {
-//        return '<p>Ni čakajočih opravičil.</p>';
-//    }
-//
-//    $html = '<ul class="list-unstyled">';
-//    foreach ($pendingJustifications as $justification) {
-//        // Note: Structure of $justification depends on getPendingJustifications()
-//        $studentName = htmlspecialchars($justification['student_first_name'] . ' ' . $justification['student_last_name']);
-//        $subjectName = htmlspecialchars($justification['subject_name']);
-//        $periodDate = formatDateDisplay($justification['period_date']);
-//        $html .= '<li class="mb-sm p-sm border rounded-sm">';
-//        $html .= "<strong>{$studentName}</strong> - {$subjectName} ({$periodDate})";
-//        $html .= ' <a href="/teacher/justifications.php?absence_id=' . $justification['att_id'] . '" class="btn btn-secondary btn-sm ml-sm">Preglej</a>';
-//        $html .= '</li>';
-//    }
-//    $html .= '</ul>';
-//    $html .= '<div class="mt-md"><a href="/teacher/justifications.php" class="btn btn-primary">Vsa Opravičila</a></div>';
-//    return $html;
-//}
-//
-///**
-// * Creates the HTML for the teacher's class averages dashboard widget.
-// * @return string HTML content for the widget.
-// */
-//function renderTeacherClassAveragesWidget(): string
-//{
-//    $teacherId = getTeacherId();
-//    if (!$teacherId) return renderPlaceholderWidget('Podatki o povprečjih niso na voljo.');
-//
-//    $teacherClasses = getTeacherClasses($teacherId);
-//    if (empty($teacherClasses)) {
-//        return renderPlaceholderWidget('Nimate dodeljenih predmetov za prikaz povprečij.');
-//    }
-//
-//    $html = '<ul class="list-unstyled">';
-//    foreach ($teacherClasses as $cs) {
-//        // Fetch grades for this class_subject_id
-//        $grades = getClassGrades($cs['class_subject_id']); // This function gets all grades for all students
-//
-//        $classAverage = 0;
-//        if (!empty($grades)) {
-//            $classAverage = calculateClassAverage($grades); // This function needs to be robust
-//        }
-//
-//        $html .= '<li class="d-flex justify-between items-center mb-sm p-sm border rounded-sm">';
-//        $html .= '<span>' . htmlspecialchars($cs['class_title'] . ' - ' . $cs['subject_name']) . '</span>';
-//        if ($classAverage > 0) {
-//            $html .= '<span class="badge badge-info">' . number_format($classAverage, 2) . '%</span>';
-//        } else {
-//            $html .= '<span class="badge badge-secondary">Ni ocen</span>';
-//        }
-//        $html .= '</li>';
-//    }
-//    $html .= '</ul>';
-//    return $html;
-//}
-
 /**
  * Checks if a teacher is the homeroom teacher for a specific class.
  *
@@ -632,3 +501,310 @@ function getAllAttendanceForClass(int $classId): array
         return [];
     }
 }
+
+/**
+ * Gets justifications for classes where the teacher is the homeroom teacher
+ *
+ * @param int|null $teacherId Teacher ID (uses current user if null)
+ * @param bool $includingProcessed Whether to include processed justifications
+ * @return array Array of justification records
+ */
+function getHomeroomTeacherJustifications(?int $teacherId = null, bool $includingProcessed = false): array
+{
+    if ($teacherId === null) $teacherId = getTeacherId();
+    if (!$teacherId) return [];
+
+    try {
+        $pdo = safeGetDBConnection('getHomeroomTeacherJustifications');
+        if ($pdo === null) return [];
+
+        $query = "
+            SELECT a.att_id, a.status, a.justification, a.justification_file, a.approved, a.reject_reason,
+                   p.period_id, p.period_date, p.period_label,
+                   s.first_name, s.last_name, s.student_id,
+                   c.class_code, c.title as class_title,
+                   subj.name as subject_name
+            FROM attendance a
+            JOIN periods p ON a.period_id = p.period_id
+            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+            JOIN enrollments e ON a.enroll_id = e.enroll_id
+            JOIN students s ON e.student_id = s.student_id
+            JOIN classes c ON e.class_id = c.class_id
+            JOIN subjects subj ON cs.subject_id = subj.subject_id
+            WHERE c.homeroom_teacher_id = ?
+              AND a.status != 'P'  -- Not present
+              AND a.justification IS NOT NULL
+        ";
+
+        // Add condition for pending justifications if not including processed ones
+        if (!$includingProcessed) $query .= " AND a.approved IS NULL"; else $query .= " AND a.approved IS NOT NULL";
+
+        $query .= " ORDER BY p.period_date DESC, c.class_code";
+
+        $stmt = $pdo->prepare($query);
+        $stmt->execute([$teacherId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError("Error in getHomeroomTeacherJustifications: " . $e->getMessage());
+        return [];
+    }
+}
+
+///**
+// * Creates the HTML for the teacher's class overview dashboard widget
+// *
+// * @return string HTML content for the widget
+// */
+//function renderTeacherClassOverviewWidget(): string
+//{
+//    $teacherId = getTeacherId();
+//    if (!$teacherId) {
+//        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o učitelju.');
+//    }
+//
+//    $classes = getTeacherClasses($teacherId);
+//    if (empty($classes)) {
+//        return renderPlaceholderWidget('Nimate dodeljenih razredov.');
+//    }
+//
+//    $html = '<div class="card">';
+//    $html .= '<div class="card__title">Pregled razredov</div>';
+//    $html .= '<div class="card__content">';
+//
+//    foreach ($classes as $class) {
+//        $html .= '<div class="mb-md">';
+//        $html .= '<h4>' . htmlspecialchars($class['class_code']) . ' - ' . htmlspecialchars($class['title']) . '</h4>';
+//
+//        if (empty($class['subjects'])) {
+//            $html .= '<p class="text-disabled">Ni dodeljenih predmetov.</p>';
+//        } else {
+//            $html .= '<ul class="ml-md">';
+//            foreach ($class['subjects'] as $subject) {
+//                $html .= '<li>' . htmlspecialchars($subject['name']) . '</li>';
+//            }
+//            $html .= '</ul>';
+//        }
+//
+//        $html .= '</div>';
+//    }
+//
+//    $html .= '</div>'; // card__content
+//    $html .= '</div>'; // card
+//
+//    return $html;
+//}
+//
+///**
+// * Shows attendance status for today's classes taught by the teacher
+// *
+// * @return string HTML content for the widget
+// */
+//function renderTeacherAttendanceWidget(): string
+//{
+//    $teacherId = getTeacherId();
+//    if (!$teacherId) {
+//        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o učitelju.');
+//    }
+//
+//    // Today's date in database format
+//    $today = date('Y-m-d');
+//
+//    // Get classes and periods for today
+//    try {
+//        $pdo = safeGetDBConnection('renderTeacherAttendanceWidget');
+//
+//        $query = "
+//            SELECT p.period_id, p.period_label, c.class_code, subj.name as subject_name,
+//                   COUNT(DISTINCT e.student_id) as total_students,
+//                   SUM(CASE WHEN a.status = 'A' THEN 1 ELSE 0 END) as absent_count,
+//                   SUM(CASE WHEN a.status = 'L' THEN 1 ELSE 0 END) as late_count
+//            FROM periods p
+//            JOIN class_subjects cs ON p.class_subject_id = cs.class_subject_id
+//            JOIN classes c ON cs.class_id = c.class_id
+//            JOIN subjects subj ON cs.subject_id = subj.subject_id
+//            LEFT JOIN enrollments e ON cs.class_id = e.class_id
+//            LEFT JOIN attendance a ON p.period_id = a.period_id AND e.enroll_id = a.enroll_id
+//            WHERE cs.teacher_id = ? AND p.period_date = ?
+//            GROUP BY p.period_id, p.period_label, c.class_code, subj.name
+//            ORDER BY p.period_label
+//        ";
+//
+//        $stmt = $pdo->prepare($query);
+//        $stmt->execute([$teacherId, $today]);
+//
+//        $todayPeriods = $stmt->fetchAll(PDO::FETCH_ASSOC);
+//    } catch (PDOException $e) {
+//        logDBError("Error in renderTeacherAttendanceWidget: " . $e->getMessage());
+//        $todayPeriods = [];
+//    }
+//
+//    $html = '<div class="card">';
+//    $html .= '<div class="card__title">Prisotnost danes</div>';
+//    $html .= '<div class="card__content">';
+//
+//    if (empty($todayPeriods)) {
+//        $html .= '<p>Danes nimate vpisanih ur.</p>';
+//    } else {
+//        $html .= '<table class="data-table">';
+//        $html .= '<thead><tr><th>Ura</th><th>Razred</th><th>Predmet</th><th>Prisotnost</th></tr></thead>';
+//        $html .= '<tbody>';
+//
+//        foreach ($todayPeriods as $period) {
+//            $html .= '<tr>';
+//            $html .= '<td>' . htmlspecialchars($period['period_label']) . '</td>';
+//            $html .= '<td>' . htmlspecialchars($period['class_code']) . '</td>';
+//            $html .= '<td>' . htmlspecialchars($period['subject_name']) . '</td>';
+//
+//            $totalStudents = (int)$period['total_students'];
+//            $absentCount = (int)$period['absent_count'];
+//            $lateCount = (int)$period['late_count'];
+//            $presentCount = $totalStudents - $absentCount - $lateCount;
+//
+//            $attendanceHtml = '';
+//            if ($totalStudents > 0) {
+//                $attendanceHtml .= '<div class="d-flex gap-sm">';
+//                if ($presentCount > 0) {
+//                    $attendanceHtml .= '<span class="badge badge-success">' . $presentCount . ' prisotnih</span>';
+//                }
+//                if ($absentCount > 0) {
+//                    $attendanceHtml .= '<span class="badge badge-error">' . $absentCount . ' odsotnih</span>';
+//                }
+//                if ($lateCount > 0) {
+//                    $attendanceHtml .= '<span class="badge badge-warning">' . $lateCount . ' zamud</span>';
+//                }
+//                $attendanceHtml .= '</div>';
+//            } else {
+//                $attendanceHtml = '<span class="text-disabled">Ni podatkov</span>';
+//            }
+//
+//            $html .= '<td>' . $attendanceHtml . '</td>';
+//            $html .= '</tr>';
+//        }
+//
+//        $html .= '</tbody>';
+//        $html .= '</table>';
+//    }
+//
+//    $html .= '</div>'; // card__content
+//    $html .= '</div>'; // card
+//
+//    return $html;
+//}
+//
+///**
+// * Shows absence justifications waiting for teacher approval
+// *
+// * @return string HTML content for the widget
+// */
+//function renderTeacherPendingJustificationsWidget(): string
+//{
+//    $teacherId = getTeacherId();
+//    if (!$teacherId) {
+//        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o učitelju.');
+//    }
+//
+//    $pendingJustifications = getHomeroomTeacherJustifications($teacherId);
+//
+//    $html = '<div class="card">';
+//    $html .= '<div class="card__title">Čakajoča opravičila</div>';
+//    $html .= '<div class="card__content">';
+//
+//    if (empty($pendingJustifications)) {
+//        $html .= '<p>Trenutno ni čakajočih opravičil.</p>';
+//    } else {
+//        $html .= '<ul class="mt-0 mb-md">';
+//        $count = 0;
+//        foreach ($pendingJustifications as $item) {
+//            if ($count++ >= 5) break; // Show only first 5
+//
+//            $html .= '<li class="mb-sm">';
+//            $html .= htmlspecialchars($item['first_name'] . ' ' . $item['last_name']);
+//            $html .= ' (' . htmlspecialchars($item['class_code']) . ') - ';
+//            $html .= formatDateDisplay($item['period_date']);
+//            $html .= '</li>';
+//        }
+//        $html .= '</ul>';
+//
+//        $total = count($pendingJustifications);
+//        if ($total > 5) {
+//            $html .= '<p>+ ' . ($total - 5) . ' več</p>';
+//        }
+//
+//        $html .= '<div class="text-center mt-md">';
+//        $html .= '<a href="justifications.php" class="btn btn-primary">Preglej vsa opravičila</a>';
+//        $html .= '</div>';
+//    }
+//
+//    $html .= '</div>'; // card__content
+//    $html .= '</div>'; // card
+//
+//    return $html;
+//}
+//
+///**
+// * Creates the HTML for the teacher's class averages dashboard widget
+// *
+// * @return string HTML content for the widget
+// */
+//function renderTeacherClassAveragesWidget(): string
+//{
+//    $teacherId = getTeacherId();
+//    if (!$teacherId) {
+//        return renderPlaceholderWidget('Napaka pri pridobivanju podatkov o učitelju.');
+//    }
+//
+//    $classes = getTeacherClasses($teacherId);
+//    if (empty($classes)) {
+//        return renderPlaceholderWidget('Nimate dodeljenih razredov.');
+//    }
+//
+//    $html = '<div class="card">';
+//    $html .= '<div class="card__title">Povprečja razredov</div>';
+//    $html .= '<div class="card__content">';
+//
+//    // Display data for up to 3 classes
+//    $displayClasses = array_slice($classes, 0, 3);
+//
+//    foreach ($displayClasses as $class) {
+//        if (empty($class['subjects'])) continue;
+//
+//        $html .= '<div class="mb-md">';
+//        $html .= '<h4>' . htmlspecialchars($class['class_code']) . ' - ' . htmlspecialchars($class['title']) . '</h4>';
+//
+//        foreach ($class['subjects'] as $subject) {
+//            // Get grades for this class-subject
+//            $grades = getClassGrades($subject['class_subject_id']);
+//            if (empty($grades)) {
+//                $html .= '<p>' . htmlspecialchars($subject['name']) . ': <span class="text-disabled">Ni ocen</span></p>';
+//                continue;
+//            }
+//
+//            // Calculate average
+//            $average = calculateClassAverage($grades);
+//
+//            // Determine color class based on average
+//            $colorClass = '';
+//            if ($average >= 4.5) $colorClass = 'text-success';
+//            else if ($average >= 3.5) $colorClass = 'text-accent';
+//            else if ($average >= 2.5) $colorClass = 'text-warning';
+//            else $colorClass = 'text-error';
+//
+//            $html .= '<p>' . htmlspecialchars($subject['name']) . ': ';
+//            $html .= '<span class="' . $colorClass . ' font-bold">' . number_format($average, 2) . '</span>';
+//            $html .= '</p>';
+//        }
+//
+//        $html .= '</div>';
+//    }
+//
+//    // If there are more classes, show a message
+//    if (count($classes) > 3) {
+//        $html .= '<p class="text-center">+ ' . (count($classes) - 3) . ' več razredov</p>';
+//    }
+//
+//    $html .= '</div>'; // card__content
+//    $html .= '</div>'; // card
+//
+//    return $html;
+//}
