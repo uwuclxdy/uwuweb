@@ -182,7 +182,6 @@ $gradeItems = [
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="createItemModalTitle">
         <div class="modal-header">
             <h3 class="modal-title" id="createItemModalTitle">Create New Item</h3>
-            <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
         <form id="createItemForm" method="POST" action="modal-examples.php">
             <div class="modal-body">
@@ -207,8 +206,10 @@ $gradeItems = [
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary">Create Item</button>
+                <div class="d-flex justify-between w-full">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Item</button>
+                </div>
             </div>
         </form>
     </div>
@@ -220,7 +221,6 @@ $gradeItems = [
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="editItemModalTitle">
         <div class="modal-header">
             <h3 class="modal-title" id="editItemModalTitle">Edit Item</h3>
-            <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
         <form id="editItemForm" method="POST" action="modal-examples.php">
             <div class="modal-body">
@@ -246,8 +246,10 @@ $gradeItems = [
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <div class="d-flex justify-between w-full">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
             </div>
         </form>
     </div>
@@ -259,7 +261,6 @@ $gradeItems = [
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmModalTitle">
         <div class="modal-header">
             <h3 class="modal-title" id="deleteConfirmModalTitle">Potrditev izbrisa</h3>
-            <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
         <div class="modal-body">
             <div class="alert status-warning mb-md">
@@ -273,8 +274,10 @@ $gradeItems = [
         <!-- optional info message -->
         <p class="text-disabled ml-xl">Izbris bo mogoče le, če uporabnik ni v nobeni povezavi.</p>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-            <button type="button" class="btn btn-primary" id="confirmDeleteBtn">Izbriši</button>
+            <div class="d-flex justify-between w-full">
+                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                <button type="button" class="btn btn-primary" id="confirmDeleteBtn">Izbriši</button>
+            </div>
         </div>
     </div>
 </div>
@@ -285,7 +288,6 @@ $gradeItems = [
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="addGradeItemModalTitle">
         <div class="modal-header">
             <h3 class="modal-title" id="addGradeItemModalTitle">Dodaj ocenjevalno enoto</h3>
-            <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
         <form id="addGradeItemForm" method="POST" action="modal-examples.php">
             <div class="modal-body">
@@ -304,8 +306,10 @@ $gradeItems = [
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-                <button type="submit" class="btn btn-primary">Dodaj</button>
+                <div class="d-flex justify-between w-full">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                    <button type="submit" class="btn btn-primary">Dodaj</button>
+                </div>
             </div>
         </form>
     </div>
@@ -317,7 +321,6 @@ $gradeItems = [
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="assignStudentModalTitle">
         <div class="modal-header">
             <h3 class="modal-title" id="assignStudentModalTitle">Dodaj dijaka v razred</h3>
-            <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
         <form id="assignStudentForm" method="POST" action="modal-examples.php">
             <div class="modal-body">
@@ -365,8 +368,10 @@ $gradeItems = [
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-                <button type="submit" class="btn btn-primary">Dodaj v razred</button>
+                <div class="d-flex justify-between w-full">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                    <button type="submit" class="btn btn-primary">Dodaj v razred</button>
+                </div>
             </div>
         </form>
     </div>
@@ -378,7 +383,6 @@ $gradeItems = [
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="attendanceModalTitle">
         <div class="modal-header">
             <h3 class="modal-title" id="attendanceModalTitle">Zabeleži prisotnost</h3>
-            <button class="btn-close" aria-label="Close modal" data-close-modal>×</button>
         </div>
         <form id="attendanceForm" method="POST" action="modal-examples.php">
             <div class="modal-body">
@@ -424,8 +428,10 @@ $gradeItems = [
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-                <button type="submit" class="btn btn-primary">Shrani</button>
+                <div class="d-flex justify-between w-full">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                    <button type="submit" class="btn btn-primary">Shrani</button>
+                </div>
             </div>
         </form>
     </div>

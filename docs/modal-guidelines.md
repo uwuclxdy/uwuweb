@@ -24,8 +24,10 @@ Use the following HTML structure for all modals:
             <!-- Additional form fields -->
          </div>
          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-            <button type="submit" class="btn btn-primary">Submit</button>
+            <div class="d-flex justify-between w-full">
+               <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+               <button type="submit" class="btn btn-primary">Submit</button>
+            </div>
          </div>
       </form>
       <!-- For non-forms: -->
@@ -34,8 +36,10 @@ Use the following HTML structure for all modals:
           Content goes here
       </div>
       <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-          <button type="button" class="btn btn-primary" id="confirmButton">Confirm</button>
+          <div class="d-flex justify-between w-full">
+              <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+              <button type="button" class="btn btn-primary" id="confirmButton">Confirm</button>
+          </div>
       </div>
       -->
     </div>
@@ -206,8 +210,10 @@ For confirming actions like deletion:
    <!-- optional info message -->
    <p class="text-disabled ml-xl mr-xl">Izbris bo mogoče le, če ...</p>
    <div class="modal-footer">
-      <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-      <button type="button" class="btn btn-error" id="confirmDeleteBtn">Delete</button>
+      <div class="d-flex justify-between w-full">
+         <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+         <button type="button" class="btn btn-error" id="confirmDeleteBtn">Delete</button>
+      </div>
    </div>
 </div>
 
@@ -301,6 +307,10 @@ For confirming actions like deletion:
 8. **Modal Closing**:
    - Do NOT use the × close button (`<button class="btn-close">×</button>`)
    - Instead provide a "Cancel" or "Close" button in the modal footer
+   - Use a flex container with `justify-between` to position the Cancel button on the left and the action button on the
+     right
+   - Always use the pattern: `<div class="d-flex justify-between w-full">` in the modal footer to ensure consistent
+     layout
    - Rely on the overlay click and Escape key for additional dismissal options
 
 ## 6. Delete Confirmation Pattern
@@ -330,8 +340,10 @@ For delete confirmations, follow this simpler pattern instead of requiring users
       <!-- optional info message -->
       <p class="text-disabled ml-xl mr-xl">Izbris bo mogoče le, če ...</p>
       <div class="modal-footer">
-         <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-         <button type="button" class="btn btn-error" id="confirmDeleteBtn">Izbriši</button>
+         <div class="d-flex justify-between w-full">
+            <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+            <button type="button" class="btn btn-error" id="confirmDeleteBtn">Izbriši</button>
+         </div>
       </div>
    </div>
 </div>
@@ -402,8 +414,10 @@ For delete confirmations, follow this simpler pattern instead of requiring users
             </div>
          </div>
          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-            <button type="submit" class="btn btn-primary">Add Item</button>
+            <div class="d-flex justify-between w-full">
+               <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+               <button type="submit" class="btn btn-primary">Add Item</button>
+            </div>
          </div>
       </form>
    </div>

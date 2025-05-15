@@ -35,6 +35,19 @@ features:
 
 ---
 
+## 5. Grading System
+
+Gradable items can have different amount of points, but the grade is always calculated with percentage.
+| Grade | Percentage |
+|-------|------------|
+| 1 | 0% - 49% |
+| 2 | 50% - 60% |
+| 3 | 61% - 74% |
+| 4 | 75% - 88% |
+| 5 | 89% - 100% |
+
+---
+
 ## 4. Database Schema
 
 Look at the file `db/uwuweb.sql` for database schema.

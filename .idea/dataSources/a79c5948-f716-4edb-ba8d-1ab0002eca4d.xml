@@ -1156,7 +1156,7 @@ test\\_%|schema||&apos;&apos;||UPDATE|G</Grants>
     <schema id="328" parent="1" name="uwuweb">
       <AutoIntrospectionLevel>3</AutoIntrospectionLevel>
       <LastIntrospectionLevel>3</LastIntrospectionLevel>
-      <LastIntrospectionLocalTimestamp>2025-05-10.21:06:07</LastIntrospectionLocalTimestamp>
+      <LastIntrospectionLocalTimestamp>2025-05-14.22:08:23</LastIntrospectionLocalTimestamp>
       <CollationName>utf8mb4_unicode_ci</CollationName>
     </schema>
     <user id="329" parent="1" name="&apos;&apos;">
@@ -1253,7 +1253,7 @@ test\\_%|schema||&apos;&apos;||UPDATE|G</Grants>
       <CollationName>utf8mb4_unicode_ci</CollationName>
     </table>
     <column id="350" parent="335" name="att_id">
-      <AutoIncrement>34</AutoIncrement>
+      <AutoIncrement>81</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1323,7 +1323,7 @@ period_id</ColNames>
       <UnderlyingIndexName>enroll_id</UnderlyingIndexName>
     </key>
     <column id="365" parent="336" name="class_subject_id">
-      <AutoIncrement>13</AutoIncrement>
+      <AutoIncrement>30</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1386,7 +1386,7 @@ subject_id</ColNames>
       <UnderlyingIndexName>class_id</UnderlyingIndexName>
     </key>
     <column id="378" parent="337" name="class_id">
-      <AutoIncrement>4</AutoIncrement>
+      <AutoIncrement>9</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1434,7 +1434,7 @@ subject_id</ColNames>
       <UnderlyingIndexName>class_code</UnderlyingIndexName>
     </key>
     <column id="388" parent="338" name="enroll_id">
-      <AutoIncrement>11</AutoIncrement>
+      <AutoIncrement>21</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1483,7 +1483,7 @@ class_id</ColNames>
       <UnderlyingIndexName>student_id</UnderlyingIndexName>
     </key>
     <column id="398" parent="339" name="item_id">
-      <AutoIncrement>13</AutoIncrement>
+      <AutoIncrement>32</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1503,10 +1503,9 @@ class_id</ColNames>
       <Position>4</Position>
       <StoredType>decimal(5,2 digit)|0s</StoredType>
     </column>
-    <column id="402" parent="339" name="weight">
-      <DefaultExpression>1.00</DefaultExpression>
+    <column id="402" parent="339" name="date">
       <Position>5</Position>
-      <StoredType>decimal(3,2 digit)|0s</StoredType>
+      <StoredType>date|0s</StoredType>
     </column>
     <foreign-key id="403" parent="339" name="grade_items_ibfk_1">
       <ColNames>class_subject_id</ColNames>
@@ -1528,7 +1527,7 @@ class_id</ColNames>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
     <column id="407" parent="340" name="grade_id">
-      <AutoIncrement>18</AutoIncrement>
+      <AutoIncrement>46</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1581,7 +1580,7 @@ class_id</ColNames>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
     <column id="418" parent="341" name="parent_id">
-      <AutoIncrement>7</AutoIncrement>
+      <AutoIncrement>13</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1615,7 +1614,7 @@ class_id</ColNames>
       <UnderlyingIndexName>user_id</UnderlyingIndexName>
     </key>
     <column id="425" parent="342" name="period_id">
-      <AutoIncrement>17</AutoIncrement>
+      <AutoIncrement>39</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1711,7 +1710,7 @@ parent_id</ColNames>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
     <column id="444" parent="345" name="student_id">
-      <AutoIncrement>11</AutoIncrement>
+      <AutoIncrement>21</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1765,7 +1764,7 @@ parent_id</ColNames>
       <UnderlyingIndexName>user_id</UnderlyingIndexName>
     </key>
     <column id="455" parent="346" name="subject_id">
-      <AutoIncrement>6</AutoIncrement>
+      <AutoIncrement>15</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1849,7 +1848,7 @@ parent_id</ColNames>
       <UnderlyingIndexName>PRIMARY</UnderlyingIndexName>
     </key>
     <column id="470" parent="348" name="teacher_id">
-      <AutoIncrement>5</AutoIncrement>
+      <AutoIncrement>10</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
@@ -1893,7 +1892,7 @@ parent_id</ColNames>
       <UnderlyingIndexName>user_id</UnderlyingIndexName>
     </key>
     <column id="479" parent="349" name="user_id">
-      <AutoIncrement>22</AutoIncrement>
+      <AutoIncrement>44</AutoIncrement>
       <NotNull>1</NotNull>
       <Position>1</Position>
       <StoredType>int(11)|0s</StoredType>
