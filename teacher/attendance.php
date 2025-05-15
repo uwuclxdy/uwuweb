@@ -3,293 +3,287 @@
  * Teacher Attendance Form
  *
  * Provides interface for teachers to manage student attendance
- * Supports tracking attendance for class periods
- *
- * /teacher/attendance.php
+ * File path: /teacher/attendance.php
  */
-
-use Random\RandomException;
 
 require_once '../includes/auth.php';
 require_once '../includes/db.php';
-require_once '../includes/functions.php';
+require_once '../includes/functions.php'; // Contains calculateAttendanceStats, getAttendanceStatusLabel, formatDateDisplay, addPeriod, getClassPeriods, getPeriodAttendance, saveAttendance, getClassStudents
 require_once '../includes/header.php';
-require_once 'teacher_functions.php';
-
-// CSS styles are included in header.php
+require_once 'teacher_functions.php'; // Will define isHomeroomTeacher, getAllAttendanceForClass
 
 requireRole(ROLE_TEACHER);
 
-$teacherId = getTeacherId();
-if (!$teacherId) die('Napaka: Račun ni bil najden.');
+$teacherId = getUserId(); // Assuming getUserId() is appropriate here, or getTeacherId() if it specifically maps user_id to teacher_id
+$actualTeacherId = getTeacherId($teacherId); // Ensure we have the teacher_id from the teachers table
+
+if (!$actualTeacherId) {
+    // Fallback or error if not a teacher, though requireRole should handle this.
+    // This is more about getting the ID from the 'teachers' table.
+    // If getTeacherId() can take no arguments and use session, that's fine.
+    // For now, assuming getTeacherId() (with no args or from session) gives the correct `teachers.teacher_id`
+    $actualTeacherId = getTeacherId(); // Corrected: getTeacherId() should fetch current user's teacher ID
+    if (!$actualTeacherId) {
+        echo generateAlert('Učiteljev račun ni bil najden ali pa niste prijavljeni kot učitelj.', 'error');
+        include_once '../includes/footer.php';
+        exit;
+    }
+}
+
 
 $pdo = safeGetDBConnection('teacher/attendance.php');
+$csrfToken = generateCSRFToken();
 
-// Get the CSRF token for form security
-try {
-    $csrfToken = generateCSRFToken();
-} catch (RandomException $e) {
-    sendJsonErrorResponse('Napaka pri ustvarjanju token-a za zaščito oblike.', 500);
+$selectedClassSubjectId = isset($_GET['class_subject_id']) ? (int)$_GET['class_subject_id'] : null;
+$selectedPeriodId = isset($_GET['period_id']) ? (int)$_GET['period_id'] : null;
+
+$teacherClassesSubjects = getTeacherClasses($actualTeacherId);
+$currentSubjectName = '';
+$currentClassId = null;
+$currentClassName = '';
+
+if ($selectedClassSubjectId && !empty($teacherClassesSubjects)) foreach ($teacherClassesSubjects as $cs) if ($cs['class_subject_id'] == $selectedClassSubjectId) {
+    $currentSubjectName = $cs['subject_name'];
+    $currentClassId = $cs['class_id'];
+    $currentClassName = $cs['class_title']; // Assuming class_title from getTeacherClasses
+    break;
 }
 
-// Get classes assigned to the teacher
-$teacherClasses = getTeacherClasses($teacherId);
+// Handle Add Period
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_period'])) if (verifyCSRFToken($_POST['csrf_token'])) {
+    $periodDate = $_POST['period_date'];
+    $periodLabel = $_POST['period_label'];
+    $classSubjectIdForPeriod = (int)$_POST['class_subject_id_for_modal'];
 
-// Restructure teacher classes for dropdown display
-$groupedClasses = [];
-foreach ($teacherClasses as $class) {
-    $classId = $class['class_id'];
-    if (!isset($groupedClasses[$classId])) {
-        $groupedClasses[$classId] = [
-            'class_id' => $classId,
-            'class_name' => $class['class_title'] . ' (' . $class['class_code'] . ')',
-            'subjects' => []
-        ];
+    if (!validateDate($periodDate)) echo generateAlert('Neveljaven format datuma.', 'error'); elseif (empty($periodLabel)) echo generateAlert('Oznaka ure ne sme biti prazna.', 'error');
+    elseif ($classSubjectIdForPeriod !== $selectedClassSubjectId || !$selectedClassSubjectId) echo generateAlert('Neveljavna izbira predmeta/razreda za dodajanje ure.', 'error');
+    else {
+        $newPeriodId = addPeriod($classSubjectIdForPeriod, $periodDate, $periodLabel);
+        if ($newPeriodId) echo generateAlert('Ura uspešno dodana.', 'success'); else echo generateAlert('Napaka pri dodajanju ure.', 'error');
     }
-    $groupedClasses[$classId]['subjects'][] = [
-        'class_subject_id' => $class['class_subject_id'],
-        'subject_name' => $class['subject_name']
-    ];
-}
-$teacherClasses = array_values($groupedClasses);
+} else echo generateAlert('Neveljaven CSRF žeton.', 'error');
 
-// Default values
-$selectedClassSubject = isset($_GET['class_subject_id']) ? (int)$_GET['class_subject_id'] : 0;
-$classSubjectName = '';
+// Handle Save Attendance
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_attendance'])) if (verifyCSRFToken($_POST['csrf_token'])) {
+    $attendanceData = $_POST['attendance'] ?? [];
+    $periodIdToSave = (int)$_POST['period_id_for_attendance'];
+
+    if ($periodIdToSave !== $selectedPeriodId || !$selectedPeriodId) echo generateAlert('Neveljavna izbira ure za shranjevanje prisotnosti.', 'error'); else {
+        $successCount = 0;
+        $errorCount = 0;
+        foreach ($attendanceData as $enrollId => $status) if (in_array($status, ['P', 'A', 'L'])) if (saveAttendance((int)$enrollId, $periodIdToSave, $status)) $successCount++; else $errorCount++;
+        if ($errorCount > 0) echo generateAlert("Prisotnost delno shranjena. Uspešno: $successCount, Napake: $errorCount.", 'warning'); else echo generateAlert('Prisotnost uspešno shranjena.', 'success');
+        // Data will be re-fetched on page load, showing updated statuses
+    }
+} else echo generateAlert('Neveljaven CSRF žeton.', 'error');
+
 $periods = [];
+if ($selectedClassSubjectId) $periods = getClassPeriods($selectedClassSubjectId);
 
-// If a class-subject is selected, get periods and name
-if ($selectedClassSubject > 0) if (!teacherHasAccessToClassSubject($selectedClassSubject, $teacherId)) {
-    echo "Nimate dostopa do izbranega razreda ali predmeta.";
-    $selectedClassSubject = 0;
-} else {
-    // Get the periods for this class-subject
-    $periods = getClassPeriods($selectedClassSubject);
-
-    // Get class-subject name for display
-    foreach ($teacherClasses as $class) foreach ($class['subjects'] as $subject) if ($subject['class_subject_id'] == $selectedClassSubject) {
-        $classSubjectName = $class['class_name'] . ' - ' . $subject['subject_name'];
-        break 2;
-    }
-}
-
-// Handle period selection
-$selectedPeriod = isset($_GET['period_id']) ? (int)$_GET['period_id'] : 0;
+$studentsForAttendance = [];
 $periodAttendance = [];
-$periodInfo = null;
+if ($selectedClassSubjectId && $selectedPeriodId && $currentClassId) {
+    $studentsForAttendance = getClassStudents($currentClassId); // Assumes this returns enroll_id
+    $rawPeriodAttendance = getPeriodAttendance($selectedPeriodId);
+    foreach ($rawPeriodAttendance as $att) $periodAttendance[$att['enroll_id']] = $att['status'];
+}
 
-if ($selectedPeriod > 0 && $selectedClassSubject > 0) {
-    // Get attendance for this period
-    $periodAttendance = getPeriodAttendance($selectedPeriod);
-
-    // Get period info for display
-    foreach ($periods as $period) if ($period['period_id'] == $selectedPeriod) {
-        $periodInfo = $period;
-        break;
+$isHomeroom = false;
+$classStudentsForStats = [];
+$allClassAttendanceRecords = [];
+if ($selectedClassSubjectId && $currentClassId) {
+    $isHomeroom = isHomeroomTeacher($actualTeacherId, $currentClassId);
+    if ($isHomeroom) {
+        $classStudentsForStats = getClassStudents($currentClassId); // Re-fetch or use $studentsForAttendance if period also selected
+        $allClassAttendanceRecords = getAllAttendanceForClass($currentClassId);
     }
 }
 
-// Generate header card
-renderHeaderCard(
-    'Vodenje prisotnosti',
-    'Upravljajte prisotnost učencev po posameznih urah',
-    'Učitelj'
-);
 ?>
-
 <div class="container">
-    <div class="section">
-        <!-- Class selection -->
-        <div class="card mb-lg">
-            <div class="card__title">Izberi razred in predmet</div>
-            <div class="card__content">
-                <form method="GET" action="attendance.php" class="mb-md">
+    <header class="page-header">
+        <h1 class="page-title">Evidenca Prisotnosti</h1>
+        <?php renderHeaderCard('Evidenca Prisotnosti', 'Upravljajte prisotnost študentov za vaše predmete.', getRoleName(getUserRole())); ?>
+    </header>
+
+    <div class="alert-container">
+        <?php
+        // Placeholder for dynamic alerts via JS or PHP generated ones above
+        if (isset($_SESSION['alert_message'])) {
+            echo generateAlert($_SESSION['alert_message']['text'], $_SESSION['alert_message']['type']);
+            unset($_SESSION['alert_message']);
+        }
+        ?>
+    </div>
+
+
+    <section class="content-section">
+        <form method="GET" action="attendance.php" class="mb-lg">
+            <div class="row">
+                <div class="col col-md-6">
                     <div class="form-group">
-                        <label for="class_subject_selector" class="form-label">Razred in predmet:</label>
-                        <select id="class_subject_selector" name="class_subject_id" class="form-select"
+                        <label for="class_subject_id" class="form-label">Izberite Razred in Predmet:</label>
+                        <select name="class_subject_id" id="class_subject_id" class="form-select"
                                 onchange="this.form.submit()">
-                            <option value="">-- Izberi razred in predmet --</option>
-                            <?php foreach ($teacherClasses as $class): ?>
-                                <optgroup label="<?= htmlspecialchars($class['class_name']) ?>">
-                                    <?php foreach ($class['subjects'] as $subject): ?>
-                                        <option value="<?= $subject['class_subject_id'] ?>"
-                                            <?= ($selectedClassSubject == $subject['class_subject_id']) ? 'selected' : '' ?>>
-                                            <?= htmlspecialchars($subject['subject_name']) ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </optgroup>
+                            <option value="">-- Izberite --</option>
+                            <?php foreach ($teacherClassesSubjects as $cs): ?>
+                                <option value="<?= $cs['class_subject_id'] ?>" <?= $selectedClassSubjectId == $cs['class_subject_id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($cs['class_title'] . ' - ' . $cs['subject_name']) ?>
+                                </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
+                </div>
+                <?php if ($selectedClassSubjectId && !empty($periods)): ?>
+                    <div class="col col-md-6">
+                        <div class="form-group">
+                            <label for="period_id" class="form-label">Izberite Uro:</label>
+                            <select name="period_id" id="period_id" class="form-select" onchange="this.form.submit()">
+                                <option value="">-- Izberite --</option>
+                                <?php foreach ($periods as $period): ?>
+                                    <option value="<?= $period['period_id'] ?>" <?= $selectedPeriodId == $period['period_id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($period['period_label'] . ' (' . formatDateDisplay($period['period_date']) . ')') ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <input type="hidden" name="class_subject_id" value="<?= $selectedClassSubjectId ?>">
+                        </div>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </form>
+
+        <?php if ($selectedClassSubjectId): ?>
+            <div class="mb-md">
+                <button type="button" class="btn btn-primary" data-open-modal="addPeriodModal"
+                        data-subject-name="<?= htmlspecialchars($currentSubjectName) ?>"
+                        data-class-subject-id="<?= $selectedClassSubjectId ?>">
+                    <span class="btn-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                                                fill="currentColor" width="18" height="18"><path
+                                    d="M11 11V5H13V11H19V13H13V19H11V13H5V11H11Z"></path></svg></span>
+                    Dodaj Novo Uro
+                </button>
+            </div>
+        <?php endif; ?>
+    </section>
+
+    <?php if ($selectedClassSubjectId && $selectedPeriodId && !empty($studentsForAttendance)): ?>
+        <section class="content-section card">
+            <div class="card__title">
+                <h3>Vnos Prisotnosti
+                    za: <?php echo htmlspecialchars($currentClassName . ' - ' . $currentSubjectName); ?></h3>
+                <p>
+                    Ura: <?php echo htmlspecialchars((isset($periods)) ? (array_values(array_filter($periods, static fn($p) => $p['period_id'] == $selectedPeriodId))[0]['period_label'] ?? '') . ' (' . formatDateDisplay(array_values(array_filter($periods, static fn($p) => $p['period_id'] == $selectedPeriodId))[0]['period_date'] ?? '') . ')' : ''); ?></p>
+            </div>
+            <div class="card__content">
+                <form method="POST"
+                      action="attendance.php?class_subject_id=<?php echo $selectedClassSubjectId; ?>&period_id=<?php echo $selectedPeriodId; ?>">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrfToken); ?>">
+                    <input type="hidden" name="period_id_for_attendance" value="<?php echo $selectedPeriodId; ?>">
+                    <input type="hidden" name="save_attendance" value="1">
+
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                            <tr>
+                                <th>Študent</th>
+                                <th class="text-center">Prisoten (P)</th>
+                                <th class="text-center">Odsoten (A)</th>
+                                <th class="text-center">Zamudil (L)</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <?php foreach ($studentsForAttendance as $student): ?>
+                                <?php $currentStatus = $periodAttendance[$student['enroll_id']] ?? ''; ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($student['first_name'] . ' ' . $student['last_name']); ?></td>
+                                    <td class="text-center">
+                                        <input type="radio" id="status_p_<?php echo $student['enroll_id']; ?>"
+                                               name="attendance[<?php echo $student['enroll_id']; ?>]"
+                                               value="P" <?php echo $currentStatus == 'P' ? 'checked' : ''; ?> required>
+                                        <label for="status_p_<?php echo $student['enroll_id']; ?>" class="sr-only">Prisoten</label>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="radio" id="status_a_<?php echo $student['enroll_id']; ?>"
+                                               name="attendance[<?php echo $student['enroll_id']; ?>]"
+                                               value="A" <?php echo $currentStatus == 'A' ? 'checked' : ''; ?> required>
+                                        <label for="status_a_<?php echo $student['enroll_id']; ?>" class="sr-only">Odsoten</label>
+                                    </td>
+                                    <td class="text-center">
+                                        <input type="radio" id="status_l_<?php echo $student['enroll_id']; ?>"
+                                               name="attendance[<?php echo $student['enroll_id']; ?>]"
+                                               value="L" <?php echo $currentStatus == 'L' ? 'checked' : ''; ?> required>
+                                        <label for="status_l_<?php echo $student['enroll_id']; ?>" class="sr-only">Zamudil</label>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="form-group mt-md">
+                        <button type="submit" class="btn btn-primary">Shrani Prisotnost</button>
+                    </div>
                 </form>
             </div>
+        </section>        <?php elseif ($selectedClassSubjectId && empty($studentsForAttendance) && $selectedPeriodId): ?>
+        <div class="alert status-info">Za ta razred ni vpisanih študentov ali pa za izbrano uro ni bilo mogoče pridobiti
+            seznama.
         </div>
+    <?php elseif ($selectedClassSubjectId && empty($periods)): ?>
+        <div class="alert status-info">Za izbrani predmet še ni vpisanih ur. Prosimo, dodajte novo uro.</div>
+    <?php endif; ?>
 
-        <?php if ($selectedClassSubject > 0): ?>
-            <!-- Periods list -->
-            <div class="card mb-lg">
-                <div class="card__title">
-                    <div class="d-flex items-center justify-between">
-                        <span>Ure za <?= htmlspecialchars($classSubjectName) ?></span>
-                        <button data-open-modal="addPeriodModal" class="btn btn-primary btn-sm">
-                            Dodaj novo uro
-                        </button>
-                    </div>
-                </div>
-                <div class="card__content">
-                    <?php if (empty($periods)): ?>
-                        <p class="text-disabled">Ni zabeleženih ur za ta razred in predmet.</p>
-                    <?php else: ?>
-                        <div class="table-responsive">
-                            <table class="data-table">
-                                <thead>
-                                <tr>
-                                    <th>Datum</th>
-                                    <th>Oznaka</th>
-                                    <th>Prisotnost</th>
-                                    <th>Akcije</th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                <?php foreach ($periods as $period): ?>
-                                    <tr>
-                                        <td><?= formatDateDisplay($period['period_date']) ?></td>
-                                        <td><?= htmlspecialchars($period['period_label']) ?></td>
-                                        <td>
-                                            <?php
-                                            $presentCount = $period['present_count'] ?? 0;
-                                            $absentCount = $period['absent_count'] ?? 0;
-                                            $lateCount = $period['late_count'] ?? 0;
-                                            $total = $presentCount + $absentCount + $lateCount;
 
-                                            if ($total > 0) {
-                                                $presentPercentage = round(($presentCount / $total) * 100);
-                                                echo "<div class='d-flex items-center gap-sm'>";
-                                                echo "<div class='attendance-status status-present'></div> $presentCount";
-                                                echo "<div class='attendance-status status-absent'></div> $absentCount";
-                                                echo "<div class='attendance-status status-late'></div> $lateCount";
-                                                echo "</div>";
-                                            } else echo "<span class='text-disabled'>Ni podatkov</span>";
-                                            ?>
-                                        </td>
-                                        <td>
-                                            <a href="attendance.php?class_subject_id=<?= $selectedClassSubject ?>&period_id=<?= $period['period_id'] ?>"
-                                               class="btn btn-secondary btn-sm">Uredi prisotnost</a>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                                </tbody>
-                            </table>
+    <?php if ($isHomeroom && $selectedClassSubjectId && !empty($classStudentsForStats)): ?>
+        <section class="content-section mt-lg">
+            <h2 class="section-title">Statistika Prisotnosti za Razred: <?= htmlspecialchars($currentClassName) ?>
+                (Celotno Leto)</h2>
+            <p class="text-secondary mb-md">Prikazana je statistika prisotnosti za vse predmete za študente v tem
+                razredu, kjer ste razrednik.</p>
+            <div class="dashboard-grid">
+                <?php foreach ($classStudentsForStats as $student): ?>
+                    <div class="card shadow-sm mb-sm">
+                        <div class="card__title p-md d-flex justify-between items-center">
+                            <span><?= htmlspecialchars($student['first_name'] . ' ' . $student['last_name']) ?></span>
+                            <?php
+                            $studentAttendanceRecords = [];
+                            foreach ($allClassAttendanceRecords as $record) if (isset($record['student_id']) && $record['student_id'] == $student['student_id']) $studentAttendanceRecords[] = $record;
+                            $stats = calculateAttendanceStats($studentAttendanceRecords);
+                            $presentPercent = $stats['present_percent'] ?? 0;
+                            $rateClass = 'badge-info'; // Default
+                            if ($stats['total'] > 0) $rateClass = $presentPercent >= 90 ? 'badge-success' :
+                                ($presentPercent >= 75 ? 'badge-warning' : 'badge-error'); elseif (empty($studentAttendanceRecords)) $rateClass = 'badge-secondary';
+                            ?>
+                            <span class="badge <?= $rateClass ?>">
+                            <?= $stats['total'] > 0 ? number_format($presentPercent, 1) . '%' : ($stats['total'] === 0 && empty($studentAttendanceRecords) ? 'N/A' : '0.0%') ?>
+                        </span>
                         </div>
-                    <?php endif; ?>
-                </div>
+                        <div class="card__content p-md">
+                            <div class="d-flex flex-column gap-sm">
+                                <div class="d-flex justify-between">
+                                    <span>Prisoten:</span>
+                                    <span class="badge badge-success"><?= $stats['present_count'] ?? 0 ?></span>
+                                </div>
+                                <div class="d-flex justify-between">
+                                    <span>Odsoten:</span>
+                                    <span class="badge badge-error"><?= $stats['absent_count'] ?? 0 ?></span>
+                                </div>
+                                <div class="d-flex justify-between">
+                                    <span>Zamuda:</span>
+                                    <span class="badge badge-warning"><?= $stats['late_count'] ?? 0 ?></span>
+                                </div>
+                                <div class="d-flex justify-between mt-sm">
+                                    <span>Skupaj zabeleženih ur:</span>
+                                    <span class="font-bold"><?= $stats['total'] ?? 0 ?></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
+        </section>
+    <?php endif; ?>
 
-            <?php if ($selectedPeriod > 0 && $periodInfo): ?>
-                <!-- Attendance management -->
-                <div class="card">
-                    <div class="card__title">
-                        <div class="d-flex items-center justify-between">
-                            <span>Prisotnost za <?= formatDateDisplay($periodInfo['period_date']) ?> (<?= htmlspecialchars($periodInfo['period_label']) ?>)</span>
-                            <a href="attendance.php?class_subject_id=<?= $selectedClassSubject ?>"
-                               class="btn btn-secondary btn-sm">Nazaj na seznam</a>
-                        </div>
-                    </div>
-                    <div class="card__content">
-                        <?php if (empty($periodAttendance)): ?>
-                            <p class="text-disabled">Ni učencev za ta razred in predmet.</p>
-                        <?php else: ?>
-                            <form id="attendanceForm" method="POST">
-                                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                                <input type="hidden" name="period_id" value="<?= $selectedPeriod ?>">
-
-                                <div class="table-responsive">
-                                    <table class="data-table">
-                                        <thead>
-                                        <tr>
-                                            <th>Učenec</th>
-                                            <th>Status</th>
-                                            <th>Opravičilo</th>
-                                            <th>Akcije</th>
-                                        </tr>
-                                        </thead>
-                                        <tbody>
-                                        <?php foreach ($periodAttendance as $record): ?>
-                                            <tr>
-                                                <td><?= htmlspecialchars($record['first_name'] . ' ' . $record['last_name']) ?></td>
-                                                <td>
-                                                    <div class="attendance-status status-<?= strtolower($record['status']) ?>"
-                                                         data-status="<?= $record['status'] ?>">
-                                                        <?= getAttendanceStatusLabel($record['status']) ?>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <?php if ($record['status'] === 'A' || $record['status'] === 'L'): ?>
-                                                        <?php if ($record['justification']): ?>
-                                                            <?php if ($record['approved'] === null): ?>
-                                                                <span class="badge badge-warning">Čaka na odobritev</span>
-                                                            <?php elseif ($record['approved']): ?>
-                                                                <span class="badge badge-success">Odobreno</span>
-                                                            <?php else: ?>
-                                                                <span class="badge badge-error">Zavrnjeno: <?= htmlspecialchars($record['reject_reason']) ?></span>
-                                                            <?php endif; ?>
-
-                                                            <?php if ($record['justification_file']): ?>
-                                                                <a href="download_justification.php?att_id=<?= $record['att_id'] ?>"
-                                                                   class="text-accent ml-sm" target="_blank">
-                                                                    Datoteka
-                                                                </a>
-                                                            <?php endif; ?>
-                                                        <?php else: ?>
-                                                            <span class="text-disabled">Ni opravičila</span>
-                                                        <?php endif; ?>
-                                                    <?php else: ?>
-                                                        <span class="text-disabled">-</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <div class="btn-group">
-                                                        <button type="button"
-                                                                class="btn btn-sm attendance-btn <?= $record['status'] === 'P' ? 'btn-accent' : '' ?>"
-                                                                data-enroll-id="<?= $record['enroll_id'] ?>"
-                                                                data-status="P">P
-                                                        </button>
-                                                        <button type="button"
-                                                                class="btn btn-sm attendance-btn <?= $record['status'] === 'A' ? 'btn-accent' : '' ?>"
-                                                                data-enroll-id="<?= $record['enroll_id'] ?>"
-                                                                data-status="A">A
-                                                        </button>
-                                                        <button type="button"
-                                                                class="btn btn-sm attendance-btn <?= $record['status'] === 'L' ? 'btn-accent' : '' ?>"
-                                                                data-enroll-id="<?= $record['enroll_id'] ?>"
-                                                                data-status="L">L
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div class="mt-lg">
-                                    <div class="d-flex flex-wrap gap-md mb-md">
-                                        <button type="button" class="btn btn-secondary" id="markAllPresent">Vsi
-                                            prisotni
-                                        </button>
-                                        <button type="button" class="btn btn-secondary" id="saveAttendance">Shrani
-                                        </button>
-                                    </div>
-
-                                    <div id="attendanceStatusMessage"></div>
-                                </div>
-                            </form>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            <?php endif; ?>
-        <?php endif; ?>
-    </div>
 </div>
 
 <!-- Add Period Modal -->
@@ -297,28 +291,30 @@ renderHeaderCard(
     <div class="modal-overlay" aria-hidden="true"></div>
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="addPeriodModalTitle">
         <div class="modal-header">
-            <h3 class="modal-title" id="addPeriodModalTitle">Dodaj novo uro</h3>
+            <h3 class="modal-title" id="addPeriodModalTitle">Dodaj Novo Uro</h3>
         </div>
-        <form id="addPeriodForm" method="POST">
+        <form id="addPeriodForm" method="POST"
+              action="attendance.php?class_subject_id=<?= $selectedClassSubjectId ?><?= $selectedPeriodId ? '&period_id=' . $selectedPeriodId : '' ?>">
             <div class="modal-body">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
-                <input type="hidden" name="class_subject_id" value="<?= $selectedClassSubject ?>">
+                <input type="hidden" name="add_period" value="1">
+                <input type="hidden" name="class_subject_id_for_modal" id="class_subject_id_for_modal_input"
+                       value="<?= $selectedClassSubjectId ?>">
 
                 <div class="form-group">
-                    <label for="period_date" class="form-label">Datum:</label>
-                    <input type="date" id="period_date" name="period_date" class="form-input"
-                           value="<?= date('Y-m-d') ?>" required>
+                    <label class="form-label" for="period_date">Datum Ure:</label>
+                    <input type="date" id="period_date" name="period_date" class="form-input" required>
                 </div>
-
                 <div class="form-group">
-                    <label for="period_label" class="form-label">Oznaka ure:</label>
-                    <input type="text" id="period_label" name="period_label" class="form-input"
-                           placeholder="npr. 1. ura, 2. ura, itd." required>
+                    <label class="form-label" for="period_label">Oznaka Ure (npr. Predavanje, Vaje):</label>
+                    <input type="text" id="period_label" name="period_label" class="form-input" required>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-                <button type="submit" class="btn btn-primary">Dodaj</button>
+                <div class="d-flex justify-between w-full">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                    <button type="submit" class="btn btn-primary">Dodaj Uro</button>
+                </div>
             </div>
         </form>
     </div>
@@ -326,14 +322,32 @@ renderHeaderCard(
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // --- Modal Management Functions ---
+        // Standard Modal JS (from modal-guidelines.md)
         const openModal = (modalId) => {
             const modal = document.getElementById(modalId);
             if (modal) {
                 modal.classList.add('open');
-                // Focus the first focusable element
                 const firstFocusable = modal.querySelector('button, [href], input, select, textarea');
                 if (firstFocusable) firstFocusable.focus();
+
+                // Custom logic for addPeriodModal
+                if (modalId === 'addPeriodModal') {
+                    const dateInput = modal.querySelector('#period_date');
+                    if (dateInput) {
+                        dateInput.valueAsDate = new Date(); // Autofill today's date
+                    }
+
+                    const labelInput = modal.querySelector('#period_label');
+                    const openButton = document.querySelector('[data-open-modal="addPeriodModal"]');
+                    if (labelInput && openButton) {
+                        labelInput.value = openButton.dataset.subjectName || 'Predmet';
+                    }
+                    const classSubjectIdInput = modal.querySelector('#class_subject_id_for_modal_input');
+                    if (classSubjectIdInput && openButton && openButton.dataset.classSubjectId) {
+                        classSubjectIdInput.value = openButton.dataset.classSubjectId;
+                    }
+
+                }
             }
         };
 
@@ -341,14 +355,10 @@ renderHeaderCard(
             if (typeof modal === 'string') {
                 modal = document.getElementById(modal);
             }
-
             if (modal) {
                 modal.classList.remove('open');
-                // Reset forms if present
                 const form = modal.querySelector('form');
                 if (form) form.reset();
-
-                // Clear any error messages
                 const errorMsgs = modal.querySelectorAll('.feedback-error');
                 errorMsgs.forEach(msg => {
                     if (msg && msg.style) {
@@ -358,7 +368,6 @@ renderHeaderCard(
             }
         };
 
-        // --- Event Listeners for Modals ---
         document.querySelectorAll('[data-open-modal]').forEach(btn => {
             btn.addEventListener('click', function () {
                 const modalId = this.dataset.openModal;
@@ -380,230 +389,40 @@ renderHeaderCard(
 
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
-                document.querySelectorAll('.modal.open').forEach(modal => {
-                    closeModal(modal);
-                });
+                document.querySelectorAll('.modal.open').forEach(modal => closeModal(modal));
             }
         });
 
-        // --- Add Period Form ---
-        const addPeriodForm = document.getElementById('addPeriodForm');
-        if (addPeriodForm) {
-            addPeriodForm.addEventListener('submit', function (e) {
-                e.preventDefault();
-
-                const formData = new FormData(this);
-                formData.append('action', 'addPeriod');
-
-                fetch('../api/attendance.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            window.location.href = `attendance.php?class_subject_id=${formData.get('class_subject_id')}&period_id=${data.period_id}`;
-                        } else {
-                            // Show error message
-                            createAlert(data.message || 'Napaka pri dodajanju ure.', 'error', '#addPeriodForm .modal-body');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        createAlert('Prišlo je do napake pri komunikaciji s strežnikom.', 'error', '#addPeriodForm .modal-body');
-                    });
-            });
-        }
-
-        // --- Attendance Management ---
-        document.getElementById('attendanceForm');
-        const attendanceStatusMessage = document.getElementById('attendanceStatusMessage');
-
-        // Mark attendance status
-        const attendanceButtons = document.querySelectorAll('.attendance-btn');
-        if (attendanceButtons.length > 0) {
-            attendanceButtons.forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const enrollId = this.dataset.enrollId;
-                    const status = this.dataset.status;
-                    const row = this.closest('tr');
-
-                    // Update UI immediately
-                    row.querySelectorAll('.attendance-btn').forEach(b => {
-                        b.classList.remove('btn-accent');
-                    });
-                    this.classList.add('btn-accent');
-
-                    const statusDisplay = row.querySelector('.attendance-status');
-                    statusDisplay.className = `attendance-status status-${status.toLowerCase()}`;
-                    statusDisplay.dataset.status = status;
-                    statusDisplay.textContent = getStatusLabel(status);
-
-                    // Save change to server
-                    saveAttendanceRecord(enrollId, status);
-                });
-            });
-        }
-
-        // Mark all present button
-        const markAllPresentBtn = document.getElementById('markAllPresent');
-        if (markAllPresentBtn) {
-            markAllPresentBtn.addEventListener('click', function () {
-                const enrollIds = [];
-
-                document.querySelectorAll('.attendance-btn[data-status="P"]').forEach(btn => {
-                    const enrollId = btn.dataset.enrollId;
-
-                    // Only select unmarked or different status
-                    const row = btn.closest('tr');
-                    const currentStatus = row.querySelector('.attendance-status').dataset.status;
-
-                    if (currentStatus !== 'P') {
-                        enrollIds.push(enrollId);
-
-                        // Update UI
-                        row.querySelectorAll('.attendance-btn').forEach(b => {
-                            b.classList.remove('btn-accent');
-                            if (b.dataset.status === 'P') {
-                                b.classList.add('btn-accent');
-                            }
-                        });
-
-                        const statusDisplay = row.querySelector('.attendance-status');
-                        statusDisplay.className = 'attendance-status status-p';
-                        statusDisplay.dataset.status = 'P';
-                        statusDisplay.textContent = getStatusLabel('P');
-                    }
-                });
-
-                // Save all changes
-                if (enrollIds.length > 0) {
-                    saveBulkAttendanceRecords(enrollIds, 'P');
+        // Auto-submit select forms for class/subject and period
+        const classSubjectSelect = document.getElementById('class_subject_id');
+        if (classSubjectSelect) {
+            classSubjectSelect.addEventListener('change', function () {
+                // Clear period_id when class_subject changes
+                const periodSelectField = document.getElementById('period_id');
+                if (periodSelectField) { // if it exists, remove it before submitting
+                    // Create a temporary form to submit only class_subject_id
+                    const tempForm = document.createElement('form');
+                    tempForm.method = 'GET';
+                    tempForm.action = 'attendance.php';
+                    const csInput = document.createElement('input');
+                    csInput.type = 'hidden';
+                    csInput.name = 'class_subject_id';
+                    csInput.value = this.value;
+                    tempForm.appendChild(csInput);
+                    document.body.appendChild(tempForm);
+                    tempForm.submit();
                 } else {
-                    createAlert('Vsi učenci so že označeni kot prisotni.', 'info', '#attendanceStatusMessage');
+                    this.form.submit();
                 }
             });
         }
-
-        // Save all attendance button
-        const saveAttendanceBtn = document.getElementById('saveAttendance');
-        if (saveAttendanceBtn) {
-            saveAttendanceBtn.addEventListener('click', function () {
-                createAlert('Vse spremembe so bile shranjene.', 'success', '#attendanceStatusMessage');
+        const periodSelect = document.getElementById('period_id');
+        if (periodSelect) {
+            periodSelect.addEventListener('change', function () {
+                this.form.submit();
             });
-        }
-
-        // Helper functions
-        function getStatusLabel(status) {
-            switch (status) {
-                case 'P':
-                    return 'Prisoten';
-                case 'A':
-                    return 'Odsoten';
-                case 'L':
-                    return 'Zamudil';
-                default:
-                    return status;
-            }
-        }
-
-        function saveAttendanceRecord(enrollId, status) {
-            const formData = new FormData();
-            formData.append('action', 'saveAttendance');
-            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-            formData.append('enroll_id', enrollId);
-            formData.append('period_id', document.querySelector('input[name="period_id"]').value);
-            formData.append('status', status);
-
-            fetch('../api/attendance.php', {
-                method: 'POST',
-                body: formData
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (!data.success) {
-                        createAlert(data.message || 'Napaka pri shranjevanju prisotnosti.', 'error', '#attendanceStatusMessage');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    createAlert('Prišlo je do napake pri komunikaciji s strežnikom.', 'error', '#attendanceStatusMessage');
-                });
-        }
-
-        function saveBulkAttendanceRecords(enrollIds, status) {
-            let saved = 0;
-            let errors = 0;
-
-            enrollIds.forEach(enrollId => {
-                const formData = new FormData();
-                formData.append('action', 'saveAttendance');
-                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
-                formData.append('enroll_id', enrollId);
-                formData.append('period_id', document.querySelector('input[name="period_id"]').value);
-                formData.append('status', status);
-
-                fetch('../api/attendance.php', {
-                    method: 'POST',
-                    body: formData
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            saved++;
-                        } else {
-                            errors++;
-                        }
-
-                        if (saved + errors === enrollIds.length) {
-                            if (errors === 0) {
-                                createAlert(`Uspešno posodobljeno ${saved} zapisov prisotnosti.`, 'success', '#attendanceStatusMessage');
-                            } else {
-                                createAlert(`Uspešno posodobljeno ${saved} zapisov, napake pri ${errors} zapisih.`, 'warning', '#attendanceStatusMessage');
-                            }
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        errors++;
-
-                        if (saved + errors === enrollIds.length) {
-                            createAlert(`Uspešno posodobljeno ${saved} zapisov, napake pri ${errors} zapisih.`, 'warning', '#attendanceStatusMessage');
-                        }
-                    });
-            });
-        }
-
-        function createAlert(message, type = 'info', container = '#attendanceStatusMessage', autoRemove = true, duration = 5000) {
-            const alertElement = document.createElement('div');
-            alertElement.className = `alert status-${type} card-entrance`;
-
-            const contentElement = document.createElement('div');
-            contentElement.className = 'alert-content';
-            contentElement.innerHTML = message;
-
-            alertElement.appendChild(contentElement);
-
-            const containerElement = document.querySelector(container);
-            containerElement.innerHTML = '';
-            containerElement.appendChild(alertElement);
-
-            if (autoRemove) {
-                setTimeout(() => {
-                    alertElement.classList.add('closing');
-                    setTimeout(() => {
-                        if (containerElement.contains(alertElement)) {
-                            containerElement.removeChild(alertElement);
-                        }
-                    }, 300);
-                }, duration);
-            }
-
-            return alertElement;
         }
     });
 </script>
 
-<?php
-include_once '../includes/footer.php';
-?>
+<?php include_once '../includes/footer.php'; ?>
