@@ -106,8 +106,7 @@ $allStudents = getAllStudentsBasicInfo();
     <?php renderHeaderCard(
         'User Management',
         'Manage user accounts across the system.',
-        'admin',
-        'Administrator'
+        'admin'
     ); ?>
 
     <!-- Status Message -->

@@ -1,7 +1,6 @@
 <?php
 /**
  * Teacher Functions Library
- *
  * File path: /teacher/teacher_functions.php
  *
  * Provides teacher-specific helper functions and dashboard widgets.

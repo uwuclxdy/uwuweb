@@ -136,8 +136,7 @@ $pdo = getDBConnection();
     <?php renderHeaderCard(
         'Upravljanje Predmetov',
         'Dodajanje, urejanje, in brisanje predmetov.',
-        'admin',
-        'Administrator'
+        'admin'
     ); ?>
 
     <?php if (!empty($message)): ?>

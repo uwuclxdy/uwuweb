@@ -102,8 +102,7 @@ $pdo = getDBConnection();
     <?php renderHeaderCard(
         'Upravljanje Razredov',
         'Dodajanje, urejanje, in brisanje razredov v sistemu.',
-        'admin',
-        'Administrator'
+        'admin'
     ); ?>
 
     <?php if (!empty($message)): ?>

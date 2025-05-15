@@ -112,8 +112,7 @@ $pdo = getDBConnection();
     <?php renderHeaderCard(
         'Upravljanje Povezav Razredov in Predmetov',
         'Dodeljevanje predmetov razredom in učiteljem.',
-        'admin',
-        'Administrator'
+        'admin'
     ); ?>
 
     <?php if (!empty($message)): ?>

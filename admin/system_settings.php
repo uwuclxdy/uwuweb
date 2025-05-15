@@ -91,8 +91,7 @@ try {
     <?php renderHeaderCard(
         'Sistemske Nastavitve',
         'Upravljanje sistemskih nastavitev aplikacije.',
-        'admin',
-        'Administrator'
+        'admin'
     ); ?>
 
     <?php if (!empty($message)): ?>
