@@ -245,6 +245,8 @@ Teacher-specific helper functions.
 
 - `findClassSubjectById(array $teacherClasses, int $classSubjectId): ?array` - Finds a class-subject by ID in the
   teacher's classes
+- `isHomeroomTeacher(int $teacherId, int $classId): bool` - Checks if a teacher is a homeroom teacher for a class
+- `getAllAttendanceForClass(int $classId): array` - Retrieves all attendance records for a class
 - `renderTeacherClassOverviewWidget(): string` - Creates the HTML for the teacher's class overview dashboard widget
 - `renderTeacherAttendanceWidget(): string` - Shows attendance status for today's classes taught by the teacher
 - `renderTeacherPendingJustificationsWidget(): string` - Shows absence justifications waiting for teacher approval

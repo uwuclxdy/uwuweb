@@ -8,8 +8,10 @@
  * Core attendance, grade, and justification functions are now in /includes/functions.php.
  *
  *
- *  Utility Functions:
- *  - findClassSubjectById(array $teacherClasses, int $classSubjectId): ?array - Finds a class-subject by its ID from the teacher's classes
+ * Utility Functions:
+ * - findClassSubjectById(array $teacherClasses, int $classSubjectId): ?array - Finds a class-subject by its ID from the teacher's classes
+ * - isHomeroomTeacher(int $teacherId, int $classId): bool - Checks if a teacher is the homeroom teacher for a specific class
+ * - getAllAttendanceForClass(int $classId): array - Retrieves all attendance records for all students in a specific class
  *
  * Dashboard Widgets:
  * - renderTeacherClassOverviewWidget(): string - Creates the HTML for the teacher's class overview dashboard widget
@@ -32,36 +34,24 @@ require_once __DIR__ . '/../includes/functions.php';
 function findClassSubjectById(array $teacherClasses, int $classSubjectId): ?array
 {
     // First check nested structure (classes with subjects array)
-    foreach ($teacherClasses as $class) {
-        if (isset($class['subjects']) && is_array($class['subjects'])) {
-            foreach ($class['subjects'] as $subject) {
-                if (isset($subject['class_subject_id']) && $subject['class_subject_id'] == $classSubjectId) {
-                    return [
-                        'class_id' => $class['class_id'] ?? null,
-                        'class_code' => $class['class_code'] ?? '',
-                        'class_title' => $class['title'] ?? '',
-                        'subject_id' => $subject['subject_id'] ?? null,
-                        'subject_name' => $subject['subject_name'] ?? '',
-                        'class_subject_id' => $subject['class_subject_id']
-                    ];
-                }
-            }
-        }
-    }
+    foreach ($teacherClasses as $class) if (isset($class['subjects']) && is_array($class['subjects'])) foreach ($class['subjects'] as $subject) if (isset($subject['class_subject_id']) && $subject['class_subject_id'] == $classSubjectId) return [
+        'class_id' => $class['class_id'] ?? null,
+        'class_code' => $class['class_code'] ?? '',
+        'class_title' => $class['title'] ?? '',
+        'subject_id' => $subject['subject_id'] ?? null,
+        'subject_name' => $subject['subject_name'] ?? '',
+        'class_subject_id' => $subject['class_subject_id']
+    ];
 
     // Then check flat structure (direct class-subject entries)
-    foreach ($teacherClasses as $class) {
-        if (isset($class['class_subject_id']) && $class['class_subject_id'] == $classSubjectId) {
-            return [
-                'class_id' => $class['class_id'] ?? null,
-                'class_code' => $class['class_code'] ?? '',
-                'class_title' => $class['title'] ?? $class['class_title'] ?? 'Razred',
-                'subject_id' => $class['subject_id'] ?? null,
-                'subject_name' => $class['subject_name'] ?? '',
-                'class_subject_id' => $class['class_subject_id']
-            ];
-        }
-    }
+    foreach ($teacherClasses as $class) if (isset($class['class_subject_id']) && $class['class_subject_id'] == $classSubjectId) return [
+        'class_id' => $class['class_id'] ?? null,
+        'class_code' => $class['class_code'] ?? '',
+        'class_title' => $class['title'] ?? $class['class_title'] ?? 'Razred',
+        'subject_id' => $class['subject_id'] ?? null,
+        'subject_name' => $class['subject_name'] ?? '',
+        'class_subject_id' => $class['class_subject_id']
+    ];
 
     return null;
 }
@@ -374,4 +364,188 @@ function renderTeacherClassAveragesWidget(): string
     $html .= '</div>';
 
     return $html;
+}
+
+///**
+// * Creates the HTML for the teacher's class overview dashboard widget.
+// * @return string HTML content for the widget.
+// */
+//function renderTeacherClassOverviewWidget(): string
+//{
+//    // Implementation depends on what data needs to be shown.
+//    // Example: List of classes, number of students.
+//    // This function might need access to getTeacherClasses().
+//    $teacherId = getTeacherId();
+//    if (!$teacherId) return renderPlaceholderWidget('Podatki o razredih niso na voljo.');
+//
+//    $classes = getTeacherClasses($teacherId);
+//    if (empty($classes)) {
+//        return renderPlaceholderWidget('Nimate dodeljenih nobenih predmetov ali razredov.');
+//    }
+//
+//    $html = '<ul class="list-unstyled">';
+//    foreach ($classes as $class) {
+//        $html .= '<li class="mb-sm">';
+//        $html .= '<a href="/teacher/gradebook.php?class_subject_id=' . $class['class_subject_id'] . '" class="text-primary hover-underline">';
+//        $html .= htmlspecialchars($class['class_title'] . ' - ' . $class['subject_name']);
+//        $html .= '</a>';
+//        // Could add more info, e.g., student count if readily available
+//        $html .= '</li>';
+//    }
+//    $html .= '</ul>';
+//    return $html;
+//}
+//
+///**
+// * Shows attendance status for today's classes taught by the teacher.
+// * This is a simplified version for a dashboard widget.
+// * @return string HTML content for the widget.
+// */
+//function renderTeacherAttendanceWidget(): string
+//{
+//    $teacherId = getTeacherId();
+//    if (!$teacherId) return renderPlaceholderWidget('Podatki o prisotnosti niso na voljo.');
+//
+//    $pdo = safeGetDBConnection();
+//    // This is a conceptual query; actual implementation might be more complex
+//    // to find "today's classes" and their status.
+//    // For simplicity, this might link to the main attendance page.
+//
+//    // Let's list subjects and link to attendance page
+//    $teacherClasses = getTeacherClasses($teacherId);
+//    if (empty($teacherClasses)) {
+//        return renderPlaceholderWidget('Nimate urnika za danes ali nimate dodeljenih predmetov.');
+//    }
+//
+//    $html = '<p class="text-secondary mb-md">Hitri dostop do vodenja prisotnosti za vaše predmete.</p>';
+//    $html .= '<ul class="list-styled">';
+//    foreach ($teacherClasses as $class) {
+//        $html .= '<li><a href="/teacher/attendance.php?class_subject_id=' . $class['class_subject_id'] . '">';
+//        $html .= htmlspecialchars($class['class_title'] . ' - ' . $class['subject_name']) . '</a></li>';
+//    }
+//    $html .= '</ul>';
+//
+//    return $html;
+//}
+//
+//
+///**
+// * Shows absence justifications waiting for teacher approval.
+// * @return string HTML content for the widget.
+// */
+//function renderTeacherPendingJustificationsWidget(): string
+//{
+//    $teacherId = getTeacherId();
+//    if (!$teacherId) return renderPlaceholderWidget('Podatki o opravičilih niso na voljo.');
+//
+//    $pendingJustifications = getPendingJustifications($teacherId);
+//
+//    if (empty($pendingJustifications)) {
+//        return '<p>Ni čakajočih opravičil.</p>';
+//    }
+//
+//    $html = '<ul class="list-unstyled">';
+//    foreach ($pendingJustifications as $justification) {
+//        // Note: Structure of $justification depends on getPendingJustifications()
+//        $studentName = htmlspecialchars($justification['student_first_name'] . ' ' . $justification['student_last_name']);
+//        $subjectName = htmlspecialchars($justification['subject_name']);
+//        $periodDate = formatDateDisplay($justification['period_date']);
+//        $html .= '<li class="mb-sm p-sm border rounded-sm">';
+//        $html .= "<strong>{$studentName}</strong> - {$subjectName} ({$periodDate})";
+//        $html .= ' <a href="/teacher/justifications.php?absence_id=' . $justification['att_id'] . '" class="btn btn-secondary btn-sm ml-sm">Preglej</a>';
+//        $html .= '</li>';
+//    }
+//    $html .= '</ul>';
+//    $html .= '<div class="mt-md"><a href="/teacher/justifications.php" class="btn btn-primary">Vsa Opravičila</a></div>';
+//    return $html;
+//}
+//
+///**
+// * Creates the HTML for the teacher's class averages dashboard widget.
+// * @return string HTML content for the widget.
+// */
+//function renderTeacherClassAveragesWidget(): string
+//{
+//    $teacherId = getTeacherId();
+//    if (!$teacherId) return renderPlaceholderWidget('Podatki o povprečjih niso na voljo.');
+//
+//    $teacherClasses = getTeacherClasses($teacherId);
+//    if (empty($teacherClasses)) {
+//        return renderPlaceholderWidget('Nimate dodeljenih predmetov za prikaz povprečij.');
+//    }
+//
+//    $html = '<ul class="list-unstyled">';
+//    foreach ($teacherClasses as $cs) {
+//        // Fetch grades for this class_subject_id
+//        $grades = getClassGrades($cs['class_subject_id']); // This function gets all grades for all students
+//
+//        $classAverage = 0;
+//        if (!empty($grades)) {
+//            $classAverage = calculateClassAverage($grades); // This function needs to be robust
+//        }
+//
+//        $html .= '<li class="d-flex justify-between items-center mb-sm p-sm border rounded-sm">';
+//        $html .= '<span>' . htmlspecialchars($cs['class_title'] . ' - ' . $cs['subject_name']) . '</span>';
+//        if ($classAverage > 0) {
+//            $html .= '<span class="badge badge-info">' . number_format($classAverage, 2) . '%</span>';
+//        } else {
+//            $html .= '<span class="badge badge-secondary">Ni ocen</span>';
+//        }
+//        $html .= '</li>';
+//    }
+//    $html .= '</ul>';
+//    return $html;
+//}
+
+/**
+ * Checks if a teacher is the homeroom teacher for a specific class.
+ *
+ * @param int $teacherId The ID of the teacher.
+ * @param int $classId The ID of the class.
+ * @return bool True if the teacher is the homeroom teacher, false otherwise.
+ */
+function isHomeroomTeacher(int $teacherId, int $classId): bool
+{
+    $pdo = safeGetDBConnection('isHomeroomTeacher');
+    if (!$pdo) return false;
+
+    try {
+        $stmt = $pdo->prepare("SELECT homeroom_teacher_id FROM classes WHERE class_id = :class_id");
+        $stmt->bindParam(':class_id', $classId, PDO::PARAM_INT);
+        $stmt->execute();
+        $class = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $class && isset($class['homeroom_teacher_id']) && $class['homeroom_teacher_id'] == $teacherId;
+    } catch (PDOException $e) {
+        logDBError($e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Retrieves all attendance records for all students in a specific class.
+ *
+ * @param int $classId The ID of the class.
+ * @return array An array of attendance records. Each record includes student_id.
+ */
+function getAllAttendanceForClass(int $classId): array
+{
+    $pdo = safeGetDBConnection('getAllAttendanceForClass');
+    if (!$pdo) return [];
+
+    try {
+        // Fetches all attendance records for all students in a specific class
+        // Joins with enrollments to link attendance to student_id via class_id
+        $sql = "SELECT att.*, e.student_id
+                FROM attendance att
+                JOIN enrollments e ON att.enroll_id = e.enroll_id
+                WHERE e.class_id = :class_id";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindParam(':class_id', $classId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        logDBError($e->getMessage());
+        return [];
+    }
 }
