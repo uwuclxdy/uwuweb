@@ -86,7 +86,31 @@ function renderTeacherClassOverviewWidget(): string
                 <p>Ni dodeljenih razredov/predmetov</p>
             </div>';
 
-    $html = '';
+    $html = '<div class="d-flex flex-column h-full">';
+
+    // Classes section
+    $html .= '<div class="rounded p-0 shadow mb-lg flex-grow-1 d-flex flex-column">';
+    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Dodeljeni razredi in predmeti</h5>';
+    $html .= '<div class="px-md py-sm flex-grow-1 overflow-auto">';
+    $html .= '<ul class="p-0 m-0">';
+
+    foreach ($classes as $class) {
+        $html .= '<li class="d-flex justify-between items-center py-sm border-bottom">';
+        $html .= '<div>';
+        $html .= '<div class="font-medium">' . htmlspecialchars($class['subject_name']) . '</div>';
+        $html .= '<div class="text-sm text-secondary">' . htmlspecialchars($class['class_code']) . ' - ' . htmlspecialchars($class['class_title']) . '</div>';
+        $html .= '</div>';
+        $html .= '<div class="d-flex items-center">';
+        $html .= '<span class="badge badge-primary">' . htmlspecialchars($class['student_count']) . ' učencev</span>';
+        $html .= '</div>';
+        $html .= '</li>';
+    }
+
+    $html .= '</ul>';
+    $html .= '</div>';
+    $html .= '</div>';
+
+    $html .= '</div>'; // Close main container
 
     return $html;
 }
@@ -98,6 +122,7 @@ function renderTeacherClassOverviewWidget(): string
  */
 function renderTeacherAttendanceWidget(): string
 {
+    // todo: simplify the view to "[class_code] + [status on the right]" and make it linked to "/teacher/attendance.php?class_subject_id=[class_subject_id]&period_id=[period_id]"
     $teacherId = getTeacherId();
     if (!$teacherId) return renderPlaceholderWidget('Informacije o učitelju niso na voljo.');
 
@@ -118,7 +143,49 @@ function renderTeacherAttendanceWidget(): string
     $stmt->execute();
     $todayClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $html = '';
+    $html = '<div class="d-flex flex-column h-full">';
+
+    // Today's classes header
+    $html .= '<div class="rounded p-0 shadow mb-lg">';
+
+    if (empty($todayClasses)) {
+        $html .= '<div class="px-md py-lg d-flex flex-column items-center justify-center text-disabled">';
+        $html .= '<p class="m-0">Danes nimate predvidenih ur</p>';
+    } else {
+        $html .= '<div class="px-md py-sm">';
+        $html .= '<div class="d-flex flex-column gap-xs">';
+
+        foreach ($todayClasses as $class) {
+            $attendanceComplete = ($class['recorded_attendance'] == $class['total_students']);
+            $attendanceStatus = $attendanceComplete ? 'status-success' : 'status-warning';
+            $attendanceText = $attendanceComplete ? 'Vpisana prisotnost' : 'Manjka prisotnost';
+            $attendanceProgress = $class['total_students'] > 0
+                ? round(($class['recorded_attendance'] / $class['total_students']) * 100)
+                : 0;
+
+            $html .= '<div class="d-flex flex-column px-sm py-sm border rounded-sm ' . ($attendanceComplete ? 'border-success' : '') . '">';
+            $html .= '<div class="d-flex justify-between items-center">';
+            $html .= '<div class="font-medium">' . htmlspecialchars($class['period_label']) . '. ura - ' . htmlspecialchars($class['subject_name']) . '</div>';
+            $html .= '<div class="badge ' . ($attendanceComplete ? 'badge-success' : 'badge-warning') . '">' . $attendanceText . '</div>';
+            $html .= '</div>';
+
+            $html .= '<div class="text-sm">' . htmlspecialchars($class['class_code']) . ' - ' . $class['recorded_attendance'] . '/' . $class['total_students'] . ' učencev</div>';
+
+            // Progress bar
+            $html .= '<div class="mt-xs w-full h-xs rounded-full bg-secondary">';
+            $html .= '<div class="h-full rounded-full ' . ($attendanceComplete ? 'bg-success' : 'bg-warning') . '" style="width: ' . $attendanceProgress . '%"></div>';
+            $html .= '</div>';
+
+            $html .= '</div>';
+        }
+
+        $html .= '</div>';
+    }
+    $html .= '</div>';
+
+    $html .= '</div>'; // Close today's classes
+
+    $html .= '</div>'; // Close main container
 
     return $html;
 }
@@ -165,7 +232,80 @@ function renderTeacherPendingJustificationsWidget(): string
     $countStmt->execute();
     $totalPending = (int)$countStmt->fetchColumn();
 
-    $html = '';
+    $html = '<div class="d-flex flex-column h-full">';
+
+    // Stats section
+    $html .= '<div class="rounded p-0 shadow mb-lg">';
+    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Pregled opravičil</h5>';
+    $html .= '<div class="px-md py-md">';
+
+    if ($totalPending > 0) {
+        $html .= '<div class="d-flex justify-between items-center">';
+        $html .= '<span>Čakajoča opravičila:</span>';
+        $html .= '<span class="badge badge-primary">' . $totalPending . '</span>';
+        $html .= '</div>';
+    } else $html .= '<div class="text-center text-secondary">Ni čakajočih opravičil</div>';
+
+    $html .= '</div>';
+    $html .= '</div>';
+
+    // Justifications section (expandable)
+    $html .= '<div class="rounded p-0 shadow flex-grow-1 d-flex flex-column">';
+    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Zadnja opravičila</h5>';
+
+    $html .= '<div class="flex-grow-1 overflow-auto">';
+
+    if (empty($justifications)) {
+        $html .= '<div class="px-md py-lg d-flex flex-column items-center justify-center text-disabled h-full">';
+        $html .= '<p class="m-0">Trenutno ni čakajočih opravičil</p>';
+    } else {
+        $html .= '<div class="px-md py-sm">';
+
+        foreach ($justifications as $item) {
+            $html .= '<div class="border-bottom py-sm">';
+            $html .= '<div class="d-flex justify-between">';
+            $html .= '<div class="font-medium">' . htmlspecialchars($item['first_name'] . ' ' . $item['last_name']) . '</div>';
+            $html .= '<div class="text-sm badge badge-secondary">' . htmlspecialchars($item['class_code']) . '</div>';
+            $html .= '</div>';
+
+            $html .= '<div class="text-sm">' . formatDateDisplay($item['period_date']) . ' - ' . htmlspecialchars($item['period_label']) . '. ura - ' . htmlspecialchars($item['subject_name']) . '</div>';
+
+            // Truncate justification text if too long
+            $justificationText = htmlspecialchars($item['justification']);
+            if (strlen($justificationText) > 100) $justificationText = substr($justificationText, 0, 97) . '...';
+
+            $html .= '<div class="text-sm text-secondary mt-xs">' . $justificationText . '</div>';
+
+            // File indicator and action buttons
+            $html .= '<div class="d-flex justify-between items-center mt-xs">';
+
+            // File indicator
+            if (!empty($item['justification_file'])) $html .= '<div class="text-xs badge badge-info">Priložena datoteka</div>'; else $html .= '<div></div>';
+
+            // Actions
+            $html .= '<div class="d-flex gap-xs">';
+            $html .= '<a href="/uwuweb/teacher/justifications.php?id=' . $item['att_id'] . '" class="btn btn-sm btn-primary">Preglej</a>';
+            $html .= '</div>';
+
+            $html .= '</div>'; // End actions row
+            $html .= '</div>'; // End justification item
+        }
+
+    }
+    $html .= '</div>';
+
+    $html .= '</div>'; // End scrollable container
+
+    // View all link
+    if ($totalPending > 0) {
+        $html .= '<div class="border-top p-sm d-flex justify-end">';
+        $html .= '<a href="/uwuweb/teacher/justifications.php" class="text-accent text-sm">Preglej vsa opravičila (' . $totalPending . ')</a>';
+        $html .= '</div>';
+    }
+
+    $html .= '</div>'; // End justifications section
+
+    $html .= '</div>'; // Close main container
 
     return $html;
 }
@@ -201,7 +341,111 @@ function renderTeacherClassAveragesWidget(): string
     $stmt->execute();
     $classAverages = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    $html = '';
+    $html = '<div class="d-flex flex-column h-full">';
+
+    // Find best and worst classes
+    $bestClass = null;
+    $worstClass = null;
+    $bestScore = -1;
+    $worstScore = 101;
+
+    foreach ($classAverages as $class) if ($class['avg_score'] !== null) {
+        if ($class['avg_score'] > $bestScore) {
+            $bestScore = $class['avg_score'];
+            $bestClass = $class;
+        }
+        if ($class['avg_score'] < $worstScore) {
+            $worstScore = $class['avg_score'];
+            $worstClass = $class;
+        }
+    }
+
+    // Performance highlights section
+    if (!empty($classAverages) && $bestClass && $worstClass) {
+        $html .= '<div class="rounded p-0 shadow mb-lg">';
+        $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Pregled uspešnosti</h5>';
+        $html .= '<div class="px-md py-sm">';
+
+        // Best performing class
+        $html .= '<div class="mb-md">';
+        $html .= '<div class="text-sm text-secondary">Najvišja povprečna ocena</div>';
+        $html .= '<div class="d-flex justify-between items-center">';
+        $html .= '<div class="font-medium">' . htmlspecialchars($bestClass['subject_name']) . ' - ' . htmlspecialchars($bestClass['class_title']) . '</div>';
+
+        $bestGrade = getGradeLetter($bestScore);
+        $gradeClass = 'grade-' . $bestGrade;
+
+        $html .= '<div class="badge ' . $gradeClass . '">' . round($bestScore, 1) . '% (' . $bestGrade . ')</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+
+        // Lowest performing class
+        $html .= '<div>';
+        $html .= '<div class="text-sm text-secondary">Najnižja povprečna ocena</div>';
+        $html .= '<div class="d-flex justify-between items-center">';
+        $html .= '<div class="font-medium">' . htmlspecialchars($worstClass['subject_name']) . ' - ' . htmlspecialchars($worstClass['class_title']) . '</div>';
+
+        $worstGrade = getGradeLetter($worstScore);
+        $gradeClass = 'grade-' . $worstGrade;
+
+        $html .= '<div class="badge ' . $gradeClass . '">' . round($worstScore, 1) . '% (' . $worstGrade . ')</div>';
+        $html .= '</div>';
+        $html .= '</div>';
+
+        $html .= '</div>';
+        $html .= '</div>';
+    }
+
+    // All classes section (expandable)
+    $html .= '<div class="rounded p-0 shadow flex-grow-1 d-flex flex-column">';
+    $html .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Povprečja po razredih</h5>';
+    $html .= '<div class="px-md py-sm flex-grow-1 overflow-auto">';
+
+    if (empty($classAverages)) {
+        $html .= '<div class="d-flex flex-column items-center justify-center text-disabled h-full">';
+        $html .= '<p class="m-0">Ni podatkov o razrednih povprečjih</p>';
+    } else {
+        $html .= '<div class="d-flex flex-column gap-xs">';
+
+        // Group by subject for better organization
+        $subjectGroups = [];
+        foreach ($classAverages as $class) {
+            if (!isset($subjectGroups[$class['subject_name']])) $subjectGroups[$class['subject_name']] = [];
+            $subjectGroups[$class['subject_name']][] = $class;
+        }
+
+        foreach ($subjectGroups as $subjectName => $classes) {
+            $html .= '<div class="mb-sm">';
+            $html .= '<div class="font-medium mb-xs">' . htmlspecialchars($subjectName) . '</div>';
+
+            foreach ($classes as $class) {
+                // Calculate grade
+                $gradeScore = $class['avg_score'] ?? 0;
+                $grade = getGradeLetter($gradeScore);
+                $scoreText = $class['avg_score'] !== null ? round($class['avg_score'], 1) . '%' : 'N/A';
+
+                $gradeClass = $class['avg_score'] !== null ? 'grade-' . $grade : 'badge-secondary';
+
+                $html .= '<div class="d-flex justify-between items-center py-xs border-bottom">';
+                $html .= '<div class="d-flex items-center">';
+                $html .= '<div>' . htmlspecialchars($class['class_title']) . '</div>';
+                $html .= '<div class="text-sm text-secondary ml-sm">' . $class['student_count'] . ' učencev</div>';
+                $html .= '</div>';
+
+                $html .= '<div class="badge ' . $gradeClass . '">' . $scoreText . ($class['avg_score'] !== null ? ' (' . $grade . ')' : '') . '</div>';
+                $html .= '</div>';
+            }
+
+            $html .= '</div>';
+        }
+
+    }
+    $html .= '</div>';
+
+    $html .= '</div>';
+    $html .= '</div>'; // End all classes section
+
+    $html .= '</div>'; // Close main container
 
     return $html;
 }

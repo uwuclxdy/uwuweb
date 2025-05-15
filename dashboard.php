@@ -57,7 +57,7 @@ $userInfo = getUserInfo($_SESSION['user_id']);
                 <div class="card__title px-md py-md">
                     <?= htmlspecialchars($widget['title']) ?>
                 </div>
-                <div class="card__content px-md py-md">
+                <div class="card__content py-sm">
                     <?php
                     // Call the widget's render function if it exists
                     if (function_exists($widget['function'])) echo call_user_func($widget['function']); else echo '<p class="text-disabled">Vsebina pripomočka ni na voljo</p>';
