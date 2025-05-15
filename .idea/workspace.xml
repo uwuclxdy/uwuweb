@@ -7,21 +7,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="update backend">
-      <change beforePath="$PROJECT_DIR$/.idea/.sourcegraph/cody_settings.json" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.sourcegraph/cody_settings.json" afterDir="false" />
+    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="update headers">
+      <change afterPath="$PROJECT_DIR$/includes/download_justification.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/modal-guidelines.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/modal-guidelines.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/project-outline.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/project-outline.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db/uwuweb.sql" beforeDir="false" afterPath="$PROJECT_DIR$/db/uwuweb.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/project-functions.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/project-functions.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/includes/auth.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/auth.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/includes/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/functions.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parent/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/attendance.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parent/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/grades.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/student/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/attendance.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/student/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/grades.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/student/justification.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/justification.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/teacher/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/teacher/gradebook.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/gradebook.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/teacher/download_justification.php" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/teacher/justifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/justifications.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/teacher/teacher_functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/teacher_functions.php" afterDir="false" />
     </list>
@@ -62,7 +62,7 @@
 }</component>
   <component name="PhpWorkspaceProjectConfiguration" interpreter_name="PHP" />
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="QODANA_PROBLEMS_VIEW_TAB" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
@@ -73,6 +73,7 @@
     <ConfirmationsSetting value="1" id="Add" />
   </component>
   <component name="ProjectViewState">
+    <option name="autoscrollFromSource" value="true" />
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
@@ -102,7 +103,7 @@
     "SHELLCHECK.PATH": "/home/uwuclxdy/.local/share/JetBrains/PhpStorm2025.1/Shell Script/shellcheck",
     "git-widget-placeholder": "main",
     "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/home/uwuclxdy/PhpstormProjects/uwuweb/design",
+    "last_opened_file_path": "/home/uwuclxdy/PhpstormProjects/uwuweb/teacher",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.standard": "true",
     "node.js.detected.package.tslint": "true",
@@ -111,7 +112,7 @@
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "reference.settingsdialog.IDE.editor.colors.Language Defaults",
+    "settings.editor.selected.configurable": "MTTitleBarConfigurable",
     "vue.rearranger.settings.migration": "true"
   },
   "keyToStringList": {
@@ -129,9 +130,11 @@
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/teacher" />
       <recent name="$PROJECT_DIR$/design" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/includes" />
       <recent name="$PROJECT_DIR$/docs" />
     </key>
   </component>
@@ -166,8 +169,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-6a121458b545-JavaScript-PS-251.25410.148" />
-        <option value="bundled-php-predefined-a98d8de5180a-c5828cf854d9-com.jetbrains.php.sharedIndexes-PS-251.25410.148" />
+        <option value="bundled-js-predefined-d6986cc7102b-43a09073042e-JavaScript-PS-252.13776.56" />
+        <option value="bundled-php-predefined-a98d8de5180a-927333cdaedb-com.jetbrains.php.sharedIndexes-PS-252.13776.56" />
       </set>
     </attachedChunks>
   </component>
@@ -223,95 +226,8 @@
       <workItem from="1747236162937" duration="18300000" />
       <workItem from="1747262623317" duration="1076000" />
       <workItem from="1747314238343" duration="110000" />
-      <workItem from="1747314357500" duration="3206000" />
-    </task>
-    <task id="LOCAL-00038" summary="refactor">
-      <option name="closed" value="true" />
-      <created>1746642811473</created>
-      <option name="number" value="00038" />
-      <option name="presentableId" value="LOCAL-00038" />
-      <option name="project" value="LOCAL" />
-      <updated>1746642811473</updated>
-    </task>
-    <task id="LOCAL-00039" summary="small docs change">
-      <option name="closed" value="true" />
-      <created>1746644676920</created>
-      <option name="number" value="00039" />
-      <option name="presentableId" value="LOCAL-00039" />
-      <option name="project" value="LOCAL" />
-      <updated>1746644676920</updated>
-    </task>
-    <task id="LOCAL-00040" summary="fix admin users page">
-      <option name="closed" value="true" />
-      <created>1746647382182</created>
-      <option name="number" value="00040" />
-      <option name="presentableId" value="LOCAL-00040" />
-      <option name="project" value="LOCAL" />
-      <updated>1746647382182</updated>
-    </task>
-    <task id="LOCAL-00041" summary="update dashboard widget">
-      <option name="closed" value="true" />
-      <created>1746719041956</created>
-      <option name="number" value="00041" />
-      <option name="presentableId" value="LOCAL-00041" />
-      <option name="project" value="LOCAL" />
-      <updated>1746719041957</updated>
-    </task>
-    <task id="LOCAL-00042" summary="update dashboard widgets">
-      <option name="closed" value="true" />
-      <created>1746719088128</created>
-      <option name="number" value="00042" />
-      <option name="presentableId" value="LOCAL-00042" />
-      <option name="project" value="LOCAL" />
-      <updated>1746719088128</updated>
-    </task>
-    <task id="LOCAL-00043" summary="update index.php">
-      <option name="closed" value="true" />
-      <created>1746719250184</created>
-      <option name="number" value="00043" />
-      <option name="presentableId" value="LOCAL-00043" />
-      <option name="project" value="LOCAL" />
-      <updated>1746719250184</updated>
-    </task>
-    <task id="LOCAL-00044" summary="update admin structure and docs">
-      <option name="closed" value="true" />
-      <created>1746724058915</created>
-      <option name="number" value="00044" />
-      <option name="presentableId" value="LOCAL-00044" />
-      <option name="project" value="LOCAL" />
-      <updated>1746724058915</updated>
-    </task>
-    <task id="LOCAL-00045" summary="fix users.php">
-      <option name="closed" value="true" />
-      <created>1746724075528</created>
-      <option name="number" value="00045" />
-      <option name="presentableId" value="LOCAL-00045" />
-      <option name="project" value="LOCAL" />
-      <updated>1746724075528</updated>
-    </task>
-    <task id="LOCAL-00046" summary="update admin colors">
-      <option name="closed" value="true" />
-      <created>1746724445711</created>
-      <option name="number" value="00046" />
-      <option name="presentableId" value="LOCAL-00046" />
-      <option name="project" value="LOCAL" />
-      <updated>1746724445711</updated>
-    </task>
-    <task id="LOCAL-00047" summary="fix users.php">
-      <option name="closed" value="true" />
-      <created>1746725155669</created>
-      <option name="number" value="00047" />
-      <option name="presentableId" value="LOCAL-00047" />
-      <option name="project" value="LOCAL" />
-      <updated>1746725155669</updated>
-    </task>
-    <task id="LOCAL-00048" summary="allow dots in username">
-      <option name="closed" value="true" />
-      <created>1746725385897</created>
-      <option name="number" value="00048" />
-      <option name="presentableId" value="LOCAL-00048" />
-      <option name="project" value="LOCAL" />
-      <updated>1746725385897</updated>
+      <workItem from="1747314357500" duration="31043000" />
+      <workItem from="1747346444119" duration="1773000" />
     </task>
     <task id="LOCAL-00049" summary="document modal for consistency later on.">
       <option name="closed" value="true" />
@@ -617,7 +533,95 @@
       <option name="project" value="LOCAL" />
       <updated>1747261309110</updated>
     </task>
-    <option name="localTasksCounter" value="87" />
+    <task id="LOCAL-00087" summary="update docs">
+      <option name="closed" value="true" />
+      <created>1747318880142</created>
+      <option name="number" value="00087" />
+      <option name="presentableId" value="LOCAL-00087" />
+      <option name="project" value="LOCAL" />
+      <updated>1747318880143</updated>
+    </task>
+    <task id="LOCAL-00088" summary="update docs">
+      <option name="closed" value="true" />
+      <created>1747318979267</created>
+      <option name="number" value="00088" />
+      <option name="presentableId" value="LOCAL-00088" />
+      <option name="project" value="LOCAL" />
+      <updated>1747318979267</updated>
+    </task>
+    <task id="LOCAL-00089" summary="update backend">
+      <option name="closed" value="true" />
+      <created>1747329957856</created>
+      <option name="number" value="00089" />
+      <option name="presentableId" value="LOCAL-00089" />
+      <option name="project" value="LOCAL" />
+      <updated>1747329957856</updated>
+    </task>
+    <task id="LOCAL-00090" summary="update backend">
+      <option name="closed" value="true" />
+      <created>1747332609129</created>
+      <option name="number" value="00090" />
+      <option name="presentableId" value="LOCAL-00090" />
+      <option name="project" value="LOCAL" />
+      <updated>1747332609129</updated>
+    </task>
+    <task id="LOCAL-00091" summary="update teacher pages">
+      <option name="closed" value="true" />
+      <created>1747332625849</created>
+      <option name="number" value="00091" />
+      <option name="presentableId" value="LOCAL-00091" />
+      <option name="project" value="LOCAL" />
+      <updated>1747332625849</updated>
+    </task>
+    <task id="LOCAL-00092" summary="fixed gradebook.php">
+      <option name="closed" value="true" />
+      <created>1747340827377</created>
+      <option name="number" value="00092" />
+      <option name="presentableId" value="LOCAL-00092" />
+      <option name="project" value="LOCAL" />
+      <updated>1747340827377</updated>
+    </task>
+    <task id="LOCAL-00093" summary="update backend">
+      <option name="closed" value="true" />
+      <created>1747340850756</created>
+      <option name="number" value="00093" />
+      <option name="presentableId" value="LOCAL-00093" />
+      <option name="project" value="LOCAL" />
+      <updated>1747340850756</updated>
+    </task>
+    <task id="LOCAL-00094" summary="fixed teacher attendance.php">
+      <option name="closed" value="true" />
+      <created>1747340920812</created>
+      <option name="number" value="00094" />
+      <option name="presentableId" value="LOCAL-00094" />
+      <option name="project" value="LOCAL" />
+      <updated>1747340920812</updated>
+    </task>
+    <task id="LOCAL-00095" summary="update teacher dashboard">
+      <option name="closed" value="true" />
+      <created>1747341355767</created>
+      <option name="number" value="00095" />
+      <option name="presentableId" value="LOCAL-00095" />
+      <option name="project" value="LOCAL" />
+      <updated>1747341355767</updated>
+    </task>
+    <task id="LOCAL-00096" summary="update headers">
+      <option name="closed" value="true" />
+      <created>1747341454833</created>
+      <option name="number" value="00096" />
+      <option name="presentableId" value="LOCAL-00096" />
+      <option name="project" value="LOCAL" />
+      <updated>1747341454833</updated>
+    </task>
+    <task id="LOCAL-00097" summary="update headers">
+      <option name="closed" value="true" />
+      <created>1747345175811</created>
+      <option name="number" value="00097" />
+      <option name="presentableId" value="LOCAL-00097" />
+      <option name="project" value="LOCAL" />
+      <updated>1747345175811</updated>
+    </task>
+    <option name="localTasksCounter" value="98" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -649,12 +653,6 @@
   <component name="VcsManagerConfiguration">
     <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN" value="false" />
-    <MESSAGE value="manage_classes.php fully functional" />
-    <MESSAGE value="update sql" />
-    <MESSAGE value="implement manage_subjects.php" />
-    <MESSAGE value="modal update" />
-    <MESSAGE value="update ide files" />
-    <MESSAGE value="update css" />
     <MESSAGE value="update footer" />
     <MESSAGE value="update header - admin page complete" />
     <MESSAGE value="add notif docs" />
@@ -673,8 +671,14 @@
     <MESSAGE value="update teacher dashboard widgets" />
     <MESSAGE value="update docs and make a header function" />
     <MESSAGE value="update db" />
+    <MESSAGE value="update docs" />
+    <MESSAGE value="update teacher pages" />
+    <MESSAGE value="fixed gradebook.php" />
     <MESSAGE value="update backend" />
-    <option name="LAST_COMMIT_MESSAGE" value="update backend" />
+    <MESSAGE value="fixed teacher attendance.php" />
+    <MESSAGE value="update teacher dashboard" />
+    <MESSAGE value="update headers" />
+    <option name="LAST_COMMIT_MESSAGE" value="update headers" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />

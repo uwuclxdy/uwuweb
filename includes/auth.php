@@ -222,7 +222,8 @@ function updateLastActivityTime(): void
  * @param string $reason Optional reason to include in the redirect URL
  * @return void
  */
-#[NoReturn] function destroySession(string $reason = ''): void
+#[NoReturn]
+function destroySession(string $reason = ''): void
 {
     $_SESSION = array();
 
