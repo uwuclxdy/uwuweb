@@ -509,12 +509,16 @@ function getWidgetsByRole(int $role): array
 
         case ROLE_PARENT:
             $widgets[] = [
-                'title' => 'Prisotnost otroka',
+                'title' => 'Prisotnost',
                 'function' => 'renderParentAttendanceWidget'
             ];
             $widgets[] = [
-                'title' => 'Povprečja otroka',
+                'title' => 'Povprečja',
                 'function' => 'renderParentChildClassAveragesWidget'
+            ];
+            $widgets[] = [
+                'title' => 'Opravičila',
+                'function' => 'renderParentJustificationsWidget'
             ];
             break;
     }

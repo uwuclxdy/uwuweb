@@ -7,29 +7,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="update css">
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/a79c5948-f716-4edb-ba8d-1ab0002eca4d.xml" afterDir="false" />
+    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="implement parent grades">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin/manage_assignments.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/manage_assignments.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin/manage_classes.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/manage_classes.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin/manage_subjects.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/manage_subjects.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin/system_settings.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/system_settings.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/admin/users.php" beforeDir="false" afterPath="$PROJECT_DIR$/admin/users.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/admin.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/admin.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/api/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/api/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/db/seed_demo.sql" beforeDir="false" afterPath="$PROJECT_DIR$/db/seed_demo.sql" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docs/project-functions.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/project-functions.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/includes/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/functions.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/index.php" beforeDir="false" afterPath="$PROJECT_DIR$/index.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parent/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parent/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/grades.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/student/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/attendance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/student/grades.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/grades.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/student/justification.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/justification.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/student/student_functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/student/student_functions.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/teacher/gradebook.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/gradebook.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/teacher/justifications.php" beforeDir="false" afterPath="$PROJECT_DIR$/teacher/justifications.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/parent/parent_functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/parent_functions.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -118,7 +100,7 @@
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "MTTitleBarConfigurable",
+    "settings.editor.selected.configurable": "editor.preferences.completion",
     "vue.rearranger.settings.migration": "true"
   },
   "keyToStringList": {
@@ -250,55 +232,7 @@
       <workItem from="1747262623317" duration="1076000" />
       <workItem from="1747314238343" duration="110000" />
       <workItem from="1747314357500" duration="31043000" />
-      <workItem from="1747346444119" duration="8932000" />
-    </task>
-    <task id="LOCAL-00054" summary="small update to modal docs">
-      <option name="closed" value="true" />
-      <created>1746730245834</created>
-      <option name="number" value="00054" />
-      <option name="presentableId" value="LOCAL-00054" />
-      <option name="project" value="LOCAL" />
-      <updated>1746730245834</updated>
-    </task>
-    <task id="LOCAL-00055" summary="lazy ahh copilot fix">
-      <option name="closed" value="true" />
-      <created>1746731293113</created>
-      <option name="number" value="00055" />
-      <option name="presentableId" value="LOCAL-00055" />
-      <option name="project" value="LOCAL" />
-      <updated>1746731293113</updated>
-    </task>
-    <task id="LOCAL-00056" summary="manage_classes.php fully functional">
-      <option name="closed" value="true" />
-      <created>1746734185395</created>
-      <option name="number" value="00056" />
-      <option name="presentableId" value="LOCAL-00056" />
-      <option name="project" value="LOCAL" />
-      <updated>1746734185395</updated>
-    </task>
-    <task id="LOCAL-00057" summary="manage_classes.php fully functional">
-      <option name="closed" value="true" />
-      <created>1746734290271</created>
-      <option name="number" value="00057" />
-      <option name="presentableId" value="LOCAL-00057" />
-      <option name="project" value="LOCAL" />
-      <updated>1746734290271</updated>
-    </task>
-    <task id="LOCAL-00058" summary="manage_classes.php fully functional">
-      <option name="closed" value="true" />
-      <created>1746734388267</created>
-      <option name="number" value="00058" />
-      <option name="presentableId" value="LOCAL-00058" />
-      <option name="project" value="LOCAL" />
-      <updated>1746734388267</updated>
-    </task>
-    <task id="LOCAL-00059" summary="update sql">
-      <option name="closed" value="true" />
-      <created>1746734910116</created>
-      <option name="number" value="00059" />
-      <option name="presentableId" value="LOCAL-00059" />
-      <option name="project" value="LOCAL" />
-      <updated>1746734910116</updated>
+      <workItem from="1747346444119" duration="13751000" />
     </task>
     <task id="LOCAL-00060" summary="implement manage_subjects.php">
       <option name="closed" value="true" />
@@ -644,7 +578,55 @@
       <option name="project" value="LOCAL" />
       <updated>1747352050388</updated>
     </task>
-    <option name="localTasksCounter" value="103" />
+    <task id="LOCAL-00103" summary="implement student grades.php">
+      <option name="closed" value="true" />
+      <created>1747355400177</created>
+      <option name="number" value="00103" />
+      <option name="presentableId" value="LOCAL-00103" />
+      <option name="project" value="LOCAL" />
+      <updated>1747355400178</updated>
+    </task>
+    <task id="LOCAL-00104" summary="update backend">
+      <option name="closed" value="true" />
+      <created>1747355434313</created>
+      <option name="number" value="00104" />
+      <option name="presentableId" value="LOCAL-00104" />
+      <option name="project" value="LOCAL" />
+      <updated>1747355434313</updated>
+    </task>
+    <task id="LOCAL-00105" summary="finally attendance / opravičila typeshi">
+      <option name="closed" value="true" />
+      <created>1747355535852</created>
+      <option name="number" value="00105" />
+      <option name="presentableId" value="LOCAL-00105" />
+      <option name="project" value="LOCAL" />
+      <updated>1747355535853</updated>
+    </task>
+    <task id="LOCAL-00106" summary="sync ide stuff">
+      <option name="closed" value="true" />
+      <created>1747355560571</created>
+      <option name="number" value="00106" />
+      <option name="presentableId" value="LOCAL-00106" />
+      <option name="project" value="LOCAL" />
+      <updated>1747355560571</updated>
+    </task>
+    <task id="LOCAL-00107" summary="minor cleanup">
+      <option name="closed" value="true" />
+      <created>1747355637667</created>
+      <option name="number" value="00107" />
+      <option name="presentableId" value="LOCAL-00107" />
+      <option name="project" value="LOCAL" />
+      <updated>1747355637667</updated>
+    </task>
+    <task id="LOCAL-00108" summary="implement parent grades">
+      <option name="closed" value="true" />
+      <created>1747356821920</created>
+      <option name="number" value="00108" />
+      <option name="presentableId" value="LOCAL-00108" />
+      <option name="project" value="LOCAL" />
+      <updated>1747356821920</updated>
+    </task>
+    <option name="localTasksCounter" value="109" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -676,11 +658,6 @@
   <component name="VcsManagerConfiguration">
     <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN" value="false" />
-    <MESSAGE value="fix ts fucking link finally" />
-    <MESSAGE value="update notifs" />
-    <MESSAGE value="update ide stuff" />
-    <MESSAGE value="update anims" />
-    <MESSAGE value="prepare to implement" />
     <MESSAGE value="implement manage_assignments.php" />
     <MESSAGE value="update modals" />
     <MESSAGE value="update strings / modals" />
@@ -694,14 +671,19 @@
     <MESSAGE value="update docs" />
     <MESSAGE value="update teacher pages" />
     <MESSAGE value="fixed gradebook.php" />
-    <MESSAGE value="update backend" />
     <MESSAGE value="fixed teacher attendance.php" />
     <MESSAGE value="update teacher dashboard" />
     <MESSAGE value="update headers" />
     <MESSAGE value="reformat" />
     <MESSAGE value="opravicila v1 rahhh" />
     <MESSAGE value="update css" />
-    <option name="LAST_COMMIT_MESSAGE" value="update css" />
+    <MESSAGE value="implement student grades.php" />
+    <MESSAGE value="update backend" />
+    <MESSAGE value="finally attendance / opravičila typeshi" />
+    <MESSAGE value="sync ide stuff" />
+    <MESSAGE value="minor cleanup" />
+    <MESSAGE value="implement parent grades" />
+    <option name="LAST_COMMIT_MESSAGE" value="implement parent grades" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
