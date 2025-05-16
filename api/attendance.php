@@ -32,11 +32,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($_POST)) sendJsonErrorResponse('No data submitted', 400, 'attendance_api');
 
     // Handle different API actions
-    if (isset($_POST['class_subject_id'], $_POST['period_date'], $_POST['period_label'])) handleAddPeriodApi(); elseif (isset($_POST['period_id'], $_POST['enroll_id'], $_POST['status'])) handleSaveAttendanceApi();
-    elseif (isset($_POST['period_id']) && !isset($_POST['enroll_id'])) handleGetPeriodAttendanceApi();
-    elseif (isset($_POST['student_id'], $_POST['start_date'], $_POST['end_date'])) handleGetStudentAttendanceApi();
+    if (isset($_POST['class_subject_id'], $_POST['period_date'], $_POST['period_label'])) try {
+        handleAddPeriodApi();
+    } catch (JsonException $e) {
+        sendJsonErrorResponse('Invalid JSON', 400, 'attendance_api');
+    } elseif (isset($_POST['period_id'], $_POST['enroll_id'], $_POST['status'])) try {
+        handleSaveAttendanceApi();
+    } catch (JsonException $e) {
+        sendJsonErrorResponse('Invalid JSON', 400, 'attendance_api');
+    }
+    elseif (isset($_POST['period_id']) && !isset($_POST['enroll_id'])) try {
+        handleGetPeriodAttendanceApi();
+    } catch (JsonException $e) {
+        sendJsonErrorResponse('Invalid JSON', 400, 'attendance_api');
+    }
+    elseif (isset($_POST['student_id'], $_POST['start_date'], $_POST['end_date'])) try {
+        handleGetStudentAttendanceApi();
+    } catch (JsonException $e) {
+        sendJsonErrorResponse('Invalid JSON', 400, 'attendance_api');
+    }
     else sendJsonErrorResponse('Invalid action', 400, 'attendance_api');
-} elseif ($_SERVER['REQUEST_METHOD'] === 'GET') if (isset($_GET['period_id'])) handleGetPeriodAttendanceApi(); elseif (isset($_GET['student_id'])) handleGetStudentAttendanceApi();
+} elseif ($_SERVER['REQUEST_METHOD'] === 'GET') if (isset($_GET['period_id'])) try {
+    handleGetPeriodAttendanceApi();
+} catch (JsonException $e) {
+    sendJsonErrorResponse('Invalid JSON', 400, 'attendance_api');
+} elseif (isset($_GET['student_id'])) try {
+    handleGetStudentAttendanceApi();
+} catch (JsonException $e) {
+    sendJsonErrorResponse('Invalid JSON', 400, 'attendance_api');
+}
 else sendJsonErrorResponse('Invalid request', 400, 'attendance_api');
 else sendJsonErrorResponse('Method not allowed', 405, 'attendance_api');
 

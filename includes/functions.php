@@ -498,10 +498,6 @@ function getWidgetsByRole(int $role): array
                 'function' => 'renderStudentAttendanceWidget'
             ];
             $widgets[] = [
-                'title' => 'Prihajajoče ure',
-                'function' => 'renderUpcomingClassesWidget'
-            ];
-            $widgets[] = [
                 'title' => 'Moje ocene',
                 'function' => 'renderStudentGradesWidget'
             ];
@@ -967,39 +963,50 @@ function getAttendanceStatusLabel(string $status): string
 /**
  * Calculates statistics from attendance records
  *
- * @param array $attendance Array of attendance records
- * @return array Statistics including counts and percentages
+ * @param array $attendance The attendance records
+ * @return array The calculated statistics
  */
 function calculateAttendanceStats(array $attendance): array
 {
     $total = count($attendance);
+    if ($total === 0) return [];
+
     $present = 0;
     $absent = 0;
     $late = 0;
+    $justified = 0;
 
-    foreach ($attendance as $record) {
-        if (!isset($record['status'])) continue;
-        switch (strtoupper($record['status'])) {
-            case 'P':
-                $present++;
-                break;
-            case 'A':
-                $absent++;
-                break;
-            case 'L':
-                $late++;
-                break;
-        }
+    foreach ($attendance as $record) if ($record['status'] === 'P') $present++; elseif ($record['status'] === 'A') {
+        $absent++;
+        // Count approved justifications
+        if (isset($record['approved']) && $record['approved'] === '1') $justified++;
+    } elseif ($record['status'] === 'L') {
+        $late++;
+        // Count approved justifications for late arrivals too
+        if (isset($record['approved']) && $record['approved'] === '1') $justified++;
     }
 
+    // Calculate percentages
+    $present_percent = $total > 0 ? round(($present / $total) * 100) : 0;
+    $absent_percent = $total > 0 ? round(($absent / $total) * 100) : 0;
+    $late_percent = $total > 0 ? round(($late / $total) * 100) : 0;
+
+    // Total absences and lates
+    $totalAbsencesAndLates = $absent + $late;
+
+    // Calculate justified percentage from total absences and lates, not from total attendance
+    $justified_percent = $totalAbsencesAndLates > 0 ? round(($justified / $totalAbsencesAndLates) * 100) : 0;
+
     return [
+        'present' => $present,
+        'absent' => $absent,
+        'late' => $late,
+        'justified' => $justified,
         'total' => $total,
-        'present_count' => $present,
-        'absent_count' => $absent,
-        'late_count' => $late,
-        'present_percent' => $total > 0 ? round(($present / $total) * 100, 1) : 0,
-        'absent_percent' => $total > 0 ? round(($absent / $total) * 100, 1) : 0,
-        'late_percent' => $total > 0 ? round(($late / $total) * 100, 1) : 0,
+        'present_percent' => $present_percent,
+        'absent_percent' => $absent_percent,
+        'late_percent' => $late_percent,
+        'justified_percent' => $justified_percent
     ];
 }
 
@@ -1965,10 +1972,6 @@ function getJustificationById(int $absenceId): ?array
  */
 function approveJustification(int $absenceId): bool
 {
-    // Verify teacher has access to this justification
-    $justification = getJustificationById($absenceId);
-    if (!$justification) return false;
-
     try {
         $pdo = safeGetDBConnection('approveJustification');
         if ($pdo === null) return false;
@@ -1996,10 +1999,6 @@ function approveJustification(int $absenceId): bool
  */
 function rejectJustification(int $absenceId, string $reason): bool
 {
-    // Verify teacher has access to this justification
-    $justification = getJustificationById($absenceId);
-    if (!$justification) return false;
-
     if (empty($reason)) return false;
 
     try {

@@ -76,8 +76,10 @@ Core utility functions library.
 - `getAttendanceStatusLabel(string $status): string` - Translates attendance status code to readable label
 - `calculateAttendanceStats(array $attendance): array` - Calculates statistics from attendance records
 -
+
 `getStudentAttendance(int $studentId, ?string $startDate = null, ?string $endDate = null, bool $checkAccess = true): array` -
 Gets attendance records for a student
+
 - `getStudentAttendanceByDate(int $studentId, string $date): array` - Gets student attendance for a specific date
 - `validatePeriodDate(string $date): bool` - Validates period date to ensure it's not too far in the future or past
 - `isClassEmpty(int $classId): bool` - Checks if a class is empty (has no students)
@@ -236,13 +238,14 @@ Parent-specific helper functions.
 Student-specific helper functions.
 
 ### Grade Functions
+
 - `calculateGradeStatistics(array $grades): array` - Calculate grade statistics grouped by subject and class
 
 ### Dashboard Widget Functions
+
 - `renderStudentGradesWidget(): string` - Creates the HTML for the student's grades dashboard widget
 - `renderStudentAttendanceWidget(): string` - Creates the HTML for the student's attendance dashboard widget
 - `renderStudentClassAveragesWidget(): string` - Creates the HTML for the student's class averages dashboard widget
-- `renderUpcomingClassesWidget(): string` - Creates the HTML for a student's upcoming classes widget
 
 ## /teacher/teacher_functions.php
 

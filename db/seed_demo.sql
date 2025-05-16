@@ -1,500 +1,320 @@
--- seed_demo.sql - Sample data for uwuweb
+-- Demo data for uwuweb
 USE uwuweb;
 
--- Teachers
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('novak.j', '$2y$10$cWdPksSP0u0R4Jn4mRJaVuJX6ZNKkgEXV82JZJwL7pZU8VYlv35uu', 2);
-SET @novak_user_id = LAST_INSERT_ID();
+-- Clear existing data (except admin user and roles)
+SET FOREIGN_KEY_CHECKS = 0;
+TRUNCATE TABLE attendance;
+TRUNCATE TABLE grades;
+TRUNCATE TABLE grade_items;
+TRUNCATE TABLE periods;
+TRUNCATE TABLE enrollments;
+TRUNCATE TABLE class_subjects;
+TRUNCATE TABLE classes;
+TRUNCATE TABLE subjects;
+TRUNCATE TABLE student_parent;
+TRUNCATE TABLE parents;
+TRUNCATE TABLE teachers;
+TRUNCATE TABLE students;
+DELETE
+FROM users
+WHERE user_id > 1; -- Keep admin user
+SET FOREIGN_KEY_CHECKS = 1;
 
+-- Add users (admin user already exists)
 INSERT INTO users (username, pass_hash, role_id)
-VALUES ('kovac.a', '$2y$10$cWdPksSP0u0R4Jn4mRJaVuJX6ZNKkgEXV82JZJwL7pZU8VYlv35uu', 2);
-SET @kovac_user_id = LAST_INSERT_ID();
+VALUES ('teacher', '$2y$10$DKGGjDuuPBUCvRtJal7D0exxxdI.ppSxuwDInrUJvSahSEUs2ZgNy', 2),  -- Teacher
+       ('teacher2', '$2y$10$DKGGjDuuPBUCvRtJal7D0exxxdI.ppSxuwDInrUJvSahSEUs2ZgNy', 2), -- Teacher
+       ('teacher3', '$2y$10$DKGGjDuuPBUCvRtJal7D0exxxdI.ppSxuwDInrUJvSahSEUs2ZgNy', 2), -- Teacher
+       ('student', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3),  -- Student
+       ('student2', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3), -- Student
+       ('student3', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3), -- Student
+       ('student4', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3), -- Student
+       ('student5', '$2y$10$oU9BG1pHyKk7xcBd0Lc5Hu/I3IdR/rbzzeCKzSG66/ahSwH2a/Tcm', 3), -- Student
+       ('parent', '$2y$10$5PEvGKuui1hEZXVabZmk9Orr.FYsLunLmfh0g/XkwTUgulrTJltqW', 4),   -- Parent
+       ('parent2', '$2y$10$5PEvGKuui1hEZXVabZmk9Orr.FYsLunLmfh0g/XkwTUgulrTJltqW', 4);
+-- Parent
 
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('horvat.m', '$2y$10$cWdPksSP0u0R4Jn4mRJaVuJX6ZNKkgEXV82JZJwL7pZU8VYlv35uu', 2);
-SET @horvat_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('teacher', '$2y$10$cWdPksSP0u0R4Jn4mRJaVuJX6ZNKkgEXV82JZJwL7pZU8VYlv35uu', 2);
-SET @teacher_user_id = LAST_INSERT_ID();
-
+-- Add teachers
 INSERT INTO teachers (user_id, first_name, last_name)
-VALUES (@novak_user_id, 'Janez', 'Novak');
-SET @teacher_novak_id = LAST_INSERT_ID();
+VALUES (2, 'Marija', 'Novak'), -- Math teacher, homeroom for 1.A
+       (3, 'Anton', 'Kovač'),  -- Slovenian teacher, homeroom for 2.B
+       (4, 'Ana', 'Zupančič');
+-- English teacher, homeroom for 3.C
 
-INSERT INTO teachers (user_id, first_name, last_name)
-VALUES (@kovac_user_id, 'Ana', 'Kovač');
-SET @teacher_kovac_id = LAST_INSERT_ID();
-
-INSERT INTO teachers (user_id, first_name, last_name)
-VALUES (@horvat_user_id, 'Matej', 'Horvat');
-SET @teacher_horvat_id = LAST_INSERT_ID();
-
-INSERT INTO teachers (user_id, first_name, last_name)
-VALUES (@teacher_user_id, 'Tina', 'Zupan');
-SET @teacher_zupan_id = LAST_INSERT_ID();
-
--- Subjects
-INSERT INTO subjects (name)
-VALUES ('Matematika');
-SET @subject_math_id = LAST_INSERT_ID();
-
-INSERT INTO subjects (name)
-VALUES ('Slovenščina');
-SET @subject_slovenian_id = LAST_INSERT_ID();
-
-INSERT INTO subjects (name)
-VALUES ('Angleščina');
-SET @subject_english_id = LAST_INSERT_ID();
-
-INSERT INTO subjects (name)
-VALUES ('Fizika');
-SET @subject_physics_id = LAST_INSERT_ID();
-
-INSERT INTO subjects (name)
-VALUES ('Zgodovina');
-SET @subject_history_id = LAST_INSERT_ID();
-
--- Classes (with homeroom teachers)
-INSERT INTO classes (class_code, title, homeroom_teacher_id)
-VALUES ('1A', '1. A razred', @teacher_novak_id);
-SET @class_1a_id = LAST_INSERT_ID();
-
-INSERT INTO classes (class_code, title, homeroom_teacher_id)
-VALUES ('2B', '2. B razred', @teacher_kovac_id);
-SET @class_2b_id = LAST_INSERT_ID();
-
-INSERT INTO classes (class_code, title, homeroom_teacher_id)
-VALUES ('3C', '3. C razred', @teacher_horvat_id);
-SET @class_3c_id = LAST_INSERT_ID();
-
--- Students
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('kranjc.m', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
-SET @kranjc_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('polanc.p', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
-SET @polanc_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('zajc.l', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
-SET @zajc_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('vidmar.k', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
-SET @vidmar_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('zupancic.j', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
-SET @zupancic_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('kobal.n', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
-SET @kobal_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('golob.s', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
-SET @golob_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('novak.e', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
-SET @novak_e_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('kralj.a', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
-SET @kralj_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('student', '$2y$10$Yz0lLAypzHHK7Hn6dJ0See.KJutt8TwMLWbd53tQxCCI6e.0XC1/m', 3);
-SET @student_user_id = LAST_INSERT_ID();
-
+-- Add students
 INSERT INTO students (user_id, first_name, last_name, dob, class_code)
-VALUES (@kranjc_user_id, 'Maja', 'Kranjc', '2007-03-15', '1A');
-SET @student_kranjc_id = LAST_INSERT_ID();
+VALUES (5, 'Luka', 'Horvat', '2006-05-15', '3.A'),   -- 17-18 years old, 3rd year
+       (6, 'Maja', 'Krajnc', '2007-02-22', '2.B'),   -- 16-17 years old, 2nd year
+       (7, 'Jan', 'Kovačič', '2006-11-08', '3.A'),   -- 17-18 years old, 3rd year
+       (8, 'Nina', 'Potočnik', '2008-09-30', '1.A'), -- 15-16 years old, 1st year
+       (9, 'Tilen', 'Vidmar', '2008-04-12', '1.A');
+-- 15-16 years old, 1st year
 
-INSERT INTO students (user_id, first_name, last_name, dob, class_code)
-VALUES (@polanc_user_id, 'Peter', 'Polanc', '2007-05-22', '1A');
-SET @student_polanc_id = LAST_INSERT_ID();
-
-INSERT INTO students (user_id, first_name, last_name, dob, class_code)
-VALUES (@zajc_user_id, 'Luka', 'Zajc', '2007-11-08', '1A');
-SET @student_zajc_id = LAST_INSERT_ID();
-
-INSERT INTO students (user_id, first_name, last_name, dob, class_code)
-VALUES (@vidmar_user_id, 'Katja', 'Vidmar', '2007-09-30', '1A');
-SET @student_vidmar_id = LAST_INSERT_ID();
-
-INSERT INTO students (user_id, first_name, last_name, dob, class_code)
-VALUES (@zupancic_user_id, 'Jan', 'Zupančič', '2006-02-14', '2B');
-SET @student_zupancic_id = LAST_INSERT_ID();
-
-INSERT INTO students (user_id, first_name, last_name, dob, class_code)
-VALUES (@kobal_user_id, 'Nina', 'Kobal', '2006-07-19', '2B');
-SET @student_kobal_id = LAST_INSERT_ID();
-
-INSERT INTO students (user_id, first_name, last_name, dob, class_code)
-VALUES (@golob_user_id, 'Sara', 'Golob', '2006-04-05', '2B');
-SET @student_golob_id = LAST_INSERT_ID();
-
-INSERT INTO students (user_id, first_name, last_name, dob, class_code)
-VALUES (@novak_e_user_id, 'Eva', 'Novak', '2005-12-10', '3C');
-SET @student_novak_id = LAST_INSERT_ID();
-
-INSERT INTO students (user_id, first_name, last_name, dob, class_code)
-VALUES (@kralj_user_id, 'Anže', 'Kralj', '2005-08-27', '3C');
-SET @student_kralj_id = LAST_INSERT_ID();
-
-INSERT INTO students (user_id, first_name, last_name, dob, class_code)
-VALUES (@student_user_id, 'Zala', 'Kos', '2005-06-03', '3C');
-SET @student_kos_id = LAST_INSERT_ID();
-
--- Parents
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('kranjc.g', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4);
-SET @kranjc_p_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('polanc.j', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4);
-SET @polanc_p_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('zajc.b', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4);
-SET @zajc_p_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('kobal.m', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4);
-SET @kobal_p_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('novak.i', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4);
-SET @novak_p_user_id = LAST_INSERT_ID();
-
-INSERT INTO users (username, pass_hash, role_id)
-VALUES ('parent', '$2y$10$kqtgZ/QQrORdpA3K65P.5OyWgYxyF5ZJt.pW/oC7SC7mLK.gUvXj6', 4);
-SET @parent_user_id = LAST_INSERT_ID();
-
+-- Add parents
 INSERT INTO parents (user_id)
-VALUES (@kranjc_p_user_id);
-SET @parent_kranjc_id = LAST_INSERT_ID();
+VALUES (10), -- First parent
+       (11);
+-- Second parent
 
-INSERT INTO parents (user_id)
-VALUES (@polanc_p_user_id);
-SET @parent_polanc_id = LAST_INSERT_ID();
-
-INSERT INTO parents (user_id)
-VALUES (@zajc_p_user_id);
-SET @parent_zajc_id = LAST_INSERT_ID();
-
-INSERT INTO parents (user_id)
-VALUES (@kobal_p_user_id);
-SET @parent_kobal_id = LAST_INSERT_ID();
-
-INSERT INTO parents (user_id)
-VALUES (@novak_p_user_id);
-SET @parent_novak_id = LAST_INSERT_ID();
-
-INSERT INTO parents (user_id)
-VALUES (@parent_user_id);
-SET @parent_kos_id = LAST_INSERT_ID();
-
--- Student-Parent relationships
+-- Link students to parents (student_parent table)
 INSERT INTO student_parent (student_id, parent_id)
-VALUES (@student_kranjc_id, @parent_kranjc_id),
-       (@student_polanc_id, @parent_polanc_id),
-       (@student_zajc_id, @parent_zajc_id),
-       (@student_kobal_id, @parent_kobal_id),
-       (@student_novak_id, @parent_novak_id),
-       (@student_kos_id, @parent_kos_id);
+VALUES (1, 1), -- Luka's parent is "stars"
+       (2, 2), -- Maja's parent is "stars2"
+       (3, 1), -- Jan's parent is also "stars"
+       (4, 2), -- Nina's parent is "stars2"
+       (5, 2);
+-- Tilen's parent is "stars2"
 
--- Class-Subject-Teacher assignments
+-- Add subjects
+INSERT INTO subjects (name)
+VALUES ('Matematika'),  -- Mathematics
+       ('Slovenščina'), -- Slovenian
+       ('Angleščina'),  -- English
+       ('Fizika'),      -- Physics
+       ('Kemija'),      -- Chemistry
+       ('Zgodovina'),   -- History
+       ('Geografija'),  -- Geography
+       ('Informatika'), -- Computer Science
+       ('Športna vzgoja');
+-- Physical Education
+
+-- Add classes (homeroom groups)
+INSERT INTO classes (class_code, title, homeroom_teacher_id)
+VALUES ('1.A', '1. letnik, skupina A', 1), -- 1st year, group A - Math teacher as homeroom
+       ('2.B', '2. letnik, skupina B', 2), -- 2nd year, group B - Slovenian teacher as homeroom
+       ('3.A', '3. letnik, skupina A', 3);
+-- 3rd year, group A - English teacher as homeroom
+
+-- Assign subjects to classes with teachers (class_subjects)
 INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_1a_id, @subject_math_id, @teacher_novak_id);
-SET @cs_1a_math_id = LAST_INSERT_ID();
+VALUES
+-- 1.A class subjects
+(1, 1, 1), -- Mathematics taught by Marija
+(1, 2, 2), -- Slovenian taught by Anton
+(1, 3, 3), -- English taught by Ana
+(1, 4, 1), -- Physics taught by Marija
+(1, 9, 2), -- PE taught by Anton
 
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_1a_id, @subject_slovenian_id, @teacher_kovac_id);
-SET @cs_1a_slovenian_id = LAST_INSERT_ID();
+-- 2.B class subjects
+(2, 1, 1), -- Mathematics taught by Marija
+(2, 2, 2), -- Slovenian taught by Anton
+(2, 3, 3), -- English taught by Ana
+(2, 5, 1), -- Chemistry taught by Marija
+(2, 6, 2), -- History taught by Anton
+(2, 9, 2), -- PE taught by Anton
 
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_1a_id, @subject_english_id, @teacher_horvat_id);
-SET @cs_1a_english_id = LAST_INSERT_ID();
+-- 3.A class subjects
+(3, 1, 1), -- Mathematics taught by Marija
+(3, 2, 2), -- Slovenian taught by Anton
+(3, 3, 3), -- English taught by Ana
+(3, 7, 3), -- Geography taught by Ana
+(3, 8, 1), -- Computer Science taught by Marija
+(3, 9, 2);
+-- PE taught by Anton
 
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_1a_id, @subject_history_id, @teacher_zupan_id);
-SET @cs_1a_history_id = LAST_INSERT_ID();
-
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_2b_id, @subject_math_id, @teacher_novak_id);
-SET @cs_2b_math_id = LAST_INSERT_ID();
-
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_2b_id, @subject_slovenian_id, @teacher_kovac_id);
-SET @cs_2b_slovenian_id = LAST_INSERT_ID();
-
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_2b_id, @subject_english_id, @teacher_horvat_id);
-SET @cs_2b_english_id = LAST_INSERT_ID();
-
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_2b_id, @subject_physics_id, @teacher_zupan_id);
-SET @cs_2b_physics_id = LAST_INSERT_ID();
-
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_3c_id, @subject_math_id, @teacher_novak_id);
-SET @cs_3c_math_id = LAST_INSERT_ID();
-
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_3c_id, @subject_slovenian_id, @teacher_kovac_id);
-SET @cs_3c_slovenian_id = LAST_INSERT_ID();
-
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_3c_id, @subject_english_id, @teacher_horvat_id);
-SET @cs_3c_english_id = LAST_INSERT_ID();
-
-INSERT INTO class_subjects (class_id, subject_id, teacher_id)
-VALUES (@class_3c_id, @subject_physics_id, @teacher_zupan_id);
-SET @cs_3c_physics_id = LAST_INSERT_ID();
-
--- Enrollments
+-- Enroll students in classes
 INSERT INTO enrollments (student_id, class_id)
-VALUES (@student_kranjc_id, @class_1a_id);
-SET @enroll_kranjc_id = LAST_INSERT_ID();
+VALUES (1, 3), -- Luka in 3.A
+       (2, 2), -- Maja in 2.B
+       (3, 3), -- Jan in 3.A
+       (4, 1), -- Nina in 1.A
+       (5, 1);
+-- Tilen in 1.A
 
-INSERT INTO enrollments (student_id, class_id)
-VALUES (@student_polanc_id, @class_1a_id);
-SET @enroll_polanc_id = LAST_INSERT_ID();
+-- Create periods (class sessions)
+-- Current date for reference
+SET @today = CURDATE();
+SET @yesterday = DATE_SUB(@today, INTERVAL 1 DAY);
+SET @lastWeek = DATE_SUB(@today, INTERVAL 7 DAY);
+SET @twoWeeksAgo = DATE_SUB(@today, INTERVAL 14 DAY);
+SET @threeWeeksAgo = DATE_SUB(@today, INTERVAL 21 DAY);
+SET @oneMonthAgo = DATE_SUB(@today, INTERVAL 30 DAY);
 
-INSERT INTO enrollments (student_id, class_id)
-VALUES (@student_zajc_id, @class_1a_id);
-SET @enroll_zajc_id = LAST_INSERT_ID();
-
-INSERT INTO enrollments (student_id, class_id)
-VALUES (@student_vidmar_id, @class_1a_id);
-SET @enroll_vidmar_id = LAST_INSERT_ID();
-
-INSERT INTO enrollments (student_id, class_id)
-VALUES (@student_zupancic_id, @class_2b_id);
-SET @enroll_zupancic_id = LAST_INSERT_ID();
-
-INSERT INTO enrollments (student_id, class_id)
-VALUES (@student_kobal_id, @class_2b_id);
-SET @enroll_kobal_id = LAST_INSERT_ID();
-
-INSERT INTO enrollments (student_id, class_id)
-VALUES (@student_golob_id, @class_2b_id);
-SET @enroll_golob_id = LAST_INSERT_ID();
-
-INSERT INTO enrollments (student_id, class_id)
-VALUES (@student_novak_id, @class_3c_id);
-SET @enroll_novak_id = LAST_INSERT_ID();
-
-INSERT INTO enrollments (student_id, class_id)
-VALUES (@student_kralj_id, @class_3c_id);
-SET @enroll_kralj_id = LAST_INSERT_ID();
-
-INSERT INTO enrollments (student_id, class_id)
-VALUES (@student_kos_id, @class_3c_id);
-SET @enroll_kos_id = LAST_INSERT_ID();
-
--- Periods (for the last month)
 INSERT INTO periods (class_subject_id, period_date, period_label)
 VALUES
--- 1A Math
-(@cs_1a_math_id, DATE_SUB(CURDATE(), INTERVAL 20 DAY), '1. ura');
-SET @period_1a_math_1_id = LAST_INSERT_ID();
+-- Mathematics for 1.A
+(1, @yesterday, '1. ura'),     -- Yesterday, 1st period
+(1, @lastWeek, '3. ura'),      -- Last week, 3rd period
+(1, @twoWeeksAgo, '2. ura'),   -- Two weeks ago, 2nd period
 
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_1a_math_id, DATE_SUB(CURDATE(), INTERVAL 15 DAY), '3. ura');
-SET @period_1a_math_2_id = LAST_INSERT_ID();
+-- Slovenian for 1.A
+(2, @yesterday, '2. ura'),     -- Yesterday, 2nd period
+(2, @lastWeek, '4. ura'),      -- Last week, 4th period
 
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_1a_math_id, DATE_SUB(CURDATE(), INTERVAL 10 DAY), '2. ura');
-SET @period_1a_math_3_id = LAST_INSERT_ID();
+-- English for 1.A
+(3, @today, '2. ura'),         -- Today, 2nd period
+(3, @lastWeek, '5. ura'),      -- Last week, 5th period
 
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_1a_math_id, DATE_SUB(CURDATE(), INTERVAL 5 DAY), '4. ura');
-SET @period_1a_math_4_id = LAST_INSERT_ID();
+-- Mathematics for 2.B
+(7, @today, '1. ura'),         -- Today, 1st period
+(7, @lastWeek, '2. ura'),      -- Last week, 2nd period
+(7, @threeWeeksAgo, '3. ura'), -- Three weeks ago, 3rd period
 
--- 1A Slovenian
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_1a_slovenian_id, DATE_SUB(CURDATE(), INTERVAL 19 DAY), '2. ura');
-SET @period_1a_slovenian_1_id = LAST_INSERT_ID();
+-- Slovenian for 2.B
+(8, @yesterday, '3. ura'),     -- Yesterday, 3rd period
+(8, @lastWeek, '1. ura'),      -- Last week, 1st period
 
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_1a_slovenian_id, DATE_SUB(CURDATE(), INTERVAL 14 DAY), '1. ura');
-SET @period_1a_slovenian_2_id = LAST_INSERT_ID();
+-- Mathematics for 3.A
+(13, @today, '3. ura'),        -- Today, 3rd period
+(13, @oneMonthAgo, '1. ura'),  -- One month ago, 1st period
 
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_1a_slovenian_id, DATE_SUB(CURDATE(), INTERVAL 9 DAY), '3. ura');
-SET @period_1a_slovenian_3_id = LAST_INSERT_ID();
+-- Computer Science for 3.A
+(17, @today, '4. ura'),        -- Today, 4th period
+(17, @yesterday, '5. ura');
+-- Yesterday, 5th period
 
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_1a_slovenian_id, DATE_SUB(CURDATE(), INTERVAL 4 DAY), '2. ura');
-SET @period_1a_slovenian_4_id = LAST_INSERT_ID();
-
--- 2B Math
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_2b_math_id, DATE_SUB(CURDATE(), INTERVAL 18 DAY), '3. ura');
-SET @period_2b_math_1_id = LAST_INSERT_ID();
-
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_2b_math_id, DATE_SUB(CURDATE(), INTERVAL 13 DAY), '2. ura');
-SET @period_2b_math_2_id = LAST_INSERT_ID();
-
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_2b_math_id, DATE_SUB(CURDATE(), INTERVAL 8 DAY), '4. ura');
-SET @period_2b_math_3_id = LAST_INSERT_ID();
-
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_2b_math_id, DATE_SUB(CURDATE(), INTERVAL 3 DAY), '1. ura');
-SET @period_2b_math_4_id = LAST_INSERT_ID();
-
--- 3C English
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_3c_english_id, DATE_SUB(CURDATE(), INTERVAL 17 DAY), '4. ura');
-SET @period_3c_english_1_id = LAST_INSERT_ID();
-
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_3c_english_id, DATE_SUB(CURDATE(), INTERVAL 12 DAY), '2. ura');
-SET @period_3c_english_2_id = LAST_INSERT_ID();
-
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_3c_english_id, DATE_SUB(CURDATE(), INTERVAL 7 DAY), '1. ura');
-SET @period_3c_english_3_id = LAST_INSERT_ID();
-
-INSERT INTO periods (class_subject_id, period_date, period_label)
-VALUES (@cs_3c_english_id, DATE_SUB(CURDATE(), INTERVAL 2 DAY), '3. ura');
-SET @period_3c_english_4_id = LAST_INSERT_ID();
-
--- Grade Items
-INSERT INTO grade_items (class_subject_id, name, max_points)
+-- Create grade items
+INSERT INTO grade_items (class_subject_id, name, max_points, date)
 VALUES
--- 1A Math
-(@cs_1a_math_id, 'Test 1: Osnovne operacije', 50.00);
-SET @item_1a_math_1_id = LAST_INSERT_ID();
+-- Mathematics 1.A grade items
+(1, 'Test 1 - Osnove algebre', 30.00, DATE_SUB(@today, INTERVAL 20 DAY)),
+(1, 'Test 2 - Linearne funkcije', 40.00, DATE_SUB(@today, INTERVAL 10 DAY)),
+(1, 'Domača naloga 1', 10.00, DATE_SUB(@today, INTERVAL 25 DAY)),
 
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_1a_math_id, 'Kontrolna naloga: Enačbe', 30.00);
-SET @item_1a_math_2_id = LAST_INSERT_ID();
+-- Slovenian 1.A grade items
+(2, 'Pisni izdelek - Opis osebe', 20.00, DATE_SUB(@today, INTERVAL 15 DAY)),
+(2, 'Test - Slovnica', 30.00, DATE_SUB(@today, INTERVAL 8 DAY)),
 
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_1a_math_id, 'Domača naloga: Geometrija', 10.00);
-SET @item_1a_math_3_id = LAST_INSERT_ID();
+-- English 1.A grade items
+(3, 'Vocabulary Test', 25.00, DATE_SUB(@today, INTERVAL 12 DAY)),
+(3, 'Reading Comprehension', 20.00, DATE_SUB(@today, INTERVAL 5 DAY)),
 
--- 1A Slovenian
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_1a_slovenian_id, 'Esej: Cankar', 40.00);
-SET @item_1a_slovenian_1_id = LAST_INSERT_ID();
+-- Mathematics 2.B grade items
+(7, 'Test - Kvadratne funkcije', 40.00, DATE_SUB(@today, INTERVAL 14 DAY)),
+(7, 'Ustno ocenjevanje', 20.00, DATE_SUB(@today, INTERVAL 7 DAY)),
 
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_1a_slovenian_id, 'Test slovnice', 30.00);
-SET @item_1a_slovenian_2_id = LAST_INSERT_ID();
+-- Slovenian 2.B grade items
+(8, 'Test - Književnost', 35.00, DATE_SUB(@today, INTERVAL 18 DAY)),
+(8, 'Govorni nastop', 25.00, DATE_SUB(@today, INTERVAL 9 DAY)),
 
--- 2B Math
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_2b_math_id, 'Test: Funkcije', 50.00);
-SET @item_2b_math_1_id = LAST_INSERT_ID();
+-- Mathematics 3.A grade items
+(13, 'Test - Trigonometrija', 45.00, DATE_SUB(@today, INTERVAL 16 DAY)),
+(13, 'Seminarska naloga', 30.00, DATE_SUB(@today, INTERVAL 4 DAY)),
 
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_2b_math_id, 'Kontrolna naloga: Trigonometrija', 30.00);
-SET @item_2b_math_2_id = LAST_INSERT_ID();
+-- Computer Science 3.A grade items
+(17, 'Projektno delo - Spletna stran', 50.00, DATE_SUB(@today, INTERVAL 13 DAY)),
+(17, 'Test - Algoritmi', 35.00, DATE_SUB(@today, INTERVAL 3 DAY));
 
--- 2B Physics
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_2b_physics_id, 'Test: Gibanje', 40.00);
-SET @item_2b_physics_1_id = LAST_INSERT_ID();
+-- Insert grades
+-- Get enrollment IDs for reference
+SET @enroll_luka = 1; -- Luka in 3.A
+SET @enroll_maja = 2; -- Maja in 2.B
+SET @enroll_jan = 3; -- Jan in 3.A
+SET @enroll_nina = 4; -- Nina in 1.A
+SET @enroll_tilen = 5; -- Tilen in 1.A
 
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_2b_physics_id, 'Laboratorijsko delo', 20.00);
-SET @item_2b_physics_2_id = LAST_INSERT_ID();
-
--- 3C English
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_3c_english_id, 'Written exam', 50.00);
-SET @item_3c_english_1_id = LAST_INSERT_ID();
-
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_3c_english_id, 'Oral examination', 30.00);
-SET @item_3c_english_2_id = LAST_INSERT_ID();
-
-INSERT INTO grade_items (class_subject_id, name, max_points)
-VALUES (@cs_3c_english_id, 'Essay: My future', 20.00);
-SET @item_3c_english_3_id = LAST_INSERT_ID();
-
--- Grades
 INSERT INTO grades (enroll_id, item_id, points, comment)
 VALUES
--- 1A Math - Maja Kranjc
-(@enroll_kranjc_id, @item_1a_math_1_id, 45.00, 'Zelo dobro razumevanje snovi'),
-(@enroll_kranjc_id, @item_1a_math_2_id, 28.00, 'Manjša napaka pri računanju'),
-(@enroll_kranjc_id, @item_1a_math_3_id, 9.50, NULL),
--- 1A Math - Peter Polanc
-(@enroll_polanc_id, @item_1a_math_1_id, 38.00, 'Potrebno več vaje'),
-(@enroll_polanc_id, @item_1a_math_2_id, 22.00, NULL),
-(@enroll_polanc_id, @item_1a_math_3_id, 8.00, NULL),
--- 1A Slovenian - Maja Kranjc
-(@enroll_kranjc_id, @item_1a_slovenian_1_id, 36.00, 'Odličen esej, bogat besedni zaklad'),
-(@enroll_kranjc_id, @item_1a_slovenian_2_id, 27.00, NULL),
--- 1A Slovenian - Luka Zajc
-(@enroll_zajc_id, @item_1a_slovenian_1_id, 32.00, 'Dober esej, manjše napake'),
-(@enroll_zajc_id, @item_1a_slovenian_2_id, 25.00, NULL),
--- 2B Math - Jan Zupančič
-(@enroll_zupancic_id, @item_2b_math_1_id, 47.00, 'Zelo dobro razumevanje funkcij'),
-(@enroll_zupancic_id, @item_2b_math_2_id, 28.00, NULL),
--- 2B Physics - Nina Kobal
-(@enroll_kobal_id, @item_2b_physics_1_id, 38.00, 'Dobro razumevanje fizikalnih zakonov'),
-(@enroll_kobal_id, @item_2b_physics_2_id, 19.00, 'Natančno izvedeno delo'),
--- 3C English - Eva Novak
-(@enroll_novak_id, @item_3c_english_1_id, 48.00, 'Excellent knowledge of grammar and vocabulary'),
-(@enroll_novak_id, @item_3c_english_2_id, 29.00, 'Fluent speech with minor pronunciation issues'),
-(@enroll_novak_id, @item_3c_english_3_id, 18.00, 'Well-structured essay with some creative ideas');
+-- Grades for Nina (1.A)
+(@enroll_nina, 1, 25.00, 'Dobro razumevanje snovi.'),                           -- Math Test 1
+(@enroll_nina, 2, 32.00, 'Nekaj manjših napak pri izračunih.'),                 -- Math Test 2
+(@enroll_nina, 3, 9.50, 'Zelo dobro izdelana domača naloga.'),                  -- Math Homework
+(@enroll_nina, 4, 16.00, 'Lepo strukturiran opis.'),                            -- Slovenian Essay
+(@enroll_nina, 5, 28.00, 'Odlično znanje slovnice.'),                           -- Slovenian Grammar
+(@enroll_nina, 6, 20.00, 'Dobro znanje besedišča.'),                            -- English Vocabulary
+(@enroll_nina, 7, 16.00, 'Nekaj težav pri razumevanju besedila.'),              -- English Reading
 
--- Attendance
-INSERT INTO attendance (enroll_id, period_id, status, justification, approved, reject_reason)
-VALUES
--- 1A Math Periods - Various Students
-(@enroll_kranjc_id, @period_1a_math_1_id, 'P', NULL, NULL, NULL),                             -- Maja present
-(@enroll_polanc_id, @period_1a_math_1_id, 'P', NULL, NULL, NULL),                             -- Peter present
-(@enroll_zajc_id, @period_1a_math_1_id, 'P', NULL, NULL, NULL),                               -- Luka present
-(@enroll_vidmar_id, @period_1a_math_1_id, 'P', NULL, NULL, NULL),                             -- Katja present
+-- Grades for Tilen (1.A)
+(@enroll_tilen, 1, 18.00, 'Potrebno je utrditi osnove.'),                       -- Math Test 1
+(@enroll_tilen, 2, 28.00, 'Izboljšanje v primerjavi s prvim testom.'),          -- Math Test 2
+(@enroll_tilen, 3, 7.00, 'Nepopolna domača naloga.'),                           -- Math Homework
+(@enroll_tilen, 4, 14.00, 'Pomanjkljiv opis, a dobra struktura.'),              -- Slovenian Essay
+(@enroll_tilen, 5, 20.00, 'Osnovno znanje slovnice.'),                          -- Slovenian Grammar
+(@enroll_tilen, 6, 19.00, 'Solidno znanje besedišča.'),                         -- English Vocabulary
+(@enroll_tilen, 7, 12.00, 'Težave pri razumevanju kompleksnejših besedil.'),    -- English Reading
 
-(@enroll_kranjc_id, @period_1a_math_2_id, 'P', NULL, NULL, NULL),                             -- Maja present
-(@enroll_polanc_id, @period_1a_math_2_id, 'A', 'Zdravniški pregled', TRUE, NULL),             -- Peter absent, justified
-(@enroll_zajc_id, @period_1a_math_2_id, 'P', NULL, NULL, NULL),                               -- Luka present
-(@enroll_vidmar_id, @period_1a_math_2_id, 'P', NULL, NULL, NULL),                             -- Katja present
+-- Grades for Maja (2.B)
+(@enroll_maja, 8, 38.00, 'Odlično razumevanje kvadratnih funkcij.'),            -- Math Quadratic Functions
+(@enroll_maja, 9, 18.00, 'Suvereno odgovarjanje na vprašanja.'),                -- Math Oral Exam
+(@enroll_maja, 10, 30.00, 'Dobro poznavanje literarnih del.'),                  -- Slovenian Literature
+(@enroll_maja, 11, 22.00, 'Zelo dober govorni nastop.'),                        -- Slovenian Presentation
 
-(@enroll_kranjc_id, @period_1a_math_3_id, 'P', NULL, NULL, NULL),                             -- Maja present
-(@enroll_polanc_id, @period_1a_math_3_id, 'P', NULL, NULL, NULL),                             -- Peter present
-(@enroll_zajc_id, @period_1a_math_3_id, 'L', 'Zamuda avtobusa', TRUE, NULL),                  -- Luka late, justified
-(@enroll_vidmar_id, @period_1a_math_3_id, 'A', 'Bolezen', TRUE, NULL),                        -- Katja absent, justified
+-- Grades for Luka (3.A)
+(@enroll_luka, 12, 40.00, 'Izjemno znanje trigonometrije.'),                    -- Math Trigonometry
+(@enroll_luka, 13, 27.00, 'Dobra seminarska naloga z nekaj pomanjkljivostmi.'), -- Math Seminar
+(@enroll_luka, 14, 48.00, 'Izjemen projekt.'),                                  -- CS Project
+(@enroll_luka, 15, 30.00, 'Dobro poznavanje algoritmov.'),                      -- CS Algorithms
 
-(@enroll_kranjc_id, @period_1a_math_4_id, 'P', NULL, NULL, NULL),                             -- Maja present
-(@enroll_polanc_id, @period_1a_math_4_id, 'P', NULL, NULL, NULL),                             -- Peter present
-(@enroll_zajc_id, @period_1a_math_4_id, 'P', NULL, NULL, NULL),                               -- Luka present
-(@enroll_vidmar_id, @period_1a_math_4_id, 'P', NULL, NULL, NULL),                             -- Katja present
+-- Grades for Jan (3.A)
+(@enroll_jan, 12, 35.00, 'Dobro znanje s prostorom za izboljšave.'),            -- Math Trigonometry
+(@enroll_jan, 13, 22.00, 'Osnovna seminarska naloga.'),                         -- Math Seminar
+(@enroll_jan, 14, 40.00, 'Dober projekt z nekaj tehničnimi težavami.'),         -- CS Project
+(@enroll_jan, 15, 25.00, 'Potrebno je utrditi znanje algoritmov.');
+-- CS Algorithms
 
--- 1A Slovenian Periods
-(@enroll_kranjc_id, @period_1a_slovenian_1_id, 'P', NULL, NULL, NULL),                        -- Maja present
-(@enroll_polanc_id, @period_1a_slovenian_1_id, 'P', NULL, NULL, NULL),                        -- Peter present
-(@enroll_zajc_id, @period_1a_slovenian_1_id, 'A', 'Zaspal', FALSE, 'Neopravičljiv razlog'),   -- Luka absent, unjustified
-(@enroll_vidmar_id, @period_1a_slovenian_1_id, 'P', NULL, NULL, NULL),                        -- Katja present
+-- Insert attendance records
+-- For Nina (1.A)
+INSERT INTO attendance (enroll_id, period_id, status)
+VALUES (@enroll_nina, 1, 'P'), -- Mathematics yesterday - Present
+       (@enroll_nina, 2, 'P'), -- Mathematics last week - Present
+       (@enroll_nina, 3, 'A'), -- Mathematics two weeks ago - Absent (not justified)
+       (@enroll_nina, 4, 'P'), -- Slovenian yesterday - Present
+       (@enroll_nina, 5, 'P'), -- Slovenian last week - Present
+       (@enroll_nina, 6, 'P'), -- English today - Present
+       (@enroll_nina, 7, 'L');
+-- English last week - Late
 
--- 2B Math Periods - Jan Zupančič
-(@enroll_zupancic_id, @period_2b_math_1_id, 'P', NULL, NULL, NULL),
-(@enroll_zupancic_id, @period_2b_math_2_id, 'A', 'Športno tekmovanje', TRUE, NULL),
-(@enroll_zupancic_id, @period_2b_math_3_id, 'P', NULL, NULL, NULL),
-(@enroll_zupancic_id, @period_2b_math_4_id, 'P', NULL, NULL, NULL),
+-- Update absence record with justification
+UPDATE attendance
+SET justification      = 'Bolezen - prehlad',
+    justification_file = 'nina_opravicilo.pdf',
+    approved           = 1
+WHERE enroll_id = @enroll_nina
+  AND period_id = 3;
 
--- 3C English Periods - Various Students
-(@enroll_novak_id, @period_3c_english_1_id, 'P', NULL, NULL, NULL),                           -- Eva present
-(@enroll_kralj_id, @period_3c_english_1_id, 'P', NULL, NULL, NULL),                           -- Anže present
-(@enroll_kos_id, @period_3c_english_1_id, 'A', 'Zdravniške težave', NULL, NULL),              -- Zala absent, pending justification
+-- For Tilen (1.A)
+INSERT INTO attendance (enroll_id, period_id, status)
+VALUES (@enroll_tilen, 1, 'P'), -- Mathematics yesterday - Present
+       (@enroll_tilen, 2, 'P'), -- Mathematics last week - Present
+       (@enroll_tilen, 3, 'P'), -- Mathematics two weeks ago - Present
+       (@enroll_tilen, 4, 'A'), -- Slovenian yesterday - Absent (pending justification)
+       (@enroll_tilen, 5, 'P'), -- Slovenian last week - Present
+       (@enroll_tilen, 6, 'P'), -- English today - Present
+       (@enroll_tilen, 7, 'P');
+-- English last week - Present
 
-(@enroll_novak_id, @period_3c_english_2_id, 'P', NULL, NULL, NULL),                           -- Eva present
-(@enroll_kralj_id, @period_3c_english_2_id, 'L', 'Zadrževanje pri prejšnji uri', TRUE, NULL), -- Anže late, justified
-(@enroll_kos_id, @period_3c_english_2_id, 'P', NULL, NULL, NULL),                             -- Zala present
+-- Update absence record with pending justification
+UPDATE attendance
+SET justification      = 'Zdravniški pregled',
+    justification_file = 'tilen_opravicilo.pdf'
+WHERE enroll_id = @enroll_tilen
+  AND period_id = 4;
 
-(@enroll_novak_id, @period_3c_english_3_id, 'P', NULL, NULL, NULL),                           -- Eva present
-(@enroll_kralj_id, @period_3c_english_3_id, 'P', NULL, NULL, NULL),                           -- Anže present
-(@enroll_kos_id, @period_3c_english_3_id, 'P', NULL, NULL, NULL); -- Zala present
+-- For Maja (2.B)
+INSERT INTO attendance (enroll_id, period_id, status)
+VALUES (@enroll_maja, 8, 'P'),  -- Mathematics today - Present
+       (@enroll_maja, 9, 'P'),  -- Mathematics last week - Present
+       (@enroll_maja, 10, 'A'), -- Mathematics three weeks ago - Absent (justified)
+       (@enroll_maja, 11, 'L'), -- Slovenian yesterday - Late
+       (@enroll_maja, 12, 'P');
+-- Slovenian last week - Present
+
+-- Update absence record with approved justification
+UPDATE attendance
+SET justification = 'Družinske obveznosti',
+    approved      = 1
+WHERE enroll_id = @enroll_maja
+  AND period_id = 10;
+
+-- For Luka (3.A)
+INSERT INTO attendance (enroll_id, period_id, status)
+VALUES (@enroll_luka, 13, 'P'), -- Mathematics today - Present
+       (@enroll_luka, 14, 'A'), -- Mathematics one month ago - Absent (rejected justification)
+       (@enroll_luka, 15, 'P'), -- Computer Science today - Present
+       (@enroll_luka, 16, 'P');
+-- Computer Science yesterday - Present
+
+-- Update absence record with rejected justification
+UPDATE attendance
+SET justification = 'Prometna gneča',
+    approved      = 0,
+    reject_reason = 'Ni veljavna opravičitev za odsotnost.'
+WHERE enroll_id = @enroll_luka
+  AND period_id = 14;
+
+-- For Jan (3.A)
+INSERT INTO attendance (enroll_id, period_id, status)
+VALUES (@enroll_jan, 13, 'P'), -- Mathematics today - Present
+       (@enroll_jan, 14, 'L'), -- Mathematics one month ago - Late
+       (@enroll_jan, 15, 'A'), -- Computer Science today - Absent (not justified yet)
+       (@enroll_jan, 16, 'P'); -- Computer Science yesterday - Present

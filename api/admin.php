@@ -28,7 +28,11 @@ header('Content-Type: application/json');
 
 // Verify CSRF token for non-GET requests
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-    $requestData = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR) ?? [];
+    try {
+        $requestData = json_decode(file_get_contents('php://input'), true, 512, JSON_THROW_ON_ERROR) ?? [];
+    } catch (JsonException $e) {
+        sendJsonErrorResponse('Neveljaven JSON', 400, 'admin.php');
+    }
     $providedToken = $requestData['csrf_token'] ?? null;
 
     if (!$providedToken || !verifyCSRFToken($providedToken)) sendJsonErrorResponse('Neveljaven varnostni žeton', 403, 'admin.php');
@@ -56,7 +60,7 @@ try {
             break;
 
         default:
-            sendJsonErrorResponse('Neveljavna akcija zahtevana', 400, 'admin.php');
+            sendJsonErrorResponse('Neveljavna dejanja zahtevana', 400, 'admin.php');
     }
 } catch (PDOException $e) {
     error_log('Database error (admin.php): ' . $e->getMessage());
@@ -76,9 +80,9 @@ try {
  */
 function handleGetClassDetails(): void
 {
-    $classId = filter_var($_GET['id'] ?? 0, FILTER_VALIDATE_INT);
+    $classId = filter_var($_GET['id'] ?? '0', FILTER_VALIDATE_INT);
 
-    if (!$classId || $classId <= 0) sendJsonErrorResponse('Neveljaven ID razreda', 400, 'admin.php');
+    if ($classId === false || $classId <= 0) sendJsonErrorResponse('Neveljaven ID razreda', 400, 'admin.php');
 
     $classDetails = getClassDetails($classId);
 
@@ -100,9 +104,9 @@ function handleGetClassDetails(): void
  */
 function handleGetSubjectDetails(): void
 {
-    $subjectId = filter_var($_GET['id'] ?? 0, FILTER_VALIDATE_INT);
+    $subjectId = filter_var($_GET['id'] ?? '0', FILTER_VALIDATE_INT);
 
-    if (!$subjectId || $subjectId <= 0) sendJsonErrorResponse('Neveljaven ID predmeta', 400, 'admin.php');
+    if ($subjectId === false || $subjectId <= 0) sendJsonErrorResponse('Neveljaven ID predmeta', 400, 'admin.php');
 
     $subjectDetails = getSubjectDetails($subjectId);
 
@@ -124,13 +128,13 @@ function handleGetSubjectDetails(): void
  */
 function handleGetTeacherDetails(): void
 {
-    $teacherId = filter_var($_GET['id'] ?? 0, FILTER_VALIDATE_INT);
+    $teacherId = filter_var($_GET['id'] ?? '0', FILTER_VALIDATE_INT);
 
-    if (!$teacherId || $teacherId <= 0) sendJsonErrorResponse('Neveljaven ID učitelja', 400, 'admin.php');
+    if ($teacherId === false || $teacherId <= 0) sendJsonErrorResponse('Neveljaven ID učitelja', 400, 'admin.php');
 
     $teacherDetails = getUserDetails($teacherId);
 
-    if (!$teacherDetails || $teacherDetails['role_id'] != ROLE_TEACHER) sendJsonErrorResponse('Učitelj ni bil najden', 404, 'admin.php');
+    if (!$teacherDetails || $teacherDetails['role_id'] !== ROLE_TEACHER) sendJsonErrorResponse('Učitelj ni bil najden', 404, 'admin.php');
 
     echo json_encode([
         'success' => true,
@@ -147,9 +151,9 @@ function handleGetTeacherDetails(): void
  */
 function handleGetUserDetails(): void
 {
-    $userId = filter_var($_GET['id'] ?? 0, FILTER_VALIDATE_INT);
+    $userId = filter_var($_GET['id'] ?? '0', FILTER_VALIDATE_INT);
 
-    if (!$userId || $userId <= 0) sendJsonErrorResponse('Neveljaven ID uporabnika', 400, 'admin.php');
+    if ($userId === false || $userId <= 0) sendJsonErrorResponse('Neveljaven ID uporabnika', 400, 'admin.php');
 
     $userDetails = getUserDetails($userId);
 
