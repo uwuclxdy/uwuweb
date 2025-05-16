@@ -46,19 +46,19 @@ if (isset($_GET['action'], $_GET['user_id'], $_GET['format']) &&
 
         // Simple response - no nested conditions or multiple try/catch blocks
         if ($userData) {
-            $jsonData = json_encode($userData);
-            if ($jsonData === false) {
-                throw new Exception('JSON encoding failed: ' . json_last_error_msg());
-            }
+            $jsonData = json_encode($userData, JSON_THROW_ON_ERROR);
+            if ($jsonData === false) throw new RuntimeException('JSON encoding failed: ' . json_last_error_msg());
             echo $jsonData;
-        } else {
-            echo json_encode(['error' => 'User not found']);
-        }
+        } else echo json_encode(['error' => 'User not found'], JSON_THROW_ON_ERROR);
     } catch (Exception $e) {
         // Log the error
         error_log('Error in user edit JSON endpoint: ' . $e->getMessage());
         // Return a proper JSON error response
-        echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
+        try {
+            echo json_encode(['error' => 'Server error: ' . $e->getMessage()], JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            sendJsonErrorResponse('Server error: ' . $e->getMessage(), 500, 'users.php');
+        }
     }
     exit;
 }
@@ -114,13 +114,6 @@ $allStudents = getAllStudentsBasicInfo();
         <div class="alert status-<?= $messageType ?> page-transition mb-lg"
              role="<?= $messageType === 'error' ? 'alert' : 'status' ?>"
              aria-live="<?= $messageType === 'error' ? 'assertive' : 'polite' ?>">
-            <div class="alert-icon">
-                <?php if ($messageType === 'success'): ?>✓
-                <?php elseif ($messageType === 'warning'): ?>⚠
-                <?php elseif ($messageType === 'error'): ?>✕
-                <?php else: ?>ℹ
-                <?php endif; ?>
-            </div>
             <div class="alert-content">
                 <?= htmlspecialchars($message) ?>
             </div>
@@ -507,14 +500,12 @@ $allStudents = getAllStudentsBasicInfo();
         </div>
         <div class="modal-body">
             <div class="alert status-warning mb-md">
-                <div class="alert-icon">⚠</div>
                 <div class="alert-content">
                     <p>Ali ste prepričani, da želite izbrisati uporabnika <strong id="deleteUserModal_name"></strong>?
                     </p>
                 </div>
             </div>
             <div class="alert status-error font-bold">
-                <div class="alert-icon">✕</div>
                 <div class="alert-content">
                     <p>Tega dejanja ni mogoče razveljaviti.</p>
                 </div>

@@ -108,9 +108,6 @@ $pdo = getDBConnection();
     <?php if (!empty($message)): ?>
         <div class="alert status-<?= $messageType === 'success' ? 'success' : 'error' ?> page-transition mb-lg"
              role="alert" aria-live="polite">
-            <div class="alert-icon">
-                <?= $messageType === 'success' ? '✓' : '⚠' ?>
-            </div>
             <div class="alert-content">
                 <?= htmlspecialchars($message) ?>
             </div>

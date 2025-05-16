@@ -65,8 +65,7 @@ if ($selectedStudent && !empty($attendanceRecords)) {
     renderHeaderCard(
         'Prisotnost učenca',
         'Spremljajte podatke o prisotnosti vašega otroka.',
-        'parent',
-        'Starš'
+        'parent'
     );
     ?>
 

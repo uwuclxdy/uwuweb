@@ -380,12 +380,10 @@ renderHeaderCard(
             <div class="card__content">
                 <?php if (empty($students)): ?>
                     <div class="alert status-info">
-                        <div class="alert-icon">ℹ</div>
                         <div class="alert-content">V tem razredu ni učencev.</div>
                     </div>
                 <?php elseif (empty($gradeItems)): ?>
                     <div class="alert status-info">
-                        <div class="alert-icon">ℹ</div>
                         <div class="alert-content">Za ta predmet še ni preverjanj znanja. Kliknite gumb "Dodaj
                             preverjanje znanja" zgoraj.
                         </div>
@@ -596,7 +594,6 @@ renderHeaderCard(
         </div>
     <?php else: ?>
         <div class="alert status-warning">
-            <div class="alert-icon">⚠</div>
             <div class="alert-content">Izberite razred in predmet za prikaz redovalnice.</div>
         </div>
     <?php endif; ?>
@@ -710,14 +707,12 @@ renderHeaderCard(
         </div>
         <div class="modal-body">
             <div class="alert status-warning mb-md">
-                <div class="alert-icon">⚠</div>
                 <div class="alert-content">
                     <p>Ali ste prepričani, da želite izbrisati preverjanje znanja <strong
                                 id="delete_item_name"></strong>?</p>
                 </div>
             </div>
             <div class="alert status-error">
-                <div class="alert-icon">✕</div>
                 <div class="alert-content">
                     <p>S tem bodo izbrisane tudi vse obstoječe ocene za to preverjanje znanja. Tega dejanja ni mogoče
                         razveljaviti.</p>
@@ -827,14 +822,12 @@ renderHeaderCard(
         </div>
         <div class="modal-body">
             <div class="alert status-warning mb-md">
-                <div class="alert-icon">⚠</div>
                 <div class="alert-content">
                     <p>Ali ste prepričani, da želite izbrisati oceno za učenca <strong
                                 id="delete_grade_student_name"></strong>?</p>
                 </div>
             </div>
             <div class="alert status-error">
-                <div class="alert-icon">✕</div>
                 <div class="alert-content">
                     <p>Tega dejanja ni mogoče razveljaviti.</p>
                 </div>

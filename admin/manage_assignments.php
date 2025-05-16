@@ -118,9 +118,6 @@ $pdo = getDBConnection();
     <?php if (!empty($message)): ?>
         <div class="alert status-<?= $messageType === 'success' ? 'success' : 'error' ?> page-transition mb-lg"
              role="alert" aria-live="polite">
-            <div class="alert-icon">
-                <?= $messageType === 'success' ? '✓' : '⚠' ?>
-            </div>
             <div class="alert-content">
                 <?= htmlspecialchars($message) ?>
             </div>
@@ -151,7 +148,6 @@ $pdo = getDBConnection();
                     <tr>
                         <td colspan="4" class="text-center p-lg">
                             <div class="alert status-info page-transition mb-0" role="status">
-                                <div class="alert-icon">ℹ</div>
                                 <div class="alert-content">
                                     Ni še ustvarjenih povezav. Uporabite gumb zgoraj za dodajanje.
                                 </div>

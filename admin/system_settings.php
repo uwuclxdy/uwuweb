@@ -96,9 +96,6 @@ try {
 
     <?php if (!empty($message)): ?>
         <div class="alert status-<?= $messageType === 'success' ? 'success' : 'error' ?> mb-lg d-flex items-center gap-sm">
-             <span class="alert-icon text-lg">
-                <?= $messageType === 'success' ? '✓' : '⚠' ?>
-            </span>
             <div class="alert-content">
                 <?= htmlspecialchars($message) ?>
             </div>
