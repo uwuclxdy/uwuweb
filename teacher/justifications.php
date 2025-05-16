@@ -75,7 +75,7 @@ require_once '../includes/header.php';
                             <th>Status</th>
                             <th>Opravičilo</th>
                             <th>Priloga</th>
-                            <th>Akcije</th>
+                            <th>Dejanja</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -172,9 +172,9 @@ require_once '../includes/header.php';
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($item['approved'] === '1'): ?>
+                                    <?php if ($item['approved'] === 1): ?>
                                         <span class="badge badge-success">Odobreno</span>
-                                    <?php elseif ($item['approved'] === '0'): ?>
+                                    <?php elseif ($item['approved'] === 0): ?>
                                         <span class="badge badge-error"
                                               title="<?= htmlspecialchars($item['reject_reason']) ?>">
                                                 Zavrnjeno

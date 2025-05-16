@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') if (isset($_POST['submit_justificatio
                 $success = true;
                 $message = 'Opravičilo je bilo uspešno oddano.';
             } else $error = 'Napaka pri shranjevanju opravičila.'; else $error = 'Napaka pri nalaganju datoteke.';
-        } else $error = 'Neveljavna datoteka. Dovoljeni so samo PDF, JPG in PNG formati do 2MB.'; else if (uploadJustification($attId, $justification)) {
+        } else $error = 'Neveljavna datoteka. Dovoljeni so samo PDF, JPG in PNG formati do 15MB.'; else if (uploadJustification($attId, $justification)) {
             $success = true;
             $message = 'Opravičilo je bilo uspešno oddano.';
         } else $error = 'Napaka pri shranjevanju opravičila.';
@@ -137,12 +137,12 @@ require_once '../includes/header.php';
                 <table class="data-table">
                     <thead>
                     <tr>
-                        <th>Datum</th>
-                        <th>Ura</th>
-                        <th>Predmet</th>
-                        <th>Status</th>
-                        <th>Opravičilo</th>
-                        <th>Akcije</th>
+                        <th class="text-center">Datum</th>
+                        <th class="text-center">Ura</th>
+                        <th class="text-center">Predmet</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-center">Opravičilo</th>
+                        <th class="text-center">Dejanja</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -158,7 +158,7 @@ require_once '../includes/header.php';
 
                             // Get status label
                             $statusLabel = getAttendanceStatusLabel($record['status']);
-                            $statusClass = $record['status'] === 'A' ? 'badge-error' : 'badge-warning';
+                            $statusClass = $record['status'] === 'A' ? 'status-absent' : ($record['status'] === 'L' ? 'status-late' : '');
 
                             // Determine justification status
                             $justificationStatus = 'Ni opravičila';
@@ -167,7 +167,7 @@ require_once '../includes/header.php';
                             if ($record['justification']) if ($record['approved'] === null) {
                                 $justificationStatus = 'V obravnavi';
                                 $justificationClass = 'badge-info';
-                            } elseif ($record['approved'] === '1') {
+                            } elseif ($record['approved'] === 1) {
                                 $justificationStatus = 'Odobreno';
                                 $justificationClass = 'badge-success';
                             } else {
@@ -175,22 +175,24 @@ require_once '../includes/header.php';
                                 $justificationClass = 'badge-error';
                             }
 
+                            // Can submit/edit justification if it hasn't been approved or rejected yet
                             $canSubmitJustification = empty($record['justification']) ||
-                                ($record['approved'] === null);
+                                ($record['approved'] === null && !empty($record['justification']));
 
                             // Highlight row if it matches the requested attendance record
                             $rowClass = ($record['att_id'] == $highlightAttId) ? 'bg-accent-tertiary' : '';
                             ?>
                             <tr class="<?= $rowClass ?>">
-                                <td><?= htmlspecialchars(formatDateDisplay($record['date'])) ?></td>
-                                <td><?= htmlspecialchars($record['period_label']) ?></td>
-                                <td><?= htmlspecialchars($record['subject_name']) ?></td>
-                                <td><span class="badge <?= $statusClass ?>"><?= htmlspecialchars($statusLabel) ?></span>
+                                <td class="text-center"><?= htmlspecialchars(formatDateDisplay($record['date'])) ?></td>
+                                <td class="text-center"><?= htmlspecialchars($record['period_label']) ?></td>
+                                <td class="text-center"><?= htmlspecialchars($record['subject_name']) ?></td>
+                                <td class="text-center"><span
+                                            class="attendance-status <?= $statusClass ?>"><?= htmlspecialchars($statusLabel) ?></span>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     <span class="badge <?= $justificationClass ?>"><?= htmlspecialchars($justificationStatus) ?></span>
                                 </td>
-                                <td>
+                                <td class="text-center">
                                     <?php if ($canSubmitJustification): ?>
                                         <button data-open-modal="justificationModal"
                                                 data-id="<?= $record['att_id'] ?>"
@@ -202,15 +204,17 @@ require_once '../includes/header.php';
                                                 class="btn btn-primary btn-sm">
                                             <?= empty($record['justification']) ? 'Oddaj opravičilo' : 'Uredi opravičilo' ?>
                                         </button>
-                                    <?php elseif ($record['approved'] === '0' && !empty($record['reject_reason'])): ?>
+                                    <?php elseif ($record['approved'] === 0 && !empty($record['reject_reason'])): ?>
                                         <button data-open-modal="rejectionModal"
                                                 data-id="<?= $record['att_id'] ?>"
                                                 data-reason="<?= htmlspecialchars($record['reject_reason']) ?>"
                                                 class="btn btn-secondary btn-sm">
                                             Razlog zavrnitve
                                         </button>
+                                    <?php elseif ($record['approved'] === '1'): ?>
+                                        <span class="text-disabled">Opravičilo odobreno</span>
                                     <?php else: ?>
-                                        <span class="text-disabled">Ni akcij</span>
+                                        <span class="text-disabled">Ni možnih dejanj</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -228,7 +232,7 @@ require_once '../includes/header.php';
     <div class="modal-overlay" aria-hidden="true"></div>
     <div class="modal-container" role="dialog" aria-modal="true" aria-labelledby="justificationModalTitle">
         <div class="modal-header">
-            <h3 class="modal-title" id="justificationModalTitle">Oddaja opravičila</h3>
+            <h3 class="modal-title" id="justificationModalTitle">Oddaja/Urejanje opravičila</h3>
         </div>
         <form id="justificationForm" method="POST" enctype="multipart/form-data">
             <div class="modal-body">
@@ -254,13 +258,15 @@ require_once '../includes/header.php';
                 <div class="form-group">
                     <label class="form-label" for="justification_file">Priloži dokazilo (neobvezno):</label>
                     <input type="file" id="justification_file" name="justification_file" class="form-input">
-                    <div class="feedback-text mt-xs">Dovoljeni formati: PDF, JPG, PNG (največ 2MB)</div>
+                    <div class="feedback-text mt-xs">Dovoljeni formati: PDF, JPG, PNG (največ 15MB)</div>
                 </div>
             </div>
             <div class="modal-footer">
                 <div class="d-flex justify-between w-full">
                     <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-                    <button type="submit" name="submit_justification" class="btn btn-primary">Oddaj opravičilo</button>
+                    <button type="submit" name="submit_justification" class="btn btn-primary"
+                            id="justification_submit_btn">Oddaj opravičilo
+                    </button>
                 </div>
             </div>
         </form>
@@ -340,6 +346,11 @@ require_once '../includes/header.php';
                     // Set existing justification if present
                     if (this.dataset.justification) {
                         document.getElementById('justification').value = this.dataset.justification;
+                        document.getElementById('justificationModalTitle').textContent = 'Urejanje opravičila';
+                        document.getElementById('justification_submit_btn').textContent = 'Posodobi opravičilo';
+                    } else {
+                        document.getElementById('justificationModalTitle').textContent = 'Oddaja opravičila';
+                        document.getElementById('justification_submit_btn').textContent = 'Oddaj opravičilo';
                     }
                 } else if (modalId === 'rejectionModal') {
                     document.getElementById('rejectionModal_reason').textContent = this.dataset.reason;
@@ -379,5 +390,19 @@ require_once '../includes/header.php';
         <?php endif; ?>
     });
 </script>
+
+<style>
+    /* Center button in action column */
+    .data-table td.text-center .btn,
+    .data-table td.text-center .text-disabled {
+        margin: 0 auto;
+        display: table;
+    }
+
+    /* Ensure proper width of attendance status */
+    .attendance-status {
+        min-width: 120px;
+    }
+</style>
 
 <?php include '../includes/footer.php'; ?>
