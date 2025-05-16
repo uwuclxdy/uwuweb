@@ -232,6 +232,7 @@ Parent-specific helper functions.
 - `renderParentAttendanceWidget(): string` - Creates the HTML for the parent's attendance dashboard widget
 - `renderParentChildClassAveragesWidget(): string` - Creates the HTML for the parent's view of their child's class
   averages
+- `rederParentJustificationsWidget(): string` - Creates the HTML for the parent's view of their child's justifications
 
 ## /student/student_functions.php
 

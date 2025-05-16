@@ -10,6 +10,7 @@
  * Dashboard Widgets:
  * - renderParentAttendanceWidget(): string - Creates the HTML for the parent's attendance dashboard widget
  * - renderParentChildClassAveragesWidget(): string - Creates the HTML for the parent's view of their child's class averages
+ * - renderParentJustificationsWidget(): string - Creates the HTML for the parent's recent justifications widget
  */
 
 use Random\RandomException;

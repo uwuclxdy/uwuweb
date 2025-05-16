@@ -7,10 +7,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="implement parent grades">
+    <list default="true" id="19d697f3-0fe2-49d8-96c4-32080f39f410" name="Changes" comment="finish w parent pages finally ffs">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/includes/functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/includes/functions.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/parent/attendance.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/attendance.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/project-functions.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/project-functions.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parent/parent_functions.php" beforeDir="false" afterPath="$PROJECT_DIR$/parent/parent_functions.php" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -232,15 +231,7 @@
       <workItem from="1747262623317" duration="1076000" />
       <workItem from="1747314238343" duration="110000" />
       <workItem from="1747314357500" duration="31043000" />
-      <workItem from="1747346444119" duration="13751000" />
-    </task>
-    <task id="LOCAL-00060" summary="implement manage_subjects.php">
-      <option name="closed" value="true" />
-      <created>1746735303409</created>
-      <option name="number" value="00060" />
-      <option name="presentableId" value="LOCAL-00060" />
-      <option name="project" value="LOCAL" />
-      <updated>1746735303409</updated>
+      <workItem from="1747346444119" duration="13880000" />
     </task>
     <task id="LOCAL-00061" summary="modal update">
       <option name="closed" value="true" />
@@ -626,7 +617,15 @@
       <option name="project" value="LOCAL" />
       <updated>1747356821920</updated>
     </task>
-    <option name="localTasksCounter" value="109" />
+    <task id="LOCAL-00109" summary="finish w parent pages finally ffs">
+      <option name="closed" value="true" />
+      <created>1747360252474</created>
+      <option name="number" value="00109" />
+      <option name="presentableId" value="LOCAL-00109" />
+      <option name="project" value="LOCAL" />
+      <updated>1747360252474</updated>
+    </task>
+    <option name="localTasksCounter" value="110" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -658,7 +657,6 @@
   <component name="VcsManagerConfiguration">
     <option name="CHECK_CODE_CLEANUP_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="LOCAL_CHANGES_DETAILS_PREVIEW_SHOWN" value="false" />
-    <MESSAGE value="implement manage_assignments.php" />
     <MESSAGE value="update modals" />
     <MESSAGE value="update strings / modals" />
     <MESSAGE value="new db" />
@@ -683,7 +681,8 @@
     <MESSAGE value="sync ide stuff" />
     <MESSAGE value="minor cleanup" />
     <MESSAGE value="implement parent grades" />
-    <option name="LAST_COMMIT_MESSAGE" value="implement parent grades" />
+    <MESSAGE value="finish w parent pages finally ffs" />
+    <option name="LAST_COMMIT_MESSAGE" value="finish w parent pages finally ffs" />
     <option name="OPTIMIZE_IMPORTS_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REFORMAT_BEFORE_PROJECT_COMMIT" value="true" />
     <option name="REARRANGE_BEFORE_PROJECT_COMMIT" value="true" />
