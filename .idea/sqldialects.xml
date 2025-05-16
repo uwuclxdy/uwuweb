@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
-    <file url="file://$PROJECT_DIR$/db/seed_demo.sql" dialect="MySQL" />
-    <file url="file://$PROJECT_DIR$/db/uwuweb.sql" dialect="MySQL" />
+    <file url="file://$PROJECT_DIR$/admin/admin_functions.php" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/db/seed_demo.sql" dialect="MariaDB" />
+    <file url="file://$PROJECT_DIR$/db/uwuweb.sql" dialect="MariaDB" />
   </component>
   <component name="SqlResolveMappings">
     <file url="file://$PROJECT_DIR$" scope="{&quot;node&quot;:{  &quot;@negative&quot;:&quot;1&quot;,  &quot;group&quot;:{   &quot;@kind&quot;:&quot;root&quot;,   &quot;node&quot;:{    &quot;name&quot;:{     &quot;@qname&quot;:&quot;a79c5948-f716-4edb-ba8d-1ab0002eca4d&quot;    },    &quot;group&quot;:{     &quot;@kind&quot;:&quot;schema&quot;,     &quot;node&quot;:{      &quot;name&quot;:{       &quot;@qname&quot;:&quot;uwuweb&quot;      }     }    }   }  } }}" />

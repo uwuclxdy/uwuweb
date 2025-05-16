@@ -196,7 +196,7 @@ function getUserDetails(int $userId): ?array
                     $user['last_name'] = $roleData['last_name'];
                     $user['teacher_id'] = $roleData['teacher_id'];
 
-                    // Get teacher's subjects
+                    // Get teacher's subjects from assigned classes
                     $stmt = $pdo->prepare("
                         SELECT DISTINCT s.subject_id 
                         FROM subjects s
@@ -205,6 +205,24 @@ function getUserDetails(int $userId): ?array
                     ");
                     $stmt->execute([$roleData['teacher_id']]);
                     $subjects = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+                    // Also get teacher's qualified subjects (that may not be assigned to any classes yet)
+                    try {
+                        $stmt = $pdo->prepare("
+                            SELECT subject_id 
+                            FROM teacher_subject_qualifications 
+                            WHERE teacher_id = ?
+                        ");
+                        $stmt->execute([$roleData['teacher_id']]);
+                        $qualifiedSubjects = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+                        // Merge both subject lists, removing duplicates
+                        $subjects = array_values(array_unique(array_merge($subjects, $qualifiedSubjects)));
+                    } catch (PDOException $e) {
+                        // If the table doesn't exist, just use the subjects we already found
+                        if ($e->getCode() != '42S02') throw $e;
+                    }
+
                     $user['subjects'] = $subjects;
                 }
                 break;
@@ -302,6 +320,34 @@ function createNewUser(array $userData): bool|int
                     $userData['first_name'],
                     $userData['last_name']
                 ]);
+
+                // Get the newly created teacher_id
+                $teacherId = $pdo->lastInsertId();
+
+                // Handle teacher subject qualifications without creating table
+                if (!empty($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) {
+                    // Check if teacher_subject_qualifications table exists
+                    $tableExists = false;
+                    try {
+                        $checkTable = $pdo->query("SHOW TABLES LIKE 'teacher_subject_qualifications'");
+                        $tableExists = ($checkTable && $checkTable->rowCount() > 0);
+                    } catch (PDOException $e) {
+                        error_log("Error checking for teacher_subject_qualifications table: " . $e->getMessage());
+                    }
+
+                    // Only try to insert subject qualifications if the table exists
+                    if ($tableExists) try {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO teacher_subject_qualifications (teacher_id, subject_id)
+                            VALUES (?, ?)
+                        ");
+
+                        foreach ($userData['teacher_subjects'] as $subjectId) if (is_numeric($subjectId)) $stmt->execute([$teacherId, (int)$subjectId]);
+                    } catch (PDOException $e) {
+                        // Log the error but don't fail the entire operation
+                        error_log("Error inserting teacher subject qualifications: " . $e->getMessage());
+                    }
+                }
                 break;
 
             case ROLE_PARENT:
@@ -450,39 +496,84 @@ function updateUser(int $userId, array $userData): bool
                     $params[] = $userData['last_name'];
                 }
 
-                if (!empty($updates)) {
-                    // Check if teacher record exists
-                    $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = ?");
-                    $stmt->execute([$userId]);
-                    $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
+                // Check if teacher record exists
+                $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE user_id = ?");
+                $stmt->execute([$userId]);
+                $teacher = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                    if ($teacher) {
-                        // Update existing teacher record
+                if ($teacher) {
+                    // Update existing teacher record (if there are updates to make)
+                    if (!empty($updates)) {
                         $query = "UPDATE teachers SET " . implode(", ", $updates) . " WHERE user_id = ?";
                         $params[] = $userId;
 
                         $stmt = $pdo->prepare($query);
                         $stmt->execute($params);
+                    }
 
-                        // Handle teacher subjects if provided
-                        if (isset($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) {
-                            // We would need to manage subject assignments here
-                            // This would typically involve updating entries in a linking table
-                            // The exact implementation depends on how subjects are related to teachers in the database
-                        }
-                    } else {
-                        // Create new teacher record if changed from another role
-                        $stmt = $pdo->prepare("INSERT INTO teachers (user_id, first_name, last_name) VALUES (?, ?, ?)");
-                        $stmt->execute([
-                            $userId,
-                            $userData['first_name'] ?? '',
-                            $userData['last_name'] ?? ''
-                        ]);
+                    // Handle teacher subjects (even if no other updates)
+                    $teacherId = $teacher['teacher_id'];
 
-                        // Handle teacher subjects if provided (for new teacher)
-                        if (isset($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) {
-                            // Similar to above, would need implementation based on database structure
+                    // Check if teacher_subject_qualifications table exists
+                    $tableExists = false;
+                    try {
+                        $checkTable = $pdo->query("SHOW TABLES LIKE 'teacher_subject_qualifications'");
+                        $tableExists = ($checkTable && $checkTable->rowCount() > 0);
+                    } catch (PDOException $e) {
+                        error_log("Error checking for teacher_subject_qualifications table: " . $e->getMessage());
+                    }
+
+                    // If table doesn't exist, store subjects in user_meta or similar
+                    if (!$tableExists) error_log("Teacher subjects not saved - table doesn't exist"); else if (isset($userData['teacher_subjects']) && is_array($userData['teacher_subjects'])) try {
+                        // Delete existing qualifications
+                        $stmt = $pdo->prepare("DELETE FROM teacher_subject_qualifications WHERE teacher_id = ?");
+                        $stmt->execute([$teacherId]);
+
+                        // Insert new qualifications (only if array is not empty)
+                        if (!empty($userData['teacher_subjects'])) {
+                            $stmt = $pdo->prepare("
+                                INSERT INTO teacher_subject_qualifications (teacher_id, subject_id)
+                                VALUES (?, ?)
+                            ");
+
+                            foreach ($userData['teacher_subjects'] as $subjectId) if (is_numeric($subjectId)) $stmt->execute([$teacherId, (int)$subjectId]);
                         }
+                    } catch (PDOException $e) {
+                        // Log the error but don't fail the entire update
+                        error_log("Error updating teacher subject qualifications: " . $e->getMessage());
+                    }
+                } else {
+                    // Create new teacher record if changed from another role
+                    $stmt = $pdo->prepare("INSERT INTO teachers (user_id, first_name, last_name) VALUES (?, ?, ?)");
+                    $stmt->execute([
+                        $userId,
+                        $userData['first_name'] ?? '',
+                        $userData['last_name'] ?? ''
+                    ]);
+
+                    // Get the newly created teacher_id
+                    $teacherId = $pdo->lastInsertId();
+
+                    // Check if teacher_subject_qualifications table exists
+                    $tableExists = false;
+                    try {
+                        $checkTable = $pdo->query("SHOW TABLES LIKE 'teacher_subject_qualifications'");
+                        $tableExists = ($checkTable && $checkTable->rowCount() > 0);
+                    } catch (PDOException $e) {
+                        error_log("Error checking for teacher_subject_qualifications table: " . $e->getMessage());
+                    }
+
+                    // Handle teacher subjects if the table exists
+                    if ($tableExists && is_array($userData['teacher_subjects']) && !empty($userData['teacher_subjects'])) try {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO teacher_subject_qualifications (teacher_id, subject_id)
+                            VALUES (?, ?)
+                        ");
+
+                        foreach ($userData['teacher_subjects'] as $subjectId) if (is_numeric($subjectId)) $stmt->execute([$teacherId, (int)$subjectId]);
+                    } catch (PDOException $e) {
+                        // Log the error but don't fail the entire create
+                        error_log("Error inserting teacher subject qualifications: " . $e->getMessage());
                     }
                 }
                 break;
@@ -1175,17 +1266,20 @@ function getClassDetails(int $classId): ?array
  */
 function createClass(array $classData): bool|int
 {
-    if (empty($classData['class_code']) || empty($classData['title']) || empty($classData['homeroom_teacher_id'])) return false;
+    if (empty($classData['class_code']) || empty($classData['homeroom_teacher_id'])) return false;
 
     try {
         $pdo = safeGetDBConnection('createClass');
 
         if ($pdo === null) sendJsonErrorResponse("Povezava s podatkovno bazo ni uspela - funkcija createClass", 500, "admin_functions.php");
 
+        // Use empty string for title if it's empty
+        $title = !empty($classData['title']) ? $classData['title'] : "";
+
         $stmt = $pdo->prepare("INSERT INTO classes (class_code, title, homeroom_teacher_id) VALUES (?, ?, ?)");
         $stmt->execute([
             $classData['class_code'],
-            $classData['title'],
+            $title,
             $classData['homeroom_teacher_id']
         ]);
 
@@ -1220,14 +1314,16 @@ function updateClass(int $classId, array $classData): bool
             $params[] = $classData['class_code'];
         }
 
-        if (!empty($classData['title'])) {
+        // Handle title separately to properly accommodate it being optional
+        if (isset($classData['title'])) {
+            // If title is empty, set it to empty string
             $updates[] = "title = ?";
-            $params[] = $classData['title'];
+            $params[] = $classData['title']; // This will be empty string if title is empty
         }
 
-        if (isset($classData['homeroom_teacher_id'])) { // Allow setting to null or empty
+        if (!empty($classData['homeroom_teacher_id'])) {
             $updates[] = "homeroom_teacher_id = ?";
-            $params[] = empty($classData['homeroom_teacher_id']) ? null : $classData['homeroom_teacher_id'];
+            $params[] = $classData['homeroom_teacher_id'];
         }
 
         if (empty($updates)) return false;
@@ -1447,7 +1543,7 @@ function getAllTeachers(): array
             FROM teachers t
             JOIN users u ON t.user_id = u.user_id
             WHERE u.role_id = ?
-            ORDER BY u.username
+            ORDER BY t.last_name, t.first_name
         ";
 
         $stmt = $pdo->prepare($query);
@@ -1803,6 +1899,7 @@ function renderAdminAttendanceWidget(): string
         $output = '<div class="d-flex flex-column h-full">'; // Main widget container
 
         // Overall attendance section
+
         $output .= '<div class="rounded p-0 shadow-sm mb-lg">';
         $output .= '<h5 class="m-0 mt-md ml-md mb-sm card-subtitle font-medium border-bottom">Prisotnost (zadnjih ' . $intervalDays . ' dni)</h5>';
         $output .= '<div class="p-md">';

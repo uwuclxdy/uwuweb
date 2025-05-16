@@ -151,8 +151,9 @@ $pdo = getDBConnection();
                 </div>
 
                 <div class="form-group">
-                    <label for="create_title" class="form-label">Ime razreda:</label>
-                    <input type="text" id="create_title" name="title" class="form-input" required
+                    <label for="create_title" class="form-label">Ime razreda: <small
+                                class="text-secondary">(neobvezno)</small></label>
+                    <input type="text" id="create_title" name="title" class="form-input"
                            placeholder="Npr. 4. razred A">
                     <div class="feedback-error" id="create_title_error"></div>
                 </div>
@@ -163,7 +164,7 @@ $pdo = getDBConnection();
                         <option value="">-- Izberite razrednika --</option>
                         <?php foreach ($teachers as $teacher): ?>
                             <option value="<?= $teacher['teacher_id'] ?>">
-                                <?= htmlspecialchars($teacher['username']) ?>
+                                <?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name'] . ' (' . $teacher['username'] . ')') ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -198,8 +199,9 @@ $pdo = getDBConnection();
                 </div>
 
                 <div class="form-group">
-                    <label for="edit_title" class="form-label">Ime razreda:</label>
-                    <input type="text" id="edit_title" name="title" class="form-input" required>
+                    <label for="edit_title" class="form-label">Ime razreda: <small
+                                class="text-secondary">(neobvezno)</small></label>
+                    <input type="text" id="edit_title" name="title" class="form-input">
                     <div class="feedback-error" id="edit_title_error"></div>
                 </div>
 
@@ -209,7 +211,7 @@ $pdo = getDBConnection();
                         <option value="">-- Izberite razrednika --</option>
                         <?php foreach ($teachers as $teacher): ?>
                             <option value="<?= $teacher['teacher_id'] ?>">
-                                <?= htmlspecialchars($teacher['username']) ?>
+                                <?= htmlspecialchars($teacher['first_name'] . ' ' . $teacher['last_name'] . ' (' . $teacher['username'] . ')') ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -300,11 +302,22 @@ $pdo = getDBConnection();
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
+                            console.log("API Response:", data); // Debug log
+
                             // Fill the form with class data
                             document.getElementById('edit_class_id').value = classId;
                             document.getElementById('edit_class_code').value = data.class.class_code;
-                            document.getElementById('edit_title').value = data.class.title;
-                            document.getElementById('edit_homeroom_teacher_id').value = data.class.homeroom_teacher_id;
+
+                            // Handle title which might be null
+                            document.getElementById('edit_title').value = data.class.title || '';
+
+                            // Make sure homeroom_teacher_id is properly set
+                            const teacherSelect = document.getElementById('edit_homeroom_teacher_id');
+                            if (data.class.homeroom_teacher_id) {
+                                teacherSelect.value = data.class.homeroom_teacher_id;
+                            } else {
+                                teacherSelect.selectedIndex = 0; // Select the first option (empty)
+                            }
 
                             // Open the modal
                             openModal('editClassModal');
@@ -326,10 +339,16 @@ $pdo = getDBConnection();
                             const teacherName = row.cells[2].textContent.trim();
                             const teacherSelect = document.getElementById('edit_homeroom_teacher_id');
 
-                            for (let i = 0; i < teacherSelect.options.length; i++) {
-                                if (teacherSelect.options[i].text === teacherName) {
-                                    teacherSelect.selectedIndex = i;
-                                    break;
+                            // Reset to first option
+                            teacherSelect.selectedIndex = 0;
+
+                            // Only try to match if not "N/A"
+                            if (teacherName !== 'N/A') {
+                                for (let i = 0; i < teacherSelect.options.length; i++) {
+                                    if (teacherSelect.options[i].text === teacherName) {
+                                        teacherSelect.selectedIndex = i;
+                                        break;
+                                    }
                                 }
                             }
 
@@ -346,7 +365,7 @@ $pdo = getDBConnection();
                 const className = this.getAttribute('data-name');
 
                 document.getElementById('deleteClassModal_id').value = classId;
-                document.getElementById('deleteClassModal_name').textContent = className;
+                document.getElementById('deleteClassModal_name').textContent = className || 'izbrani razred';
 
                 openModal('deleteClassModal');
             });

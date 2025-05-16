@@ -251,6 +251,17 @@ $allStudents = getAllStudentsBasicInfo();
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                 <input type="hidden" name="create_user" value="1">
 
+                <div class="form-group">
+                    <label class="form-label" for="create_role">Role:</label>
+                    <select id="create_role" name="role_id" class="form-input form-select" required>
+                        <option value="">-- Select Role --</option>
+                        <option value="<?= ROLE_ADMIN ?>">Administrator</option>
+                        <option value="<?= ROLE_TEACHER ?>">Teacher</option>
+                        <option value="<?= ROLE_STUDENT ?>">Student</option>
+                        <option value="<?= ROLE_PARENT ?>">Parent</option>
+                    </select>
+                </div>
+
                 <div id="create_nameFields" class="row" style="display: none;">
                     <div class="col col-md-6">
                         <div class="form-group">
@@ -281,17 +292,6 @@ $allStudents = getAllStudentsBasicInfo();
                 <div class="form-group">
                     <label class="form-label" for="create_email">Email:</label>
                     <input type="email" id="create_email" name="email" class="form-input">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="create_role">Role:</label>
-                    <select id="create_role" name="role_id" class="form-input form-select" required>
-                        <option value="">-- Select Role --</option>
-                        <option value="<?= ROLE_ADMIN ?>">Administrator</option>
-                        <option value="<?= ROLE_TEACHER ?>">Teacher</option>
-                        <option value="<?= ROLE_STUDENT ?>">Student</option>
-                        <option value="<?= ROLE_PARENT ?>">Parent</option>
-                    </select>
                 </div>
 
                 <!-- Teacher-specific fields -->
@@ -343,8 +343,10 @@ $allStudents = getAllStudentsBasicInfo();
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary">Create User</button>
+                <div class="d-flex justify-between w-full">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create User</button>
+                </div>
             </div>
         </form>
     </div>
@@ -366,13 +368,13 @@ $allStudents = getAllStudentsBasicInfo();
                 <input type="hidden" id="edit_original_username" name="original_username" value="">
 
                 <div class="form-group">
-                    <label class="form-label" for="edit_username">Username:</label>
-                    <input type="text" id="edit_username" name="username" class="form-input" required>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="edit_email">Email:</label>
-                    <input type="email" id="edit_email" name="email" class="form-input">
+                    <label class="form-label" for="edit_role">Role:</label>
+                    <select id="edit_role" name="role_id" class="form-input form-select" required>
+                        <option value="<?= ROLE_ADMIN ?>">Administrator</option>
+                        <option value="<?= ROLE_TEACHER ?>">Teacher</option>
+                        <option value="<?= ROLE_STUDENT ?>">Student</option>
+                        <option value="<?= ROLE_PARENT ?>">Parent</option>
+                    </select>
                 </div>
 
                 <div class="row">
@@ -391,13 +393,13 @@ $allStudents = getAllStudentsBasicInfo();
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="edit_role">Role:</label>
-                    <select id="edit_role" name="role_id" class="form-input form-select" required>
-                        <option value="<?= ROLE_ADMIN ?>">Administrator</option>
-                        <option value="<?= ROLE_TEACHER ?>">Teacher</option>
-                        <option value="<?= ROLE_STUDENT ?>">Student</option>
-                        <option value="<?= ROLE_PARENT ?>">Parent</option>
-                    </select>
+                    <label class="form-label" for="edit_username">Username:</label>
+                    <input type="text" id="edit_username" name="username" class="form-input" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="edit_email">Email:</label>
+                    <input type="email" id="edit_email" name="email" class="form-input">
                 </div>
 
                 <!-- Role-specific fields -->
@@ -446,8 +448,10 @@ $allStudents = getAllStudentsBasicInfo();
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary">Save Changes</button>
+                <div class="d-flex justify-between w-full">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
             </div>
         </form>
     </div>
@@ -465,7 +469,7 @@ $allStudents = getAllStudentsBasicInfo();
                 <p>You are about to reset the password for <strong id="resetUsername"></strong>.</p>
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
                 <input type="hidden" name="reset_password" value="1">
-                <input type="hidden" id="reset_user_id" name="user_id" value="">
+                <input type="hidden" id="resetPasswordModal_id" name="user_id" value="">
 
                 <div class="form-group">
                     <label class="form-label" for="new_password">New Password:</label>
@@ -484,8 +488,10 @@ $allStudents = getAllStudentsBasicInfo();
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
-                <button type="submit" class="btn btn-primary" id="resetPasswordSubmitBtn">Reset Password</button>
+                <div class="d-flex justify-between w-full">
+                    <button type="button" class="btn btn-secondary" data-close-modal>Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="resetPasswordSubmitBtn">Reset Password</button>
+                </div>
             </div>
         </form>
     </div>
@@ -514,8 +520,10 @@ $allStudents = getAllStudentsBasicInfo();
         </div>
         <p class="text-disabled ml-xl mr-xl">Izbris bo mogoče le, če uporabnik ni v nobeni povezavi.</p>
         <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
-            <button type="button" class="btn btn-error" id="confirmDeleteBtn">Izbriši</button>
+            <div class="d-flex justify-between w-full">
+                <button type="button" class="btn btn-secondary" data-close-modal>Prekliči</button>
+                <button type="button" class="btn btn-error" id="confirmDeleteBtn">Izbriši</button>
+            </div>
         </div>
     </div>
 </div>
@@ -808,9 +816,16 @@ $allStudents = getAllStudentsBasicInfo();
             idInput.name = 'user_id';
             idInput.value = userId;
 
+            // Add the delete confirmation field that handleDeleteUser() expects
+            const confirmInput = document.createElement('input');
+            confirmInput.type = 'hidden';
+            confirmInput.name = 'delete_confirmation';
+            confirmInput.value = 'DELETE';
+
             form.appendChild(csrfInput);
             form.appendChild(actionInput);
             form.appendChild(idInput);
+            form.appendChild(confirmInput);
             document.body.appendChild(form);
             form.submit();
         });
